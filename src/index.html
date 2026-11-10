@@ -294,7 +294,8 @@ let parts=[],pops=[],confetti=[],critters=[],attacks=[],puddles=[],treats=[],pun
 let hitStop=0,fovKick=0,flash=0,biteBuf=0,dashBuf=0,dtS=1/60,geysers=[];
 let attackCd=2.5,head2Cd=3,treatCd=5,critterCd=0,inX=0,inY=0;
 const keys={};let ptr=null,joy=null;
-const R={x:300,y:500,f:1,vx:0,vy:0,hp:100,sc:1,wet:0,chomp:0,recover:0,dash:0,dashCd:0,dashT:0,dx:1,dy:0,iframe:0,hurt:0,speed:0,perfect:false,gait:0,fs:1,ang:0,biteT:0,thrash:0,thrashI:45,safeT:0};
+// ang starts in three-quarter view so the title card shows Rosie's face, not her back; resetLevel squares her up for play
+const R={x:300,y:500,f:1,vx:0,vy:0,hp:100,sc:1,wet:0,chomp:0,recover:0,dash:0,dashCd:0,dashT:0,dx:1,dy:0,iframe:0,hurt:0,speed:0,perfect:false,gait:0,fs:1,ang:Math.PI/2.9,biteT:0,thrash:0,thrashI:45,safeT:0};
 const Hm={x:720,y:470,f:-1,tx:600,ty:470,mode:'roam',moving:false,walkT:0,cower:false,shock:0,cx:0,cy:0,grabbed:true,wpT:0};
 const E={x:0,y:0,vx:0,vy:0,ph:0};
 const J={cd:0,streak:0,winded:0,last:1,lastT:9,hits:0};
