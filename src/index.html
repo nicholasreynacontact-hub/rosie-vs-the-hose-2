@@ -695,15 +695,33 @@ const mArms=[22,-22].map(z=>{const g=grp(manP,0,86,z);cyl(g,shirtM,7,14,0,-7,0);
 const mNoz=grp(mArms[0],0,-38,0);box(mNoz,M('#8c96a0',{metalness:.5,roughness:.3}),9,20,9,3,-4,0);box(mNoz,yelM,7,6,7,3,-16,0);
 ink(man);let hatT=0,wasCower=false;
 /* the hose */
-const hoseM=M('#2fb457',{roughness:.25}),HOSE_G=new THREE.Color('#2fb457'),HOSE_Y=new THREE.Color('#e4f76a'),HOSE_P=new THREE.Color('#b5179e'),BLK=new THREE.Color('#000000');
+/* hose skin (art v2 item 5): 64x64 multiply map -- body, a belly stripe 20% of the circumference, one dark band per 64-unit tile.
+   Values are near-greyscale on purpose: hoseM.color keeps driving the whole body through the winded/BOOGA tints, and the map only shades it. */
+const hoseTex=ctex(64,64,Math.round(N*SEG/64),1,g=>{g.fillStyle='#c8c8c8';g.fillRect(0,0,64,64);g.fillStyle='#e6e6a8';g.fillRect(0,26,64,13);g.fillStyle='#86868f';g.fillRect(4,0,4,64);g.fillStyle='#4e4e58';g.fillRect(0,0,4,64);});
+const hoseM=M('#28cd6d',{roughness:.25,map:hoseTex}),HOSE_G=new THREE.Color('#28cd6d'),HOSE_Y=new THREE.Color('#e4f76a'),HOSE_P=new THREE.Color('#b5179e'),BLK=new THREE.Color('#000000');
 const hv=[...Array(N+1)].map(()=>new THREE.Vector3()),hCurve=new THREE.CatmullRomCurve3(hv),hose3=new THREE.Mesh(new THREE.BufferGeometry(),hoseM);hose3.castShadow=true;hose3.receiveShadow=true;hose3.frustumCulled=false;scene.add(hose3);const ink3=new THREE.Mesh(hose3.geometry,INK);ink3.frustumCulled=false;scene.add(ink3);
 const shred=new THREE.InstancedMesh(G_C,hoseM,30);shred.visible=false;shred.castShadow=true;shred.frustumCulled=false;scene.add(shred);let shredDone=false;
 const weakM=M('#ffd23f',{roughness:.3,emissive:'#aa7700'}),weak3=sph(scene,weakM,15,0,0,0,1,.8,1),weakGlow=sph(scene,MB('#ffe070',.22),34,0,0,0,1,1,1,false);weakGlow.material.blending=THREE.AdditiveBlending;
 const weakRing=flat(new THREE.RingGeometry(22,28,28),MB('#ffffff',.8),0,1.8,0);weakRing.receiveShadow=false;
-const angryEyes=(g,x,y)=>{for(const s of [1,-1]){sph(g,M('#ffffff',{roughness:.2}),5.5,x,y,s*6);sph(g,M('#e63946',{emissive:'#7a0d16'}),2.8,x+3.6,y,s*6);const b=box(g,M('#222222'),9,2,2,x+2,y+6,s*6);b.rotation.x=s*-.5;}};
+/* weak spot stays king (art v2 item 6): white-hot core, two ink ticks orbiting the ring at 1 rev/s, and a soft beacon column so it can be found across the lawn */
+const weakTmp=new THREE.Vector3();
+const weakCore=new THREE.Mesh(new THREE.CircleGeometry(7.5,20),new THREE.MeshBasicMaterial({color:'#fffbe0',transparent:true,opacity:.92,depthWrite:false}));weakCore.renderOrder=2;weakCore.frustumCulled=false;scene.add(weakCore);
+const weakTickG=grp(scene);{const tkM=new THREE.MeshBasicMaterial({color:'#2b1a33'});for(const s of [1,-1])box(weakTickG,tkM,10,2.5,3.5,s*25,0,0,false);const tk=bake(weakTickG,tkM);tk.castShadow=tk.receiveShadow=false;}
+const beamTex=ctex(4,64,1,1,g=>{const gr=g.createLinearGradient(0,0,0,64);gr.addColorStop(0,'#000000');gr.addColorStop(.45,'#4a4a4a');gr.addColorStop(1,'#ffffff');g.fillStyle=gr;g.fillRect(0,0,4,64);});
+const weakBeam=new THREE.Mesh(new THREE.CylinderGeometry(26,12,240,16,1,true),MB('#ffe070',.11));weakBeam.material.blending=THREE.AdditiveBlending;weakBeam.material.map=beamTex;weakBeam.frustumCulled=false;scene.add(weakBeam);
+/* angry (not scary) eyes: radius r whites, half-radius pupils that track Rosie, brows 1.55r long. No emissive on the pupils -- glowing red is reserved for attack warnings. */
+const angryEyes=(g,x,y,r)=>{const ps=[];for(const s of [1,-1]){const z0=s*r*1.1;sph(g,M('#ffffff',{roughness:.2}),r,x,y,z0);const p=sph(g,M('#e63946'),r*.5,x+r*.62,y,z0);const b=box(g,M('#3b0d1c'),r*1.55,r*.26,r*.3,x+r*.3,y+r*.8,z0);b.rotation.x=s*-.5;ps.push({p:p,bx:x+r*.62,z0:z0});}return ps;};
+const trackEyes=(ps,g,r)=>{const ry=g.rotation.y,dx=R.x-g.position.x,dz=zOf(R.y)-g.position.z,l=Math.hypot(dx,dz)||1,c=Math.cos(ry),sn=Math.sin(ry),lx=(dx*c-dz*sn)/l,lz=(dx*sn+dz*c)/l;for(const e of ps){e.p.position.x=e.bx+lx*r*.24;e.p.position.z=e.z0+lz*r*.26;}};
 const scar3=[...Array(16)].map(()=>sph(scene,M('#0c3318',{roughness:.9}),9,0,0,0,1,.55,1,false)),HOSE_W=new THREE.Color('#a9bf52');
-const nozHead=grp(scene);{const b=cyl(nozHead,M('#8c96a0',{metalness:.5,roughness:.3}),8,26,4,0,0);b.rotation.z=Math.PI/2;const tp=cyl(nozHead,yelM,6.5,7,19,0,0);tp.rotation.z=Math.PI/2;angryEyes(nozHead,2,10);}
-const midHead=grp(scene);sph(midHead,M('#2e9a4b',{roughness:.3}),16,4,0,0,1.2,.9,.95);sph(midHead,M('#123f1f'),3,22,-1,0);angryEyes(midHead,8,11);ink(nozHead);ink(midHead);ink(weak3);for(const g of treat3)ink(g);for(const o of pot3){ink(o.piv.children[0]);ink(o.piv.children[1]);}
+const nozHead=grp(scene);nozHead.scale.setScalar(1.6);let nozEyes,nozJaw;
+{const nozM=M('#d9793b',{metalness:.5,roughness:.3});const b=cyl(nozHead,nozM,8,26,4,0,0);b.rotation.z=Math.PI/2;const tp=cyl(nozHead,M('#b35c2a'),6.5,7,19,0,0);tp.rotation.z=Math.PI/2;nozEyes=angryEyes(nozHead,2,11,9);
+ /* hinged lower jaw: half cylinder, flat face up, hinged behind the barrel so it drops open during a telegraph */
+ nozJaw=grp(nozHead,-7,-4,0);const jw=add(nozJaw,new THREE.CylinderGeometry(1,1,1,12,1,false,0,Math.PI),M('#d9793b',{side:THREE.DoubleSide}),12,0,0,9,24,9);jw.rotation.z=-Math.PI/2;}
+const midHead=grp(scene);midHead.scale.setScalar(1.5);sph(midHead,M('#2e9a4b',{roughness:.3}),16,4,0,0,1.2,.9,.95);sph(midHead,M('#123f1f'),3,22,-1,0);
+const midEyes=angryEyes(midHead,8,12,9);
+/* two-tooth grin: round teeth, no points (see the do-not list) */
+box(midHead,M('#3b0d1c'),11,3.5,15,16,-6,0);for(const s of [1,-1])sph(midHead,M('#e9e4f5'),3.4,17,-9,s*4.5,1,1.15,1);
+ink(nozHead);ink(midHead);ink(weak3);for(const g of treat3)ink(g);for(const o of pot3){ink(o.piv.children[0]);ink(o.piv.children[1]);}
 /* attack warnings and beams */
 const teleRed=()=>MB('#ff3232',.5),jetT=[...Array(4)].map(()=>{const m=flat(new THREE.PlaneGeometry(1,1),teleRed(),0,2,0);m.receiveShadow=false;return m;});
 const fanT=[...Array(3)].map(()=>{const m=flat(new THREE.CircleGeometry(1,28,-.8,1.6),MB('#ffc828',.32),0,2,0);m.receiveShadow=false;return m;});
@@ -839,17 +857,21 @@ function render3D(dt){
   mArms[0].rotation.z=lerp(mArms[0].rotation.z,cower?2.7:up?2.95:1.5,Math.min(1,dt*12));mArms[1].rotation.z=lerp(mArms[1].rotation.z,cower?2.7:up?2.95:-sw*.5,Math.min(1,dt*12));
   mArms.forEach((a,i)=>{a.rotation.x=(i?-1:1)*.6*clamp((a.rotation.z-1.7)/1.2,0,1);});{const cwr=!!cower;if(cwr&&!wasCower)hatT=.5;wasCower=cwr;hatT=Math.max(0,hatT-dt);mHat.position.y=22+(reduce?0:1.5+1.5*Math.sin(t*Math.PI*4))+(hatT>0?20*Math.sin((1-hatT/.5)*Math.PI):0);}mNoz.visible=Hm.grabbed;mMouth.scale.y=(up||cower)?6:2.5;
   /* hose */
-  const ruined=state==='burst'||state==='won';
-  if(!ruined){for(let i=0;i<=N;i++){const p=rope[i];hv[i].set(p.x,p.z+7,zOf(p.y));}hose3.geometry.dispose();hose3.geometry=new THREE.TubeGeometry(hCurve,190,7,7,false);hose3.visible=true;shred.visible=false;shredDone=false;
+  const ruined=state==='burst'||state==='won',hTele=attacks.some(a=>a.t<a.tele&&a.src!=='human');
+  if(!ruined){for(let i=0;i<=N;i++){const p=rope[i];hv[i].set(p.x,p.z+8.5,zOf(p.y));}hose3.geometry.dispose();hose3.geometry=new THREE.TubeGeometry(hCurve,190,8.75,7,false);hose3.visible=true;shred.visible=false;shredDone=false;
     hoseM.color.copy(HOSE_G).lerp(HOSE_W,(1-hoseHP/100)*.55);if(J.winded>0)hoseM.color.lerp(HOSE_Y,.5+.4*Math.sin(t*20));else if(booga)hoseM.color.lerp(HOSE_P,.3+.25*Math.sin(t*10));
+    if(!reduce){hoseTex.offset.x=(hoseTex.offset.x+(weak>N/2?-1:1)*(hTele?2:.6)*dt)%1;}
     if(state==='play')for(const i of punct)if(Math.random()<.08){const q=rope[i];addPart({type:'water',x:q.x,y:q.y,vx:rand(-70,70),vy:rand(-280,-160),life:.6,max:.6,size:3,g:1});}}
   else if(!shredDone){shredDone=true;hose3.visible=false;shred.visible=true;const d=new THREE.Object3D();for(let i=0;i<30;i++){const p=rope[3+i*Math.floor((N-6)/30)];d.position.set(p.x+rand(-30,30),7,zOf(p.y)+rand(-30,30));d.rotation.set(Math.PI/2,0,rand(0,6.28));d.scale.set(7,rand(30,60),7);d.updateMatrix();shred.setMatrixAt(i,d.matrix);}shred.instanceMatrix.needsUpdate=true;}
   {const ps=punct.slice(-16);scar3.forEach((m,i)=>{const q=!ruined&&ps[i]!==undefined?rope[ps[i]]:null;m.visible=!!q;if(q)m.position.set(q.x,q.z+10,zOf(q.y));});}
-  const w=rope[weak],hot=J.winded>0,showW=!ruined;weak3.visible=weakGlow.visible=weakRing.visible=showW;
-  if(showW){const pul=.6+.4*Math.sin(t*10);weak3.position.set(w.x,w.z+8,zOf(w.y));{const sq=Math.sin(Math.min(1,R.biteT/.3)*Math.PI);weak3.scale.set(15*(1+.7*sq),12*(1-.5*sq),15*(1+.7*sq));}weakGlow.position.copy(weak3.position);weakGlow.scale.setScalar(30+pul*10);weakRing.position.set(w.x,1.8,zOf(w.y));weakRing.scale.setScalar(1+pul*.25);
-    weakM.color.set(hot?'#ff5d5d':'#ffd23f');weakM.emissive.set(hot?'#aa1111':'#aa7700');weakGlow.material.color.set(hot?'#ff7070':'#ffe070');}
-  nozHead.visible=!Hm.grabbed&&!ruined;if(nozHead.visible){const a=rope[N-3],b=rope[N];nozHead.position.set(b.x,b.z+8,zOf(b.y));nozHead.rotation.y=-Math.atan2(zOf(b.y)-zOf(a.y),b.x-a.x);}
-  midHead.visible=phase===3&&Hm.grabbed&&!ruined;if(midHead.visible){const a=rope[MID-3],b=rope[MID];midHead.position.set(b.x,b.z+12,zOf(b.y));midHead.rotation.y=-Math.atan2(zOf(R.y)-zOf(b.y),R.x-b.x);}
+  const w=rope[weak],hot=J.winded>0,showW=!ruined;weak3.visible=weakGlow.visible=weakRing.visible=weakCore.visible=weakTickG.visible=weakBeam.visible=showW;
+  if(showW){const pul=.6+.4*Math.sin(t*10);weak3.position.set(w.x,w.z+8,zOf(w.y));const sq=Math.sin(Math.min(1,R.biteT/.3)*Math.PI),gw=1+.7*sq;weak3.scale.set(15*gw,12*(1-.5*sq),15*gw);weakGlow.position.copy(weak3.position);weakGlow.scale.setScalar(30+pul*10);weakRing.position.set(w.x,1.8,zOf(w.y));weakRing.scale.setScalar(1+pul*.25);
+    weakTickG.position.set(w.x,3,zOf(w.y));weakTickG.scale.setScalar(1+pul*.25);weakTickG.rotation.y=reduce?0:t*6.2832;
+    weakCore.position.copy(weak3.position).addScaledVector(weakTmp.copy(cam.position).sub(weak3.position).normalize(),15*gw+3);weakCore.quaternion.copy(cam.quaternion);weakCore.scale.setScalar(gw);
+    weakBeam.position.set(w.x,124,zOf(w.y));
+    weakM.color.set(hot?'#ff5d5d':'#ffd23f');weakM.emissive.set(hot?'#aa1111':'#aa7700');weakGlow.material.color.set(hot?'#ff7070':'#ffe070');weakBeam.material.color.copy(weakGlow.material.color);}
+  nozHead.visible=!Hm.grabbed&&!ruined;if(nozHead.visible){const a=rope[N-3],b=rope[N];nozHead.position.set(b.x,b.z+14,zOf(b.y));nozHead.rotation.y=-Math.atan2(zOf(b.y)-zOf(a.y),b.x-a.x);trackEyes(nozEyes,nozHead,9);nozJaw.rotation.z=lerp(nozJaw.rotation.z,hTele?-.55:0,1-Math.exp(-dt*14));}
+  midHead.visible=phase===3&&Hm.grabbed&&!ruined;if(midHead.visible){const a=rope[MID-3],b=rope[MID];midHead.position.set(b.x,b.z+22,zOf(b.y));midHead.rotation.y=-Math.atan2(zOf(R.y)-zOf(b.y),R.x-b.x);trackEyes(midEyes,midHead,9);}
   /* pots, puddles, sprinklers, treats */
   pots.forEach((p,i)=>{const o=pot3[i];if(!o)return;o.piv.rotation.z=-p.rot;o.sp.visible=p.fallen;o.sp.position.x=p.dir*38*p.s;});
   pud3.forEach((m,i)=>{const p=puddles[i];m.visible=!!p;if(p){m.position.set(p.x,1.2,zOf(p.y));m.scale.set(p.r,1,p.r*.9);m.material.opacity=.6*Math.min(1,p.life/1.5);}});
