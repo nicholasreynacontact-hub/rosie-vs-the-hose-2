@@ -177,6 +177,42 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 .best{font-family:var(--display)}
 .best b{color:var(--sun)}
 @media (prefers-reduced-motion:reduce){.act.booga.on,.hud .chip.bready,.fill.pow.ready{animation:none}}
+/* ---- pause + wardrobe (design/ux/pause-and-wardrobe.md) -------------------------- */
+.go.paper{background:var(--paper2);color:var(--ui-ink);box-shadow:0 4px 0 var(--ui-ink);font-size:18px}
+.go.paper:active{box-shadow:0 1px 0 var(--ui-ink)}
+#pauseOv{background:none;align-items:flex-end;justify-content:center}
+#pauseOv .card{box-sizing:border-box;margin:0;width:100%;max-width:none;gap:7px;max-height:58vh;overflow:auto}
+#pauseOv .how{font-size:12px;gap:2px 10px}
+#pauseOv h2{font-size:clamp(22px,4.4vw,34px)}
+@media (min-width:720px){#pauseOv{align-items:center;justify-content:flex-start}
+  #pauseOv .card{width:46%;min-width:340px;max-width:560px;max-height:94vh}}
+.pnl{display:flex;flex-direction:column;gap:7px;align-items:center;width:100%}
+.dlbl{font-weight:800;font-size:13px}
+.seg{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.sgb{font:800 13px var(--body);background:var(--paper);color:var(--ui-ink);border:3px solid var(--ui-ink);border-radius:11px 9px 12px 10px;box-shadow:0 3px 0 var(--ui-ink);padding:5px 12px;min-height:34px;cursor:pointer}
+.sgb[aria-checked="true"],.sgb[aria-selected="true"]{background:var(--sun);box-shadow:0 3px 0 var(--ui-ink),inset 0 0 0 3px var(--ui-ink)}
+.sgb[aria-checked="true"]::after{content:" \2713"}
+.dnote{font-size:12px;font-weight:800;color:var(--coral);margin:0}
+.cfm{width:100%;display:flex;flex-direction:column;gap:6px;align-items:center}
+.strip{width:100%;display:flex;flex-direction:column;gap:6px;align-items:center;border:2px dashed rgba(36,21,56,.4);border-radius:12px;padding:8px;box-sizing:border-box}
+.strip p{font-size:13px;margin:0}
+.crow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.wrap{display:flex;gap:9px;width:100%;align-items:flex-start;flex-direction:column}
+.tabs{display:flex;gap:6px;overflow:auto;max-width:100%;flex:0 0 auto}
+.panes{flex:1 1 auto;min-width:0;width:100%}
+@media (min-width:720px){.wrap{flex-direction:row}.tabs{flex-direction:column;overflow:visible}}
+.swg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 7px}
+.sw{position:relative;font:800 10.5px var(--body);color:var(--ui-ink);background:var(--paper);border:3px solid var(--ui-ink);border-radius:50% 50% 46% 54%;box-shadow:0 3px 0 var(--ui-ink);padding:5px 2px;min-height:48px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.05}
+.sw i{display:block;width:24px;height:24px;border-radius:50%;border:3px solid var(--ui-ink);flex:0 0 auto}
+.sw[aria-checked="true"]{box-shadow:0 3px 0 var(--ui-ink),inset 0 0 0 3px var(--ui-ink)}
+.sw[aria-checked="true"] i::after{content:"\2713";display:block;font-size:13px;line-height:18px;color:var(--ui-ink);text-align:center}
+.fall,.note{font-size:12px;margin:0}
+.fall{font-weight:800}
+.cin{position:fixed;inset:0;z-index:12;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.cin b{font-family:var(--display);font-size:clamp(52px,13vw,110px);color:var(--ink);background:var(--paper);border:4px solid var(--ui-ink);box-shadow:0 8px 0 var(--ui-ink);border-radius:22px 28px 20px 26px;padding:2px 26px;transform:rotate(-3deg)}
+.sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+[inert]{pointer-events:none}
+@media (max-width:520px){.hbtn{min-height:46px;min-width:46px;padding:6px 9px}}
 </style>
 
 </head>
@@ -192,6 +228,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
     <div class="chip combo" id="comboChip" hidden><span id="combo">x2</span></div>
     <div class="chip bready" id="boogaChip" hidden><span>BOOGA READY</span></div>
     <div class="map" aria-hidden="true"><i class="deck"></i><i class="lawn"></i><i class="garden"></i><b class="view" id="mView"></b><b class="dot foe" id="mFoe"></b><b class="dot rosie" id="mRosie"></b></div>
+    <button class="hbtn" id="pauseBtn" type="button">Pause</button>
     <button class="hbtn" id="mute" type="button">Sound on</button>
     <button class="hbtn" id="fsBtn" type="button">Full screen</button>
   </div>
@@ -234,6 +271,11 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
       <dt>Shake</dt><dd><strong>Hold</strong> <kbd>Space</kbd> after a bite to thrash for extra damage</dd>
       <dt>Bark</dt><dd><strong>Tap</strong> <kbd>B</kbd> to interrupt a wind-up or stop the reel</dd>
     </dl>
+    <div class="cfm">
+      <span class="dlbl" id="tDiffLbl">How tough is the hose?</span>
+      <div class="seg" id="tSeg" role="radiogroup" aria-labelledby="tDiffLbl"></div>
+      <p class="dnote" id="tDiffNote" hidden></p>
+    </div>
     <button class="go" id="playBtn" type="button">Let Rosie loose</button>
   </div>
 </div>
@@ -263,6 +305,64 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
     <button class="go red" id="retryBtn" type="button">Shake it off and retry</button>
   </div>
 </div>
+
+<div class="ov" id="pauseOv" hidden role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+  <div class="card" id="pauseCard">
+    <div class="pnl" id="pausePanel">
+      <span class="eyebrow">The yard is holding still</span>
+      <h2 id="pauseTitle">Paused</h2>
+      <button class="go" id="resumeBtn" type="button">Back to the yard</button>
+      <button class="go paper" id="wardBtn" type="button">Rosie&#39;s wardrobe</button>
+      <div class="cfm">
+        <span class="dlbl" id="pDiffLbl">How tough is the hose?</span>
+        <div class="seg" id="pSeg" role="radiogroup" aria-labelledby="pDiffLbl"></div>
+        <p class="dnote" id="pDiffNote" hidden></p>
+      </div>
+      <div class="cfm" id="cfmAgain">
+        <button class="go paper" id="againBtn" type="button">Start this hose again</button>
+        <div class="strip" id="stripAgain" hidden>
+          <p>Start this hose again? Your best score is safe; this hose&#39;s points go back to where you started it.</p>
+          <div class="crow"><button class="go paper" id="yesAgain" type="button">Yes, start it over</button><button class="go paper" id="noAgain" type="button">Never mind</button></div>
+        </div>
+      </div>
+      <div class="cfm" id="cfmHome">
+        <button class="go paper" id="homeBtn" type="button">Back to hose #1</button>
+        <div class="strip" id="stripHome" hidden>
+          <p>Back to the very first hose? Your stars stay earned. This run&#39;s score starts fresh.</p>
+          <div class="crow"><button class="go paper" id="yesHome" type="button">Yes, back to the start</button><button class="go paper" id="noHome" type="button">Never mind</button></div>
+        </div>
+      </div>
+      <button class="hbtn" id="pMute" type="button">Sound on</button>
+      <dl class="how">
+        <dt>Move</dt><dd><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the joystick</dd>
+        <dt>Bite</dt><dd><kbd>Space</kbd></dd>
+        <dt>Dash</dt><dd><kbd>Shift</kbd></dd>
+        <dt>Booga</dt><dd><kbd>B</kbd></dd>
+        <dt>Pause</dt><dd><kbd>Esc</kbd> or <kbd>P</kbd></dd>
+      </dl>
+    </div>
+    <div class="pnl" id="wardPanel" hidden>
+      <span class="eyebrow">A wardrobe, not a character creator</span>
+      <h2 id="wardTitle">Rosie&#39;s wardrobe</h2>
+      <p class="fall" id="wFall" hidden>One of Rosie&#39;s things didn&#39;t make it into this version &mdash; pick her something new.</p>
+      <div class="wrap">
+        <div class="tabs" id="wTabs" role="tablist" aria-label="What to change"></div>
+        <div class="panes" id="wPanes"></div>
+      </div>
+      <p class="note" id="wNote">Every colour here keeps Rosie easy to spot in the grass.</p>
+      <div class="cfm" id="cfmReset">
+        <button class="go paper" id="wResetBtn" type="button">Put it all back</button>
+        <div class="strip" id="stripReset" hidden>
+          <p>Put Rosie back the way she came?</p>
+          <div class="crow"><button class="go paper" id="yesReset" type="button">Yes, plain Rosie</button><button class="go paper" id="noReset" type="button">Never mind</button></div>
+        </div>
+      </div>
+      <button class="go" id="wBackBtn" type="button">Back to pause</button>
+    </div>
+  </div>
+</div>
+<div class="cin" id="cin" hidden aria-hidden="true"><b id="cinN">3</b></div>
+<div class="sr" id="liveRgn" aria-live="polite"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -1030,7 +1130,9 @@ const boneM=M('#fffaf0',{roughness:.4,emissive:'#554422'}),treat3=[0,1,2].map(()
   sph(g,MB('#ffdc6e',.14),26,0,0,0,1,1,1,false).material.blending=THREE.AdditiveBlending;g.visible=false;return g;});
 
 /* Rosie */
-const WHITE=new THREE.Color('#ffffff'),WETC=new THREE.Color('#b9dcf5'),FURC=new THREE.Color('#fffaf0').convertSRGBToLinear(),FWET=new THREE.Color('#b9dcf5').convertSRGBToLinear(),FURS=new THREE.Color('#b7b2e8').convertSRGBToLinear();
+const WHITE=new THREE.Color('#ffffff'),WETC=new THREE.Color('#b9dcf5');
+/* wardrobe 2.2: FURC/FURS are captured by the wet lerp in render3D, so wFur() rebuilds them -- without this Rosie snaps back to cream the moment she gets wet */
+let FURC=new THREE.Color('#fffaf0').convertSRGBToLinear(),FWET=new THREE.Color('#b9dcf5').convertSRGBToLinear(),FURS=new THREE.Color('#b7b2e8').convertSRGBToLinear();
 const furM=M('#fffaf0',{roughness:.92}),furS=M('#b7b2e8',{roughness:.92}),collarM=M('#ff4f9a'),peachM=M('#f6ddd0',{roughness:.8}),noseM=M('#3a2030',{roughness:.25}),eyeM=M('#1a0f14',{roughness:.05}),irisM=M('#5a3418'),glintM=new THREE.MeshBasicMaterial({color:'#ffffff'});
 /* art v2 item 4: big round head (about 60% of her), few fat curls, wide readable eyes. Curl placement is a fixed spiral, not r2(). */
 {for(let i=0;i<24;i++){r2();r2();r2();}for(let i=0;i<46;i++){const a=r2()*Math.PI*2,b=(r2()-.3)*Math.PI*.9;if(Math.cos(a)*Math.cos(b)>.42&&Math.sin(b)<.45)continue;r2();}for(let i=0;i<14;i++){r2();r2();r2();}} /* spend the draft's r2() draws so the seeded scenery built after Rosie stays where it was */
@@ -1042,7 +1144,7 @@ const dTail=grp(dBody,-38,50,0);sph(dTail,furM,12,-4,8,0);sph(dTail,furM,10,-12,
 const dHead=grp(dogP,30,116,0);sph(dHead,furM,38,0,0,0);
 {let n=0;for(let i=0;i<28&&n<16;i++){const cy=1-2*(i+.5)/28,rd=Math.sqrt(1-cy*cy),cx=Math.cos(i*2.399)*rd,cz=Math.sin(i*2.399)*rd;if(cx>.1&&cy<.8)continue;sph(dHead,cy<-.15?furS:furM,11+(i*3%4),cx*33,cy*33,cz*33,1,1,1,false);n++;}}
 [[16,2,40],[13,-6,49],[12,-12,56],[10,-17,61],[9,-21,64]].forEach(([r,x,y])=>sph(dHead,furM,r,x,y,0,1,1,1,false)); /* topknot, leaning back */
-{const tie=add(dHead,new THREE.TorusGeometry(15,3.6,8,18),collarM,2,38,0,1,1,1);tie.rotation.set(Math.PI/2,0,.3);} /* tie: the topknot has to read from the rear camera too */
+const dTie=add(dHead,new THREE.TorusGeometry(15,3.6,8,18),collarM,2,38,0,1,1,1);dTie.rotation.set(Math.PI/2,0,.3);/* wardrobe: the Topknot slot owns this */ /* tie: the topknot has to read from the rear camera too */
 for(const s of [1,-1])sph(dHead,furM,11,31,-13,s*8,1,1,1,false); /* muzzle puffs */
 const dEars=[1,-1].map(s=>{const g=grp(dHead,-2,10,s*31);sph(g,furS,1,0,-20,s*7,12,26,10);sph(g,furS,12,0,-44,s*12);return g;});
 sph(dHead,peachM,5,39,-16,0,1,.9,1.2,false);
@@ -1050,16 +1152,232 @@ sph(dHead,noseM,6.5,41,-7,0,.85,.8,1.15,false);sph(dHead,glintM,1.5,45.6,-4.6,1.
 const dEyes=[1,-1].map(s=>{const e=sph(dHead,irisM,11,31,7,s*17,.6,1.1,1,false);sph(e,eyeM,.9,.2,0,0,1,1,1,false);sph(e,glintM,.42,.95,.38,.3,1,1,1,false);sph(e,glintM,.21,1,-.4,-.3,1,1,1,false);return e;});
 for(const s of [1,-1])sph(dHead,MB('#ff8fa3',.5),6,29.5,-6,s*24,.4,.7,1,false);
 /* neck: distinctly smaller than the head and in the shade tone, with the collar as a band across it -- this is what separates head from body from behind */
-{const nk=add(dogP,new THREE.CylinderGeometry(14,17,30,14),furS,23,66,0,1,1,1);nk.rotation.z=-.547;
- const col=add(dogP,new THREE.TorusGeometry(20,6,8,20),collarM,21,62,0,1,1,1);col.rotation.set(Math.PI/2,0,-.547);
- sph(dogP,M('#ffd23f',{emissive:'#7a5a00'}),5.5,38,52,0,1,1,.5,false);}
+const dNeck=add(dogP,new THREE.CylinderGeometry(14,17,30,14),furS,23,66,0,1,1,1);dNeck.rotation.z=-.547;
+const dCol=add(dogP,new THREE.TorusGeometry(20,6,8,20),collarM,21,62,0,1,1,1);dCol.rotation.set(Math.PI/2,0,-.547);
+const dTag=sph(dogP,M('#ffd23f',{emissive:'#7a5a00'}),5.5,38,52,0,1,1,.5,false);/* wardrobe: the Collar slot owns dCol + dTag */
 const dMouth=sph(dHead,M('#5a1f1f'),1,38,-21,0,7,5,8,false),dTongue=sph(dHead,M('#ff7b9c',{roughness:.4}),1,41,-21,0,4.5,2.5,4.5,false);
 const dLegs=[[18,13,0],[18,-13,.6],[-20,13,2.4],[-20,-13,3]].map(([x,z,ph])=>{const g=grp(dogP,x,36,z);cyl(g,furM,7.5,30,0,-16,0);sph(g,furM,9,2,-31,0,1,.72,1);return {g,ph};});
 bake(dBody,furM);bake(dBody,furS);bake(dTail,furM);bake(dHead,furM);bake(dHead,furS);for(const e of dEars)bake(e,furS);for(const l of dLegs)bake(l.g,furM);
 const dBrows=[1,-1].map(s=>sph(dHead,furS,1,34,23,s*17,4.5,4.5,9,false)); /* after the bake: these tilt */
-ink(dog);{const INK_R=INK.clone();INK_R.uniforms.th.value=2.6;INK_R.uniforms.c=INK.uniforms.c;dog.traverse(m=>{if(m.userData.ink)m.material=INK_R;});} /* heavier line on Rosie only */
+ink(dog);const INK_R=INK.clone();INK_R.uniforms.th.value=2.6;INK_R.uniforms.c=INK.uniforms.c;dog.traverse(m=>{if(m.userData.ink)m.material=INK_R;}); /* heavier line on Rosie only */
 {const sh=new THREE.Mesh(new THREE.CircleGeometry(46,24),MB('#241538',.3));sh.rotation.x=-Math.PI/2;sh.position.y=1.2;dog.add(sh);}
 let browS=0,happyT=0;
+
+/* ================= pause + wardrobe (design/ux/pause-and-wardrobe.md) =================
+   Pause: state==='paused' freezes every update; the camera eases to the wardrobe portrait
+   (1.4) so pause cannot be used to scout an incoming attack. Wardrobe: five item slots plus
+   fur, every piece baked per material so the whole outfit costs ~12 draw calls. */
+const WKEY='rosie2-look',MIGRATE={};
+const FURW=[['marshmallow','Marshmallow','#fffaf0'],['buttermilk','Buttermilk','#ffeab0'],['peach','Peach Fuzz','#ffd0b8'],['bubblegumcloud','Bubblegum Cloud','#ffc2dc'],
+  ['lilac','Lilac Puff','#dcc8ff'],['skypup','Sky Pup','#bfe2ff'],['cocoaswirl','Cocoa Swirl','#c99a72'],['storm','Storm Cloud','#cdd3e6']].map(a=>({id:a[0],n:a[1],c:a[2]}));
+const ACCW=[['bubblegum','Bubblegum','#ff4f9a'],['grape','Grape','#8b4dff'],['blueberry','Blueberry','#3d7bff'],['cocoa','Cocoa','#8a5a3c'],
+  ['cream','Cream','#fff1d8'],['plum','Plum','#5a2a6b'],['midnight','Midnight','#241538'],['sunset','Sunset','#ff8a3d',1]].map(a=>({id:a[0],n:a[1],c:a[2],small:!!a[3]}));
+const accC={},accM=c=>accC[c]||(accC[c]=M(c,{roughness:.9})),CRM=()=>accM('#fff1d8'),goldW=M('#ffd23f',{emissive:'#7a5a00'});
+const dink=o=>{ink(o);o.traverse(m=>{if(m.userData.ink)m.material=INK_R;});return o;};
+function seal(g){const ms=[];g.children.forEach(c=>{if(c.isMesh&&ms.indexOf(c.material)<0)ms.push(c.material);});
+  ms.forEach(m=>bake(g,m));dink(g);g.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=false;}});return g;}
+const tor=(g,m,R0,tb,x,y,z,rx,ry)=>{const k=add(g,new THREE.TorusGeometry(R0,tb,8,16),m,x,y,z,1,1,1,false);k.rotation.set(rx||0,ry||0,0);return k;};
+const wrot=(g,rz)=>{g.rotation.z=rz;return g;};
+
+const WSLOTS=[
+{k:'fur',n:'Fur',fur:true,def:'marshmallow',opts:FURW},
+{k:'collar',n:'Collar',def:'classic',dc:'bubblegum',small:true,
+ opts:[{id:'none',n:'None'},{id:'classic',n:'Classic Band'},{id:'chunky',n:'Chunky Band'},{id:'jingle',n:'Jingle Collar'},{id:'ribbon',n:'Ribbon Collar'},{id:'star',n:'Star Tag'}],
+ make(id,m){if(id==='none')return [];const g=wrot(grp(dogP,21,62,0),-.547);
+  tor(g,m,id==='chunky'?21:20,id==='chunky'?9:6,0,0,0,Math.PI/2);
+  if(id==='star'){const a=box(g,goldW,4,17,17,19.7,.3,0,false),b=box(g,goldW,4,17,17,19.7,.3,0,false);a.rotation.z=.2;b.rotation.set(Math.PI/4,0,.2);}
+  else sph(g,goldW,5.5,19.7,.3,0,1,1,.5,false);
+  if(id==='jingle'){sph(g,goldW,3.4,18,.3,8.5,1,1,1,false);sph(g,goldW,3.4,18,.3,-8.5,1,1,1,false);}
+  if(id==='ribbon'){const b=box(g,m,5,15,16,19.4,.3,0,false);b.rotation.x=.5;box(g,m,5,7,7,20,.3,0,false);}
+  return [seal(g)];}},
+{k:'kerchief',n:'Neckerchief',def:'none',dc:'blueberry',small:true,
+ opts:[{id:'none',n:'None'},{id:'cowpup',n:'Cowpup Kerchief'},{id:'sailor',n:'Sailor Square'},{id:'picnic',n:'Picnic Check'},{id:'scarf',n:'Tiny Scarf'},{id:'bowtie',n:'Bow Tie'}],
+ make(id,m){if(id==='none')return [];const g=wrot(grp(dogP,16.8,55,0),-.547);
+  if(id==='bowtie'){const a=sph(g,m,1,16,2,9,7,9,9,false),b=sph(g,m,1,16,2,-9,7,9,9,false);sph(g,m,4,17,2,0,1,1,1,false);a.rotation.z=.2;b.rotation.z=-.2;}
+  else{const c=add(g,G_K4,m,7,-3,0,19,14,16,false);c.rotation.set(Math.PI,Math.PI/4,-.18);
+   const p=box(g,id==='picnic'?CRM():m,11,4,13,12,-15,0,false);p.rotation.z=.35;
+   if(id==='sailor')box(g,m,13,4,20,8,-13,0,false);
+   if(id==='picnic'){box(g,CRM(),5,4,15,13,-6,0,false);box(g,CRM(),13,4,5,10,-10,6,false);}
+   if(id==='scarf'){const t=box(g,m,8,24,5,13,-27,0,false);t.rotation.z=.22;}}
+  return [seal(g)];}},
+{k:'hat',n:'Hat',def:'none',dc:'grape',
+ opts:[{id:'none',n:'None'},{id:'suncap',n:'Sun Cap'},{id:'party',n:'Party Hat'},{id:'bucket',n:'Bucket Hat'},{id:'flower',n:'Flower Crown'},{id:'earmuffs',n:'Earmuffs'},{id:'beanie',n:'Winter Beanie'}],
+ make(id,m){if(id==='none')return [];const g=grp(dHead,0,46,0);
+  if(id==='suncap'){cyl(g,m,20,16,0,4,0,false);const b=box(g,m,26,4,23,15,-3,0,false);b.rotation.z=-.08;}
+  else if(id==='party'){const c=cone(g,m,16,40,0,18,0,false);sph(g,CRM(),6,0,40,0,1,1,1,false);}
+  else if(id==='bucket'){cyl(g,m,19,18,0,6,0,false);tor(g,m,24,5,0,-3,0,Math.PI/2);}
+  else if(id==='flower'){tor(g,m,21,4.5,0,-2,0,Math.PI/2);for(let i=0;i<5;i++){const a=i/5*Math.PI*2;sph(g,CRM(),6.5,Math.cos(a)*21,1,Math.sin(a)*21,1,1,1,false);}}
+  else if(id==='earmuffs'){sph(g,m,11,0,-18,34,1,1,.7,false);sph(g,m,11,0,-18,-34,1,1,.7,false);tor(g,m,33,4.5,0,-14,0,0,Math.PI/2);}
+  else{sph(g,m,22,0,-6,0,1,.8,1,false);tor(g,CRM(),22,6,0,-14,0,Math.PI/2);}
+  return [seal(g)];}},
+{k:'sweater',n:'Sweater',def:'none',dc:'cocoa',
+ opts:[{id:'none',n:'None'},{id:'knit',n:'Cosy Knit'},{id:'stripey',n:'Stripey Jumper'},{id:'puffer',n:'Puffer Vest'},{id:'raincoat',n:'Raincoat'},{id:'spotty',n:'Spotty Tee'}],
+ make(id,m){if(id==='none')return [];const out=[],g=grp(dBody);
+  if(id==='puffer'){sph(g,m,1,-26,42,0,22,19,25,false);sph(g,m,1,-6,41,0,24,20,26,false);sph(g,m,1,14,38,0,20,17,22,false);}
+  else{sph(g,m,1,-6,40,0,36,24.4,27.6,false);
+   if(id==='stripey')tor(g,CRM(),26,6,-6,40,0,0,Math.PI/2);
+   if(id==='spotty')for(const p of [[-20,52,12],[2,50,-14],[-28,36,-18],[10,34,16]])sph(g,CRM(),6,p[0],p[1],p[2],1,1,1,false);}
+  out.push(seal(g));
+  if(id==='raincoat'){const hd=grp(dHead,-14,6,0);sph(hd,m,1,0,0,0,42,30,42,false);out.push(seal(hd));}
+  for(let i=0;i<2;i++){const c=grp(dLegs[i].g,0,-10,0);cyl(c,m,8.8,10,0,0,0,false);out.push(seal(c));}
+  return out;}},
+{k:'topknot',n:'Topknot',def:'plain',dc:'bubblegum',small:true,
+ opts:[{id:'none',n:'None'},{id:'plain',n:'Plain Tie'},{id:'bigbow',n:'Big Bow'},{id:'scrunchie',n:'Scrunchie'},{id:'pigtails',n:'Two Pigtails'},{id:'daisy',n:'Daisy'}],
+ make(id,m){if(id==='none')return [];const g=wrot(grp(dHead,2,38,0),.3);
+  if(id==='plain')tor(g,m,15,3.6,0,0,0,Math.PI/2);
+  else if(id==='scrunchie')tor(g,m,15,7.5,0,0,0,Math.PI/2);
+  else if(id==='bigbow'){tor(g,m,13,4,0,0,0,Math.PI/2);const a=sph(g,m,1,0,2,15,9,11,8,false),b=sph(g,m,1,0,2,-15,9,11,8,false);a.rotation.x=.3;b.rotation.x=-.3;}
+  else if(id==='pigtails'){tor(g,m,13,4,0,0,0,Math.PI/2);tor(g,m,8,4,0,-6,17,0,Math.PI/2);tor(g,m,8,4,0,-6,-17,0,Math.PI/2);}
+  else{sph(g,m,6,0,2,0,1,1,1,false);for(let i=0;i<5;i++){const a=i/5*Math.PI*2;sph(g,CRM(),6,0,2+Math.sin(a)*11,Math.cos(a)*11,1,1,1,false);}}
+  return [seal(g)];}}];
+
+const wPal=s=>s.small?ACCW:ACCW.filter(a=>!a.small);
+const Wdef=()=>{const o={v:1,fur:'marshmallow'};WSLOTS.forEach(s=>{if(!s.fur)o[s.k]={id:s.def,c:s.dc};});return o;};
+let look=Wdef(),wFellBack=false,wTab='fur',wT=null;
+const wGroups={};
+function wFur(hex){const sh=mix(hex,'#6f67c6',.46);
+  FURC=new THREE.Color(hex).convertSRGBToLinear();FURS=new THREE.Color(sh).convertSRGBToLinear();
+  furM.color.copy(FURC);furS.color.copy(FURS);}
+function wLoad(){const raw=store.get(WKEY);if(!raw)return;let o=null;
+  try{o=JSON.parse(raw);}catch(e){return;}
+  if(!o||typeof o!=='object')return;
+  const mg=MIGRATE[o.v];if(mg)for(const k in mg){if(o[k]&&mg[k][o[k].id])o[k].id=mg[k][o[k].id];}
+  for(const s of WSLOTS){const v=o[s.k];
+    if(s.fur){if(typeof v==='string'&&FURW.some(f=>f.id===v))look.fur=v;else if(v!==undefined)wFellBack=true;continue;}
+    if(v===undefined)continue;
+    if(!v||typeof v!=='object'){wFellBack=true;continue;}
+    if(s.opts.some(x=>x.id===v.id))look[s.k].id=v.id;else wFellBack=true;
+    if(v.c!==undefined){if(wPal(s).some(x=>x.id===v.c))look[s.k].c=v.c;else wFellBack=true;}}}
+const wSave=()=>{if(wT)clearTimeout(wT);wT=setTimeout(()=>{wT=null;store.set(WKEY,JSON.stringify(look));},300);};
+function wApply(k){const s=WSLOTS.find(x=>x.k===k);
+  if(s.fur){wFur((FURW.find(x=>x.id===look.fur)||FURW[0]).c);return;}
+  for(const g of (wGroups[k]||[]))if(g.parent)g.parent.remove(g);
+  const o=s.opts.find(x=>x.id===look[k].id)||s.opts[0],pal=wPal(s),c=(pal.find(x=>x.id===look[k].c)||pal[0]).c;
+  wGroups[k]=s.make(o.id,accM(c))||[];}
+function wApplyAll(){for(const s of WSLOTS)wApply(s.k);}
+
+/* ---------- pause ---------- */
+let pauseK=0,pauseTgt=0,cinQ=null,cinT=0;
+const say=s=>{const e=$('liveRgn');if(e)e.textContent=s;};
+function setInert(v){for(const id of ['hud','controls','game']){const e=$(id);if(!e)continue;
+  if(v){e.setAttribute('inert','');e.setAttribute('aria-hidden','true');}else{e.removeAttribute('inert');if(id!=='game')e.removeAttribute('aria-hidden');}}}
+function startCin(){const q=reduce?[['GO!',.4]]:[['3',.35],['2',.35],['1',.35],['GO!',.25]];
+  cinQ=q.map(a=>({n:a[0],t:a[1]}));cinT=cinQ[0].t;$('cinN').textContent=cinQ[0].n;$('cin').hidden=false;
+  say(reduce?'go':'3');if(cinQ[0].n==='GO!')try{sfx.bark();}catch(e){}}
+function pauseTick(raw){const sp=reduce?1:raw/.35;pauseK=clamp(pauseK+(pauseTgt?sp:-sp),0,1);
+  if(cinQ){cinT-=raw;
+    if(cinT<=0){cinQ.shift();
+      if(!cinQ.length){cinQ=null;$('cin').hidden=true;state='play';R.iframe=Math.max(R.iframe,.4);lastHud='';}
+      else{cinT=cinQ[0].t;$('cinN').textContent=cinQ[0].n;say(cinQ[0].n==='GO!'?'go':cinQ[0].n);if(cinQ[0].n==='GO!')try{sfx.bark();}catch(e){}}}}}
+function closeStrips(){let any=false;for(const id of ['stripAgain','stripHome','stripReset']){const e=$(id);if(e&&!e.hidden){e.hidden=true;any=true;}}return any;}
+function wShow(on){$('wardPanel').hidden=!on;$('pausePanel').hidden=!!on;closeStrips();
+  if(on){$('wFall').hidden=!wFellBack;wSel(wTab);}}
+function pause(){if(state!=='play'||cinQ)return;state='paused';pauseTgt=1;
+  biteBuf=0;dashBuf=0;boogaBuf=0;for(const k in keys)keys[k]=false;joy=null;ptr=null;
+  biteHeld=false;boogaDown=false;boogaFired=false;if(R.hurt>0)R.hurt=0;
+  try{knob.style.transform='';}catch(e){}
+  wShow(false);$('pauseOv').hidden=false;setInert(true);syncSeg();
+  $('pMute').textContent=muted?'Sound off':'Sound on';
+  $('resumeBtn').focus({preventScroll:true});say('Paused dialog. Back to the yard.');}
+function resume(){if(state!=='paused'||cinQ)return;$('pauseOv').hidden=true;setInert(false);pauseTgt=0;
+  $('pauseBtn').focus({preventScroll:true});try{ensureAudio();}catch(e){}startCin();}
+function restart(all){if(state!=='paused'||cinQ)return;writeBest();
+  if(all){level=1;score=0;}else score=levelScore;
+  resetLevel();state='paused';pauseTgt=0;$('pauseOv').hidden=true;setInert(false);closeStrips();
+  $('pauseBtn').focus({preventScroll:true});try{ensureAudio();}catch(e){}startCin();}
+function escKey(){if(state==='play'){pause();return;}
+  if(state==='paused'&&!cinQ){if(closeStrips()){$('resumeBtn').focus({preventScroll:true});return;}
+    if(!$('wardPanel').hidden){wShow(false);$('wardBtn').focus({preventScroll:true});return;}
+    resume();}}
+
+/* ---------- difficulty selector (title + pause); the modes live behind ROSIE_MODE ---------- */
+const DLBL={easy:'Easy',med:'Medium',hard:'Tough'};
+function buildSeg(host){const RM=window.ROSIE_MODE;if(!host||!RM)return;host.innerHTML='';
+  RM.list.forEach(m=>{const b=document.createElement('button');b.type='button';b.className='sgb';b.dataset.m=m;
+    b.setAttribute('role','radio');b.textContent=DLBL[m]||m;
+    b.addEventListener('click',()=>{RM.set(m);syncSeg();say('How tough is the hose: '+(DLBL[m]||m)+'. '+RM.label());});
+    host.appendChild(b);});}
+function syncSeg(){const RM=window.ROSIE_MODE;if(!RM)return;
+  for(const id of ['tSeg','pSeg']){const h=$(id);if(!h)continue;
+    for(const b of h.children)b.setAttribute('aria-checked',b.dataset.m===RM.pending?'true':'false');}
+  const q=RM.pending!==RM.current,n1=$('tDiffNote'),n2=$('pDiffNote');
+  if(n1){n1.textContent=RM.label();n1.hidden=false;}
+  if(n2){n2.textContent=RM.label()+(q?'. Changed mid-hose, so this one scores at the easier setting.':'');n2.hidden=false;}}
+
+/* ---------- wardrobe UI ---------- */
+function wSel(k,quiet){wTab=k;
+  for(const t of $('wTabs').children){const on=t.dataset.k===k;t.setAttribute('aria-selected',on?'true':'false');t.tabIndex=on?0:-1;}
+  for(const p of $('wPanes').children)p.hidden=p.dataset.k!==k;
+  $('wNote').hidden=k!=='fur';
+  if(!quiet){const t=[...$('wTabs').children].find(x=>x.dataset.k===k);if(t)t.focus({preventScroll:true});}}
+function wTabKey(e){const ks=[...$('wTabs').children],i=ks.findIndex(x=>x.dataset.k===wTab);let j=-1;
+  const k=e.key;
+  if(k==='ArrowRight'||k==='ArrowDown')j=(i+1)%ks.length;
+  else if(k==='ArrowLeft'||k==='ArrowUp')j=(i-1+ks.length)%ks.length;
+  else if(k==='Home')j=0;else if(k==='End')j=ks.length-1;
+  if(j>=0){e.preventDefault();wSel(ks[j].dataset.k);}}
+function wGrid(s,kind){const g=document.createElement('div');g.className='swg';g.setAttribute('role','radiogroup');
+  g.setAttribute('aria-label',kind==='opt'?(s.fur?'Fur colour':s.n):s.n+' colour');
+  const items=kind==='opt'?s.opts:wPal(s);
+  items.forEach(o=>{const b=document.createElement('button');b.type='button';b.className='sw';b.setAttribute('role','radio');b.dataset.id=o.id;
+    const sw=o.c||(s.fur?null:'#fff6e4');
+    b.innerHTML=(sw?'<i style="background:'+sw+'"></i>':'')+'<span>'+o.n+'</span>';
+    b.setAttribute('aria-label',o.n);b.tabIndex=-1;
+    b.addEventListener('click',()=>wPick(s,kind,o.id));
+    b.addEventListener('keydown',e=>{const kids=[...g.children],i=kids.indexOf(b);let j=-1;
+      if(e.key==='ArrowRight')j=(i+1)%kids.length;else if(e.key==='ArrowLeft')j=(i-1+kids.length)%kids.length;
+      else if(e.key==='ArrowDown')j=Math.min(kids.length-1,i+4);else if(e.key==='ArrowUp')j=Math.max(0,i-4);
+      else if(e.key==='Home')j=0;else if(e.key==='End')j=kids.length-1;
+      if(j>=0){e.preventDefault();kids[j].focus({preventScroll:true});kids[j].click();}});
+    g.appendChild(b);});
+  return g;}
+function wSync(){for(const p of $('wPanes').children){const s=WSLOTS.find(x=>x.k===p.dataset.k);
+  const gs=[...p.children];
+  gs.forEach((g,gi)=>{const cur=s.fur?look.fur:(gi===0?look[s.k].id:look[s.k].c);
+    let first=null,sel=null;
+    for(const b of g.children){const on=b.dataset.id===cur;b.setAttribute('aria-checked',on?'true':'false');b.tabIndex=on?0:-1;if(!first)first=b;if(on)sel=b;}
+    if(!sel&&first)first.tabIndex=0;});}}
+function wPick(s,kind,id){
+  if(s.fur)look.fur=id;else if(kind==='opt')look[s.k].id=id;else look[s.k].c=id;
+  wApply(s.k);wSync();wSave();
+  if(!reduce)happyT=1.6;
+  const nm=(kind==='opt'?(s.fur?FURW:s.opts):wPal(s)).find(x=>x.id===id);
+  const cn=s.fur?'':(wPal(s).find(x=>x.id===look[s.k].c)||{}).n;
+  say(s.n+': '+(s.fur?nm.n:(s.opts.find(x=>x.id===look[s.k].id)||{}).n+(cn?', '+cn:'')));}
+function wBuildUI(){const tabs=$('wTabs'),panes=$('wPanes');tabs.innerHTML='';panes.innerHTML='';
+  for(const s of WSLOTS){
+    const tb=document.createElement('button');tb.type='button';tb.className='sgb';tb.setAttribute('role','tab');tb.dataset.k=s.k;tb.textContent=s.n;tb.tabIndex=-1;
+    tb.addEventListener('click',()=>wSel(s.k,true));tb.addEventListener('keydown',wTabKey);tabs.appendChild(tb);
+    const p=document.createElement('div');p.dataset.k=s.k;p.hidden=true;p.appendChild(wGrid(s,'opt'));
+    if(!s.fur)p.appendChild(wGrid(s,'col'));
+    panes.appendChild(p);}
+  wSync();wSel('fur',true);}
+
+function initPauseUI(){
+  dCol.visible=false;dTag.visible=false;dTie.visible=false;   /* the wardrobe owns these three */
+  wLoad();wApplyAll();
+  buildSeg($('tSeg'));buildSeg($('pSeg'));syncSeg();
+  window.onRosieMode=()=>syncSeg();
+  wBuildUI();
+  $('pauseBtn').addEventListener('click',()=>{if(state==='play')pause();else if(state==='paused'&&!cinQ)escKey();});
+  $('resumeBtn').addEventListener('click',resume);
+  $('wardBtn').addEventListener('click',()=>{wShow(true);});
+  $('wBackBtn').addEventListener('click',()=>{wShow(false);$('wardBtn').focus({preventScroll:true});});
+  const strip=(btn,st,yes,no,act)=>{$(btn).addEventListener('click',()=>{closeStrips();$(st).hidden=false;$(no).focus({preventScroll:true});});
+    $(yes).addEventListener('click',act);$(no).addEventListener('click',()=>{$(st).hidden=true;$(btn).focus({preventScroll:true});});};
+  strip('againBtn','stripAgain','yesAgain','noAgain',()=>restart(false));
+  strip('homeBtn','stripHome','yesHome','noHome',()=>restart(true));
+  strip('wResetBtn','stripReset','yesReset','noReset',()=>{look=Wdef();wApplyAll();wSync();wSave();closeStrips();
+    $('wResetBtn').focus({preventScroll:true});say('Rosie is back the way she came.');});
+  $('pMute').addEventListener('click',()=>setMute(!muted));
+  $('pauseOv').addEventListener('keydown',e=>{if(e.key!=='Tab')return;
+    const f=[...$('pauseOv').querySelectorAll('button,[href],input,select,textarea')].filter(x=>!x.disabled&&x.tabIndex>=0&&x.offsetParent!==null);
+    if(!f.length)return;const i=f.indexOf(document.activeElement);
+    if(e.shiftKey&&(i<=0)){e.preventDefault();f[f.length-1].focus({preventScroll:true});}
+    else if(!e.shiftKey&&i===f.length-1){e.preventDefault();f[0].focus({preventScroll:true});}});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&state==='play')pause();});
+}
+
 const dAura=sph(dog,MB('#c77dff',0),100,0,62,0,1,1,1,false);dAura.material.blending=THREE.AdditiveBlending;
 /* the waterer */
 const man=grp(scene),manP=grp(man),skinM=M('#e9ae8c',{roughness:.5}),jeansM=M('#33507f',{roughness:.8}),shirtM=M('#f4ead2'),apronM=M('#1f8f8a'),bootM=M('#2a6f7f'),hatM=M('#e8c66a'),hairM=M('#5b3a29'),eyeWM=M('#ffffff'),yelM=M('#ffd23f',{roughness:.5});
@@ -1230,7 +1548,14 @@ function render3D(dt){
   /* title: hero framing - closer in, aimed to Rosie's left so she sits on the right of frame
      and the docked title card has empty yard to sit on (art-direction-v2, item 10) */
   if(state==='title'){ch=wide?250:300;cd=wide?450:560;ly=wide?130:190;hx=-Math.tan(baseFov*Math.PI/360)*cam.aspect*cd*(wide?.46:.24);}
-  cam.position.set(camTX+hx+(shake>0?rand(-8,8)*shake*4:0),ch+(shake>0?rand(-6,6)*shake*4:0),camTZ+cd);cam.lookAt(camTX+hx,ly,camTZ-210);
+  /* 1.4: pause eases (0.35 s) to the wardrobe portrait so the rope, the weak spot and every live
+     attack leave the frame -- without this, pause is a free scouting tool. */
+  {let px=camTX+hx+(shake>0?rand(-8,8)*shake*4:0),py=ch+(shake>0?rand(-6,6)*shake*4:0),pz=camTZ+cd,lx=camTX+hx,lyv=ly,lz=camTZ-210;
+   if(pauseK>.0005){const pk=pauseK*pauseK*(3-2*pauseK),pcd=wide?380:360,pch=wide?96:66,pa=.58,ply=wide?76:-16,
+     off=wide?-Math.tan(baseFov*Math.PI/360)*cam.aspect*pcd*.42:0,rx=Math.cos(pa)*off,rz2=-Math.sin(pa)*off;
+    px=lerp(px,R.x+Math.sin(pa)*pcd+rx,pk);py=lerp(py,pch,pk);pz=lerp(pz,rz+Math.cos(pa)*pcd+rz2,pk);
+    lx=lerp(lx,R.x+rx,pk);lyv=lerp(lyv,ply,pk);lz=lerp(lz,rz+rz2,pk);}
+   cam.position.set(px,py,pz);cam.lookAt(lx,lyv,lz);}
   sun.position.set(camTX-1100,520,camTZ-380);sun.target.position.set(camTX,0,camTZ-60);fill.position.set(camTX+700,420,camTZ-700);fill.target.position.set(camTX,0,camTZ);
   /* sky: blue at the start, greener as the hose is chewed, purple and green during BOOGA TIME */
   for(const k of ['top','mid','bot'])skyU[k].value.copy(SKY[k][0]).lerp(SKY[k][1],skyP);scene.fog.color.copy(FOG_A).lerp(FOG_B,skyP).lerp(FOG_P,boogaK);
@@ -1360,11 +1685,14 @@ function hud(){const pc=v=>(clamp(v/WORLD,0,1)*100).toFixed(2)+'%';$('mRosie').s
 /* ---------- input ---------- */
 function readInput(){let x=0,y=0;if(keys.arrowleft||keys.a)x-=1;if(keys.arrowright||keys.d)x+=1;if(keys.arrowup||keys.w)y-=1;if(keys.arrowdown||keys.s)y+=1;
   if(joy){x+=joy.x;y+=joy.y;}if(ptr){_v.set(ptr.x/VW*2-1,1-ptr.y/VH*2,.5).unproject(cam).sub(cam.position);if(_v.y<-.001){const k=-cam.position.y/_v.y,dx=cam.position.x+_v.x*k-R.x,dz=cam.position.z+_v.z*k-zOf(R.y),d=Math.hypot(dx,dz);if(d>22){x+=dx/d;y+=dz/d;}}}const m=Math.hypot(x,y);if(m>1){x/=m;y/=m;}inX=x;inY=y;}
-window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=true;
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();
+  if(k==='escape'||k==='p'){if(state==='paused')e.preventDefault();if(!e.repeat)escKey();return;}   /* 1.2 */
+  keys[k]=true;
   if(!e.repeat){if(k===' '||k==='j'){biteBuf=.2;biteHeld=true;}if(k==='shift'||k==='k')dashBuf=.2;if(k==='b')boogaDownNow();}
   if(state==='play'&&['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();});
 window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if(k===' '||k==='j')biteHeld=false;if(k==='b')boogaRelease();});
-window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;ptr=null;joy=null;biteHeld=false;boogaDown=false;boogaFired=false;});
+window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;ptr=null;joy=null;biteHeld=false;boogaDown=false;boogaFired=false;
+  if(state==='play')pause();});   /* 1.2: tab-away never costs health */
 const toLogical=e=>({x:e.clientX,y:e.clientY});
 cv.addEventListener('pointerdown',e=>{ptr=toLogical(e);try{cv.setPointerCapture(e.pointerId);}catch(_){}});
 cv.addEventListener('pointermove',e=>{if(ptr)ptr=toLogical(e);});
@@ -1383,12 +1711,14 @@ $('boogaBtn').addEventListener('pointerdown',e=>{e.preventDefault();boogaDownNow
 $('playBtn').addEventListener('click',()=>{ensureAudio();$('startOv').hidden=true;mode=pendingMode;runMinMode=mode;resetLevel();sfx.bark();});   // 5.3
 $('nextBtn').addEventListener('click',()=>{ensureAudio();$('winOv').hidden=true;level++;resetLevel();sfx.bark();});
 $('retryBtn').addEventListener('click',()=>{ensureAudio();$('loseOv').hidden=true;score=levelScore;resetLevel();sfx.bark();});
-$('mute').addEventListener('click',()=>{muted=!muted;$('mute').textContent=muted?'Sound off':'Sound on';if(!muted)ensureAudio();});
+function setMute(v){muted=v;const t=muted?'Sound off':'Sound on';$('mute').textContent=t;const pm=$('pMute');if(pm)pm.textContent=t;if(!muted)ensureAudio();}
+$('mute').addEventListener('click',()=>setMute(!muted));
 const fsBtn=$('fsBtn'),de=document.documentElement;
 if(!(de.requestFullscreen||de.webkitRequestFullscreen))fsBtn.hidden=true;
 fsBtn.addEventListener('click',()=>{try{if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}
   else{const p=(de.requestFullscreen||de.webkitRequestFullscreen).call(de);if(p&&p.catch)p.catch(()=>{fsBtn.hidden=true;});}}catch(e){fsBtn.hidden=true;}});
-document.addEventListener('fullscreenchange',()=>{fsBtn.textContent=document.fullscreenElement?'Exit full screen':'Full screen';setTimeout(resize,50);});
+document.addEventListener('fullscreenchange',()=>{fsBtn.textContent=document.fullscreenElement?'Exit full screen':'Full screen';setTimeout(resize,50);
+  if(!document.fullscreenElement&&state==='play')pause();});   /* 1.2: the browser eats Escape in full screen */
 
 /* ---------- loop ---------- */
 initRope();pickWaypoint();Object.assign(R,{stam:dMax(),stamT:0,held:false});
@@ -1401,17 +1731,23 @@ window.ROSIE_MODE={
   get current(){return mode},
   get pending(){return pendingMode},
   get runMin(){return runMinMode},
-  get live(){return state==='play'},
-  label(){return state==='play'?'Applies at Hose #'+(level+1):'Applies now'},
+  get live(){return state==='play'||state==='paused'},
+  label(){return (state==='play'||state==='paused')?'Applies at Hose #'+(level+1):'Applies now'},
   best(m){return bestScore(m)},
   stars(m,n){return parseInt(store.get('rosie2-stars-'+(m||mode)+'-'+n)||'0',10)||0},
   set(m){if(!DIFF[m])return false;pendingMode=m;store.set('rosie2-mode',m);
-    if(state!=='play'){mode=m;if(MRANK[m]<MRANK[runMinMode])runMinMode=m;
+    if(state!=='play'&&state!=='paused'){mode=m;if(MRANK[m]<MRANK[runMinMode])runMinMode=m;
       const b=bestScore(),e=$('tBest');if(e){e.textContent=b;$('bestLine').hidden=b<=0;}}
     if(typeof window.onRosieMode==='function'){try{window.onRosieMode(mode,pendingMode)}catch(_){}}
     return true;}};
+initPauseUI();
 let last=performance.now();
-function frame(now){const raw=Math.min(.05,(now-last)/1000);last=now;dtS=lerp(dtS,raw,.2);let dt=dtS;if(hitStop>0){hitStop-=raw;dt*=.03;}t+=dt;
+function frame(now){const raw=Math.min(.05,(now-last)/1000);last=now;
+  /* 1.3: paused skips elapsed, every upd*, hud() and all integration; last=now above is what stops
+     a 60 s pause from resuming as one giant frame step. */
+  if(state==='paused'){pauseTick(raw);render3D(0);drawOverlay();requestAnimationFrame(frame);return;}
+  if(pauseK>0)pauseTick(raw);
+  dtS=lerp(dtS,raw,.2);let dt=dtS;if(hitStop>0){hitStop-=raw;dt*=.03;}t+=dt;
   if(state==='play'){elapsed+=dt;if(booga){boogaT+=dt;beatT+=dt;if(beatT>.25){beatT=0;sfx.beat(beatN++);}if(boogaT>bLen())endBooga();}}
   if(state==='burst'){burstT+=dt;if(burstT>1.6)won();}
   readInput();if(biteBuf>0){biteBuf-=raw;if(tryBite())biteBuf=0;}if(dashBuf>0){dashBuf-=raw;if(tryDash())dashBuf=0;}
