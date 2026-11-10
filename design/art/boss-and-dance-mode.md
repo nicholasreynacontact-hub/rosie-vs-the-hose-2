@@ -181,6 +181,12 @@ GIANT DANCE MODE entry, 3 live max, 2.5 s life, no shadows. One `bake()`d group 
 
 ## 5. Mood: sunset or the concept's dusk
 
+> **RULING (user, 2026-11-10): stay daytime.** The concept art's dusk is not adopted.
+> Do not repaint the yard to night, and do not ramp the light darker as the hose takes
+> damage — the sky still shifts toward green with `skyP`, but overall brightness stays
+> put. Lantern and windmill remain NICE and must not imply nightfall. Anything below
+> that reads as a move toward dusk is out of scope.
+
 **Recommendation: do not repaint to dusk. Let the fight walk there instead.**
 
 The concept is a single painted frame at dusk; v3's entire readability guardrail set — the amber weak
