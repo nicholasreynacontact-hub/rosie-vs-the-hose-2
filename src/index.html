@@ -506,6 +506,89 @@ const LCAP=()=>Math.min(level,12);   // 4.3: difficulty is frozen from level 12 
 const atkMult=()=>Math.max(.70,1-.04*Math.max(0,LCAP()-5));
 const leapsFor=()=>clamp(Math.min(9,1+Math.min(level,3)+(phase-1)+Math.floor(Math.max(0,LCAP()-5)/2))+D().leapAdj,1,10);
 
+/* ---------- special-moves.md 3.1 / 4.1: the motion reader ----------
+   Flicks, not holds. A direction only becomes a token if it was RELEASED inside MOT_HOLD, which is
+   the whole accident guard: running holds a direction for 0.3-3 s and a dodge holds one too, so
+   neither emits anything. Tokens are numpad digits and are CAMERA-RELATIVE - inX/inY are screen
+   axes, so '8' is away from the camera at every R.ang. motT is wall time: a hitStop must not
+   stretch the windows. */
+const MOT_IN=.55,MOT_OUT=.30,MOT_HOLD=.22,MOT_GAP=.40,MOT_BASE=.30,MOT_PER=.22,MOT_SLOP=1,MOT_BTN=.18,MOT_DWELL=.09;
+const MOT_OCT=[6,3,2,1,4,7,8,9];                        // atan2 octant -> numpad digit (inY+ is toward the camera)
+const MOT_DIAG={9:[8,6],3:[6,2],1:[2,4],7:[4,8]};       // forgiveness (1): one diagonal stands in for a neighbour
+const MOT_ANG={8:90,9:45,6:0,3:-45,2:-90,1:-135,4:180,7:135};
+const MOT_GLYPH={8:'↑',9:'↗',6:'→',3:'↘',2:'↓',1:'↙',4:'←',7:'↖'};
+const Mot={buf:[],dir:-1,dirT:0,last:-1,hint:'',hintT:0,pend:null,pendT:-9};
+let motT=0;
+const motWin=n=>MOT_BASE+MOT_PER*n;
+function motTurn(a,b){const d=Math.abs(MOT_ANG[a]-MOT_ANG[b])%360;return d>180?360-d:d;}
+function motClear(){Mot.buf.length=0;Mot.dir=-1;Mot.dirT=0;Mot.last=-1;Mot.hintT=0;Mot.pend=null;}
+/* 3.1 forgiveness (4): the buffer is NEVER cleared on a failed match, so a stray flick in front of
+   a good motion still completes from the tail. Records only expire by age. */
+function motPush(tok){Mot.buf.push({tok:tok,t:motT});if(Mot.buf.length>10)Mot.buf.shift();Mot.last=tok;
+  if(Mot.pend&&motT-Mot.pendT<=MOT_BTN&&motMatch(Mot.pend,true)){Mot.pend=null;return;}   // forgiveness (3): mash-ahead
+  motHint();}
+/* called in the tick beside readInput */
+function motDir(dt){
+  if(state!=='play'){if(Mot.dir>=0){Mot.dir=-1;Mot.dirT=0;}return;}
+  const m=Math.hypot(inX,inY),touch=padId!==null,
+        tok=m>0?MOT_OCT[((Math.round(Math.atan2(inY,inX)/(Math.PI/4))%8)+8)%8]:-1;
+  if(m<=MOT_OUT){if(!touch&&Mot.dir>=0&&Mot.dirT<=MOT_HOLD)motPush(Mot.dir);Mot.dir=-1;Mot.dirT=0;return;}
+  if(m<MOT_IN&&Mot.dir<0)return;                         // hysteresis: rim jitter never starts a token
+  if(tok!==Mot.dir){
+    if(!touch&&Mot.dir>=0&&Mot.dirT<=MOT_HOLD)motPush(Mot.dir);   // a roll straight into a new direction counts as a release
+    Mot.dir=tok;Mot.dirT=0;return;}
+  Mot.dirT+=dt;
+  /* touch: one continuous swoop. A token needs a >=90 deg turn from the last pushed one plus a
+     MOT_DWELL dwell, so sweeping through 45 deg neighbours emits nothing. */
+  if(touch&&Mot.dirT>=MOT_DWELL&&tok!==Mot.last&&(Mot.last<0||motTurn(Mot.last,tok)>=90)){motPush(tok);Mot.dirT=MOT_DWELL*-1e9;}
+}
+/* 3.1: longest pattern first, walking backwards from the button token. Returns the time of the
+   first matched record, or null. Allows MOT_SLOP skipped records and ONE diagonal substitution. */
+function motSeq(seq,now){
+  const b=Mot.buf;let i=b.length-1,slop=MOT_SLOP,sub=1,lastT=now,firstT=now,endT=now;
+  for(let s=seq.length-1;s>=0;s--){
+    let found=-1;
+    while(i>=0){const r=b[i];
+      if(now-r.t>2.2){i=-1;break;}
+      if(r.tok===seq[s]){found=i;break;}
+      if(sub>0&&MOT_DIAG[r.tok]&&MOT_DIAG[r.tok].indexOf(seq[s])>=0){sub--;found=i;break;}
+      if(slop<=0)break;slop--;i--;}
+    if(found<0)return null;
+    const r=b[found];
+    if(Math.abs(lastT-r.t)>MOT_GAP)return null;
+    lastT=r.t;firstT=r.t;endT=Math.max(endT,r.t);i=found-1;}
+  if(endT-firstT>motWin(seq.length+1))return null;
+  return firstT;}
+/* 3.2 / 5.3: the frozen move table. Longest patterns first, ties by declaration order. */
+const MOVES=Object.freeze([
+  {id:'bonk',name:'MEGA BONK',seq:[2,6,8],btn:'B',glyph:'↓→↑',stam:1,len:1.40,cd:0,
+   gate:function(){return combo>=FIN_CHAIN&&J.winded>0;}},
+  {id:'dig', name:'DIGGY-DOWN', seq:[4,6,2],btn:'D',glyph:'←→↓',stam:2,len:1.15,cd:function(){return DIG_CD;},gate:function(){return true;}},
+  {id:'spin',name:'SPIN CYCLE', seq:[6,2,4],btn:'K',glyph:'→↓←',stam:2,len:.55, cd:function(){return SPIN_CD;},gate:function(){return true;}},
+  {id:'slam',name:'FLIPPITY-FLOP',seq:[2,8], btn:'B',glyph:'↓↑',   stam:1,len:.85, cd:function(){return SLAM_CD;},gate:function(){return true;}}
+].map(Object.freeze));
+/* Failure is silent and free (5.2 / AC6): no stamina, no cooldown, no pop, no sound, and the
+   button's ordinary action always still runs because this returns false. */
+function motMatch(btn,grace){
+  if(state!=='play'||R.held||R.shk>0||R.sp||(!grace&&R.recover>0))return false;
+  for(let k=0;k<MOVES.length;k++){const mv=MOVES[k];
+    if(mv.btn!==btn||R.stam<mv.stam||R.spCd[mv.id]>0||!mv.gate())continue;
+    if(motSeq(mv.seq,motT)===null)continue;
+    startSp(mv);return true;}
+  return false;}
+/* 3.1: positive-only feedback. Fires when the tail matches all but the last token of an AVAILABLE
+   move (gates checked first, so 5.6 holds: the chip never promises a finisher at chain 7). */
+function motHint(){
+  for(let k=0;k<MOVES.length;k++){const mv=MOVES[k];
+    if(R.stam<mv.stam||R.spCd[mv.id]>0||!mv.gate()||R.sp)continue;
+    if(motSeq(mv.seq.slice(0,mv.seq.length-1),motT)===null)continue;
+    Mot.hint=MOT_GLYPH[mv.seq[mv.seq.length-1]]+' + '+(mv.btn==='B'?'BITE':mv.btn==='D'?'DASH':'BARK');
+    Mot.hintT=.4;tone(760,.05,'triangle',.035,180);return;}}
+/* ---------- special-moves.md 3.2 / 7: the specials ---------- */
+const SPIN_R=230,SPIN_CD=6,SPIN_DMG=6,SLAM_R=110,SLAM_W=3.2,SLAM_CD=5,SLAM_SN=14,
+      DIG_T=.70,DIG_SP=900,DIG_CD=7,DIG_DMG=10,FIN_CHAIN=8,FIN_W=5.6;
+Object.assign(R,{sp:null,air:0,under:0,wrench:0,wrenchW:1,spCd:{bonk:0,dig:0,spin:0,slam:0}});
+
 /* ---------- sound ---------- */
 let ac=null,muted=false;
 function tone(f,d,type='square',v=.08,slide=0,delay=0){if(!ac||muted)return;const s=ac.currentTime+delay,o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.setValueAtTime(f,s);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(40,f+slide),s+d);g.gain.setValueAtTime(v,s);g.gain.exponentialRampToValueAtTime(.0001,s+d);o.connect(g).connect(ac.destination);o.start(s);o.stop(s+d+.02);}
@@ -599,7 +682,7 @@ function startHot(){const W=hotW();
   Hot.cd=hotCd();}
 function hotEmber(warn){const p=rope[clamp(Hot.c+Math.round(rand(-Hot.w,Hot.w)),1,N-1)];
   addPart({type:'star',x:p.x+rand(-10,10),by:p.y,y:p.y-p.z-12,vx:rand(-22,22),vy:rand(-130,-40),life:.5,max:.5,size:rand(3,6),g:0,hue:warn?42:rand(8,40)});}
-function hotContact(){if(R.iframe>0||R.held)return;
+function hotContact(){if(R.iframe>0||R.held||R.under||R.air)return;   // 3.2 / 5.7: the band is a GROUND hazard
   for(let i=Hot.c-Hot.w;i<=Hot.c+Hot.w;i++){if(i<1||i>N-1)continue;
     if(Math.abs(i-weak)<=3)continue;                                          // one wider than findBite's weak+-2
     const p=rope[i];if(p.z>46)continue;
@@ -618,7 +701,7 @@ function updHot(dt){
   if(Hot.t>=HOT_COOL){Hot.ph='off';Hot.t=0;Hot.cd=hotCd();}}
 /* burn differs from hurt in exactly one way: no Perfect Dodge. A static hazard that refunded a
    stamina charge for brushing it would be a stamina farm. Dash does not make Rosie fireproof. */
-function burn(dmg,kx,ky){if(state!=='play'||R.iframe>0)return;
+function burn(dmg,kx,ky){if(state!=='play'||R.iframe>0||R.under||R.air)return;   // 3.2 / 5.7
   const d=dmgOf(dmg);R.hp=Math.max(0,R.hp-d);dmgTaken+=d;R.iframe=D().iframe;R.hurt=1;R.safeT=0;chainDrop();endShake();R.vx+=kx*320;R.vy+=ky*200;   // 5.7: a burn cancels the Shake
   pop(R.x,R.y-140*R.sc,'-'+Math.round(d),'#ff9f1c',26);sfx.yelp();sfx.sizzle();if(!reduce)shake=Math.max(shake,.2);
   for(let k=0;k<8;k++)addPart({type:'star',x:R.x+rand(-22,22),by:R.y,y:R.y-rand(10,60),vx:rand(-70,70),vy:rand(-170,-40),life:.5,max:.5,size:rand(3,6),g:0,hue:rand(8,40)});
@@ -646,6 +729,7 @@ function updLass(dt){
   Lass.t+=dt;
   if(Lass.ph==='tele'){
     if(J.winded>0||booga){lassOff();return;}                                 // 5.7: cancelled, ring removed
+    if(R.under){Lass.t=Lass.tele-.001;return;}                               // 5.9: the ring waits and resolves on her emergence point
     if(Lass.t<Lass.tele)return;
     if(Math.hypot(R.x-Lass.x,(R.y-Lass.y)*DZ)>=LASSO_R*R.sc||R.hp<=LASSO_TICK+LASSO_TOSS){lassOff();return;}
     if(R.dashT>0||R.dash>0){hurt(0,0,0);pop(R.x,R.y-170,'SLIPPED OUT!','#80ffdb',24);lassOff();Lass.mercy=2;return;}
@@ -691,6 +775,8 @@ function findBite(){biteI=-1;biteS=null;for(let k=-2;k<=2;k++){const p=rope[weak
   for(const s of snakes)for(const p of s.rope)if(mouthHit(p)){biteS=s;return 3;}   // 3.2: extra snakes are bitable anywhere
   for(let i=2;i<N-2;i++)if(rope[i].z<=30&&mouthHit(rope[i])){biteI=i;return 2;}return 0;}
 function tryBite(){if(state!=='play')return false;
+  if(motMatch('B'))return true;                                            // 3.1: the motion is read BEFORE the ordinary bite
+  if(R.sp)return true;                                                     // 5.14: one special at a time, never queued
   if(R.held){lassTap();return true;}                                      // 3.2: Bite is also the mash-free input
   if(R.dash>0)return R.pounce?false:doPounce();                            // 3.3 POUNCE: Bite during a dash
   if(R.recover>0||R.chomp>0||R.shk>0)return false;
@@ -700,12 +786,12 @@ function tryBite(){if(state!=='play')return false;
   R.recover=.28;if(J.winded>0)J.winded=Math.max(.001,J.winded-WHIFF_COST);  // 3.3: mashing on approach costs window
   if(h===2){pop(R.x,R.y-120*R.sc,'TOO TOUGH!','#cfd8dc',22);sfx.clank();
     if(Hot.ph==='hot'&&biteI>=0&&Math.abs(biteI-Hot.c)<=Hot.w)burn(HOT_BITE_DMG,-Math.cos(R.ang),-Math.sin(R.ang));}  // 3.1
-  else{pop(R.x,R.y-120*R.sc,'whiff','#ffffff',20);sfx.whiff();}return true;}
+  else{pop(R.x,R.y-120*R.sc,'whiff','#ffffff',20);sfx.whiff();Mot.pend='B';Mot.pendT=motT;}return true;}
 // A tired weak spot can be chewed three times in a row. Every bite hits harder than the last:
 // freeze-frame, camera punch, louder crunch, more spray. The third bite is the RIP, with a head-shaking thrash.
 function doBite(i){const p=rope[i],step=++J.hits,fin=step>=3,unit=unitDmg();hoseHP=Math.max(0,hoseHP-unit*BITE_W[Math.min(step,3)-1]*chainDmg());  // 3.3: 1 / 1.4 / 2.4
   if(!punct.some(e=>Math.abs(e-i)<2))punct.push(i);chain(1,'bite');const mult=1+Math.min(combo-1,12)*.2;score+=Math.round((fin?30:10)*level*mult);
-  hitStop=fin?.16:.07;fovKick=fin?7:3.5;flash=fin?.45:.2;if(!reduce)shake=Math.max(shake,fin?.4:.16);R.biteT=.3;R.safeT=Math.max(R.safeT,0);
+  hitFeel(i,step);R.biteT=.3;    /* hit reactions: one escalating punch per step, see hitFeel */R.safeT=Math.max(R.safeT,0);
   pop(p.x,p.y-50,fin?'RRRIP!':step===1?'CHOMP!':'CRUNCH!',fin?'#ff5d8f':step===1?'#ffd23f':'#ff9f1c',fin?48:28+step*5);if(fin&&combo>=6)pop(R.x,R.y-190,'CHAIN x'+combo,'#80ffdb',26);
   const ca=Math.cos(R.ang),sa=Math.sin(R.ang),nb=6+step*6;
   for(let k=0;k<nb;k++)addPart({type:'bit',x:p.x,y:p.y,vx:rand(-200,200)+ca*120,vy:rand(-380,-120),life:1,max:1,size:rand(3,6),g:1,c:Math.random()<.5?'#3cc062':'#1d6b33'});
@@ -745,11 +831,13 @@ function updShake(dt){
       for(let k=0;k<8;k++)addPart({type:'water',x:w.x+rand(-8,8),y:w.y,vx:rand(-180,180),vy:rand(-320,-120),life:.6,max:.6,size:rand(2,4),g:1});
       if(hoseHP<=0){endShake();burst();}}
     return;}
-  if(state!=='play'||!biteHeld||R.held)return;                             // 5.9: while held, Bite is the mash input
+  if(state!=='play'||!biteHeld||R.held||R.sp)return;                        // 5.9: while held, Bite is the mash input
   if(R.biteT>0&&J.winded>0&&J.hits>0&&J.hits<3&&J.hits!==R.shkStep&&mouthHit(rope[weak])){R.shk=.001;R.shkT=0;R.shkStep=J.hits;}}
 function endShake(){if(R.shk<=0)return;R.shk=0;R.shkT=0;R.recover=Math.max(R.recover,.25);}
 /* BARK - a tap on B / the BOOGA button. 1 stamina, 0 damage, 2.5 s cooldown, 0.3 s recovery. */
-function doBark(){if(state!=='play'||R.held||R.barkCd>0||R.stam<1)return false;
+function doBark(){if(motMatch('K'))return true;                            // 3.1: a matched motion wins over the plain bark
+  if(state!=='play'||R.sp)return false;
+  if(R.held||R.barkCd>0||R.stam<1){Mot.pend='K';Mot.pendT=motT;return false;}   // forgiveness (3): a flick landing within MOT_BTN still fires
   R.stam--;R.barkCd=BARK_CD;R.recover=Math.max(R.recover,.3);R.chomp=.12;sfx.bark();
   const rr0=BARK_R*R.sc,ca=Math.cos(R.ang),sa=Math.sin(R.ang);
   const inCone=(x,y)=>{const dx=x-R.x,dy=(y-R.y)*DZ,d=Math.hypot(dx,dy);return d<rr0&&(d<1||(dx*ca+dy*sa)/d>BARK_CONE);};
@@ -821,9 +909,10 @@ function updSnakes(dt){
     if(Math.hypot(R.x-s.x,(R.y-s.y)*DZ)<520){snakeJet(s);s.atkCd=rand(3.4,4.8)*speedK()*D().atkCdMul;}
     else s.atkCd=.6;}}
 function tryDash(){const cost=R.recover>0?DASH_CANCEL_COST:1;                 // 3.4: cancelling the stall is not free
-  if(state!=='play'||R.dashCd>0||R.held||R.shk>0||R.stam<cost)return false;let dx=inX,dy=inY;if(Math.hypot(dx,dy)<.2){dx=Math.cos(R.ang);dy=Math.sin(R.ang);}const m=Math.hypot(dx,dy);
+  if(motMatch('D'))return true;                                               // 3.1 (the 0.2 s dashBuf retry IS the early-button grace)
+  if(state!=='play'||R.dashCd>0||R.held||R.shk>0||R.sp||R.stam<cost)return false;let dx=inX,dy=inY;if(Math.hypot(dx,dy)<.2){dx=Math.cos(R.ang);dy=Math.sin(R.ang);}const m=Math.hypot(dx,dy);
   R.stam-=cost;R.dx=dx/m;R.dy=dy/m;R.dash=.17;R.dashT=.3;R.dashCd=DASH_CD;R.perfect=false;R.ang=Math.atan2(R.dy,R.dx);R.recover=0;sfx.dash();return true;}
-function hurt(dmg,kx,ky){if(state!=='play')return;
+function hurt(dmg,kx,ky){if(state!=='play'||R.under)return;   // 3.2: nothing reaches her under the yard
   if(R.dashT>0){if(!R.perfect){R.perfect=true;R.stam=Math.min(dMax(),R.stam+1);score+=25*level;chain(1,'dodge');  // 3.4: a perfect dash is freepop(R.x,R.y-140*R.sc,'PERFECT DODGE!','#80ffdb',26);sfx.perfect();
     for(let k=0;k<10;k++)addPart({type:'sparkle',x:R.x+rand(-40,40),by:R.y,y:R.y-rand(20,90),vx:0,vy:-40,life:.6,max:.6,size:rand(4,7),g:0,hue:rand(140,180)});
     if(!booga)power=Math.min(pMax(),power+1);}return;}
@@ -833,29 +922,236 @@ function knock(p){p.fallen=true;p.dir=R.f;score+=25*level;pop(p.x,p.y-70,'CRASH!
   for(let i=0;i<16;i++)addPart({type:'soil',x:p.x,by:p.y,y:p.y-30,vx:rand(-160,160)+R.f*80,vy:rand(-320,-120),life:.8,max:.8,size:rand(2.5,5),g:1});}
 function updRosie(dt){
   R.sc=lerp(R.sc,booga?1.5:1,Math.min(1,dt*3));
-  for(const k of ['wet','chomp','recover','dash','dashCd','dashT','iframe','hurt','biteT','thrash','barkCd'])R[k]=Math.max(0,R[k]-dt);
+  for(const k of ['wet','chomp','recover','dash','dashCd','dashT','iframe','hurt','biteT','thrash','barkCd','wrench','air'])R[k]=Math.max(0,R[k]-dt);
   if(R.pounce&&R.dash<=0){R.pounce=0;R.recover=Math.max(R.recover,.30);}    // 3.3: 0.30 s on a whiffed Pounce
   R.stamT+=dt;while(R.stam<dMax()&&R.stamT>=dRegen()){R.stam++;R.stamT-=DASH_REGEN;}if(R.stam>=dMax())R.stamT=0;  // 3.4
-  if(R.held||R.shk>0){R.vx=0;R.vy=0;}                                        // 3.2 / 3.3: a lassoed or shaking dog does not move
+  if(R.held||R.shk>0||(R.sp&&!R.under)){R.vx=0;R.vy=0;}                                        // 3.2 / 3.3: a lassoed or shaking dog does not move
   // the kill-shake: Rosie whips the bitten section side to side
   if(R.thrash>0){const sd=Math.sin(t*42)>0?1:-1,ca=Math.cos(R.ang),sa=Math.sin(R.ang);for(let k=-4;k<=4;k++){const q=rope[R.thrashI+k];if(!q)continue;const g=Math.exp(-(k*k)/8);q.vx+=-sa*sd*5200*dt*g;q.vy+=ca*sd*5200*dt*g/DZ;q.vz=Math.max(q.vz,240*g);}}
   // out of danger for a few seconds, she catches her breath and dries off
   if(state==='play'){R.safeT+=dt;const hm=D().hpMax;if(R.safeT>D().regenWait&&R.hp<hm)R.hp=Math.min(hm,R.hp+Math.max(1,4-level)*1.2*D().regenMul*dt);}
   let sp=280*(booga?1.3:1);if(R.wet>0)sp*=.78;if(R.recover>0)sp*=.7;if(MUD.some(m=>inEll(R,m)))sp*=.55;
-  const slip=puddles.some(p=>inEll(R,p,.5)),mv=state==='play'&&!R.held&&R.shk<=0,ix=mv?inX:0,iy=mv?inY:0;
-  if(R.dash>0){const dsp=R.pounce?POUNCE_SP:760;R.vx=R.dx*dsp;R.vy=R.dy*dsp/DZ;if(Math.random()<dt*50)addPart({type:'dust',x:R.x-R.dx*20,y:R.y,vx:-R.dx*40,vy:-10,life:.4,max:.4,size:rand(6,11),g:0});}
+  const slip=puddles.some(p=>inEll(R,p,.5)),mv=state==='play'&&!R.held&&R.shk<=0&&!R.sp,ix=mv?inX:0,iy=mv?inY:0;
+  if(R.under){}                                                            // 3.2: Diggy-Down owns her velocity under the yard
+  else if(R.dash>0){const dsp=R.pounce?POUNCE_SP:760;R.vx=R.dx*dsp;R.vy=R.dy*dsp/DZ;if(Math.random()<dt*50)addPart({type:'dust',x:R.x-R.dx*20,y:R.y,vx:-R.dx*40,vy:-10,life:.4,max:.4,size:rand(6,11),g:0});}
   else{const k=1-Math.exp(-dt*(slip?1.6:(ix||iy)?9:12));R.vx=lerp(R.vx,ix*sp,k);R.vy=lerp(R.vy,iy*sp/DZ,k);}
-  R.x=clamp(R.x+R.vx*dt,40,WORLD-40);R.y=clamp(R.y+R.vy*dt,GY0+10,GY1);pushOut(R,24*R.sc);if(R.pounce)pounceHit();
+  R.x=clamp(R.x+R.vx*dt,40,WORLD-40);R.y=clamp(R.y+R.vy*dt,GY0+10,GY1);if(!R.under)pushOut(R,24*R.sc);if(R.pounce)pounceHit();
   R.speed=Math.hypot(R.vx,R.vy*DZ);if(R.speed>30&&R.chomp<=0)R.ang=Math.atan2(R.vy*DZ,R.vx);R.f=Math.cos(R.ang)>=0?1:-1;
   {const g0=Math.floor(R.gait/Math.PI);R.gait+=R.speed*dt*.05;if(R.speed>170&&R.dash<=0&&Math.floor(R.gait/Math.PI)!==g0)addPart({type:'dust',x:R.x-R.f*18*R.sc,y:R.y+2,vx:-R.vx*.12,vy:-14,life:.35,max:.35,size:rand(3,5.5),g:0});}
   if(R.wet>0&&Math.random()<dt*14)addPart({type:'water',x:R.x+rand(-30,30)*R.sc,by:R.y,y:R.y-rand(20,70)*R.sc,vx:rand(-20,20),vy:40,life:.5,max:.5,size:rand(1.5,3),g:1});
   if(slip&&R.speed>60&&Math.random()<dt*12)addPart({type:'water',x:R.x,y:R.y,vx:rand(-60,60),vy:rand(-120,-40),life:.4,max:.4,size:2,g:1});
   if(state!=='play')return;
-  for(const p of pots)if(!p.fallen&&Math.abs(R.x-p.x)<36*p.s+10&&Math.abs(R.y-p.y)<26)knock(p);
+  if(!R.under)for(const p of pots)if(!p.fallen&&Math.abs(R.x-p.x)<36*p.s+10&&Math.abs(R.y-p.y)<26)knock(p);
   for(const tr of treats)if(Math.hypot(R.x-tr.x,(R.y-tr.y)*DZ)<46*R.sc){tr.got=true;const th=D().treatHeal;R.hp=Math.min(D().hpMax,R.hp+th);score+=30;pop(tr.x,tr.y-60,'Yum! +'+th,'#ffd23f',24);sfx.treat();
     for(let k=0;k<8;k++)addPart({type:'sparkle',x:tr.x+rand(-25,25),by:tr.y,y:tr.y-rand(5,40),vx:0,vy:-40,life:.6,max:.6,size:rand(3,6),g:0,hue:rand(30,60)});}
   treats=treats.filter(tr=>!tr.got&&tr.life>0);
 }
+
+/* ---------- hit reactions (user request 2026-11-10; NOT in special-moves.md) ----------
+   A landed bite used to read like a nudge. hitFeel is the one place that turns a landed hit into
+   weight: the hose recoils away from the tooth mark (forward kick + a lateral snap + a vertical
+   pop), the camera kicks and freezes, and Rosie wrenches back on the follow-through. w is 1 for a
+   first bite, 2 for the second, 3 for the RIP and for every special hit, so a combo escalates
+   instead of repeating - which is the monotony complaint this exists to fix. */
+const HIT_STOP=[.06,.10,.17],HIT_SHAKE=[.16,.28,.48],HIT_FOV=[3.5,6,9.5],HIT_PUSH=[300,520,820],HIT_WR=[.10,.15,.22];
+function hitFeel(i,w){const g=clamp(Math.round(w),1,3),k0=g-1,p=(i>=0&&rope[i])?rope[i]:{x:R.x,y:R.y,z:0};
+  hitStop=Math.max(hitStop,HIT_STOP[k0]);fovKick=Math.max(fovKick,HIT_FOV[k0]);flash=Math.max(flash,.16+.14*k0);
+  if(!reduce)shake=Math.max(shake,HIT_SHAKE[k0]);
+  R.wrench=HIT_WR[k0];R.wrenchW=g;R.biteT=Math.max(R.biteT,.3);
+  const ca=Math.cos(R.ang),sa=Math.sin(R.ang),nn=(i>=1&&i<=N-1)?nrm(i):[0,1];
+  if(i>=0)for(let k=-8;k<=8;k++){const j=i+k;if(j<2||j>N-3)continue;
+    const q=rope[j],e=Math.exp(-(k*k)/16),f=HIT_PUSH[k0]*e,s=(k%2)?-1:1;
+    q.vx+=(ca*.75+nn[0]*.55*s)*f;q.vy+=(sa*.75+nn[1]*.55*s)*f/DZ;q.vz=Math.max(q.vz,(170+180*k0)*e);}
+  for(let k=0;k<3+4*g;k++)addPart({type:'soil',x:p.x+rand(-16,16),by:p.y,y:p.y-p.z-10,vx:rand(-90,90)*g,vy:rand(-200,-50)*g,life:.55,max:.55,size:rand(2,4.5),g:1});
+  R.vx-=ca*(50+80*k0);R.vy-=sa*(50+80*k0)/DZ;                              // she wrenches away from what she just bit
+  if(g>=2)tone(84+22*g,.16,'sine',.13,-36);}
+/* ---------- the five specials (one dropped: see the Squirrel Cannon note below) ----------
+   SQUIRREL CANNON is NOT built: the user dropped its motion input, and Bite-while-carrying needs
+   R.carry / squirrels[], which do not exist yet. It arrives with the squirrel pass. */
+function startSp(mv){
+  endShake();
+  R.sp={id:mv.id,t:0,ph:0,fired:false,wi:weak};R.stam=Math.max(0,R.stam-mv.stam);
+  if(mv.cd)R.spCd[mv.id]=mv.cd();
+  R.recover=0;R.chomp=0;R.dash=0;R.dashT=0;R.pounce=0;R.vx=0;R.vy=0;
+  biteBuf=0;dashBuf=0;Mot.buf.length=0;Mot.hintT=0;Mot.pend=null;
+  pop(R.x,R.y-205*R.sc,mv.name+'!',mv.id==='bonk'?'#ff5d8f':'#80ffdb',mv.id==='bonk'?44:28);
+  sfx.whoosh();
+  if(mv.id==='bonk'){fovKick=Math.max(fovKick,9);hitStop=Math.max(hitStop,.12);store.set('rosie2-seen-finisher','1');}
+  if(mv.id==='slam')fovKick=Math.max(fovKick,5);
+  if(mv.id==='dig')sfx.sizzle();
+  if(mv.id==='spin')sfx.bark();}
+function spPhase(){const np=hoseHP>66?1:hoseHP>33?2:3;
+  if(np!==phase&&hoseHP>0){phase=np;pop(R.x,R.y-180,np===2?'The hose is getting angry!':'TWO HEADS?!','#ff5d8f',30);sfx.phase();attackCd=Math.min(attackCd,1);}}
+function spRip(i){J.winded=0;J.hits=0;J.streak=0;J.cd=.8;R.thrash=.5;R.thrashI=i;geysers.push({i:i,t:1.4});
+  if(!punct.some(function(e){return Math.abs(e-i)<2;}))punct.push(i);sfx.rip();}
+/* FLIPPITY-FLOP's effect frame. 5.4 / 5.5: J.winded AND chainDmg() are both sampled HERE, never at
+   the input frame, so a slam that lands 0.05 s late deals 0 and only baits a leap. */
+function slamHit(){const w=rope[R.sp?R.sp.wi:weak],wi=R.sp?R.sp.wi:weak,
+    near=!!w&&Math.hypot(w.x-R.x,(w.y-R.y)*DZ)<SLAM_R*R.sc;
+  sfx.boom();sfx.chomp(3);hitFeel(near?wi:-1,3);if(!reduce)shake=Math.max(shake,.45);hitStop=Math.max(hitStop,.14);
+  for(let k=0;k<18;k++)addPart({type:'soil',x:R.x+rand(-44,44),by:R.y,y:R.y-rand(0,26),vx:rand(-280,280),vy:rand(-430,-140),life:.8,max:.8,size:rand(2.5,6),g:1});
+  for(let k=0;k<10;k++)addPart({type:'water',x:R.x+rand(-30,30),y:R.y,vx:rand(-210,210),vy:rand(-470,-180),life:.8,max:.8,size:rand(2,4),g:1});
+  for(let k=0;k<16;k++){const a=k/16*6.283,d=70*R.sc;addPart({type:'dust',x:R.x+Math.cos(a)*d,by:R.y+Math.sin(a)*d/DZ,y:R.y+Math.sin(a)*d/DZ-6,vx:Math.cos(a)*170,vy:-14,life:.45,max:.45,size:rand(6,12),g:0});}
+  if(near&&J.winded>0){hoseHP=Math.max(0,hoseHP-unitDmg()*SLAM_W*chainDmg());
+    chain(2,'slam');score+=Math.round(40*level*(1+Math.min(combo-1,12)*.2));
+    pop(w.x,w.y-60,'SLAAAM!','#ff5d8f',48);spRip(wi);spPhase();
+    if(hoseHP<=0){burst();return;}
+    moveWeak();}
+  else if(near){J.streak++;J.cd=0;leapAway();pop(w.x,w.y-60,'BAITED!','#80ffdb',24);}   // a non-winded spot takes 0, exactly as Pounce does
+  for(let s=snakes.length-1;s>=0;s--){const sn=snakes[s];
+    if(Math.hypot(sn.x-R.x,(sn.y-R.y)*DZ)<SLAM_R*R.sc)hitSnake(sn,SLAM_SN);}
+  if(Math.hypot(Hm.x-R.x,(Hm.y-R.y)*DZ)<SLAM_R*R.sc*1.6){Hm.shock=Math.max(Hm.shock,4);crankT+=6;if(crankW>0)crankW=0;
+    pop(Hm.x,Hm.y-150,'WHOA!','#ffd23f',28);}}
+/* SPIN CYCLE: the omnidirectional Bark. 0 damage to the main hose, winded or not. */
+function spinHit(){const rr=SPIN_R*R.sc;let did=0;
+  const tl=attacks.filter(function(a){return a.t<a.tele&&Math.hypot(a.o.x-R.x,(a.o.y-R.y)*DZ)<rr;}).slice(0,3);
+  if(tl.length){attacks=attacks.filter(function(a){return tl.indexOf(a)<0;});pop(R.x,R.y-170,'ALL INTERRUPTED!','#80ffdb',28);did++;}
+  if(!Hm.grabbed&&Math.hypot(E.x-R.x,(E.y-R.y)*DZ)<rr){E.stagger=Math.max(E.stagger,1.6);did++;}
+  for(let s=snakes.length-1;s>=0;s--){const sn=snakes[s];
+    if(Math.hypot(sn.x-R.x,(sn.y-R.y)*DZ)<rr){sn.stagger=Math.max(sn.stagger,1.6);hitSnake(sn,SPIN_DMG);did++;}}
+  if(Math.hypot(Hm.x-R.x,(Hm.y-R.y)*DZ)<rr){Hm.shock=3;crankT+=6;if(crankW>0)crankW=0;pop(Hm.x,Hm.y-150,'!!','#ffd23f',30);did++;}
+  for(let k=-7;k<=7;k++){const q=rope[MID+k];if(!q)continue;const g=Math.exp(-(k*k)/14);
+    q.vx+=Math.cos(t*9+k)*1.4*560*g;q.vy+=Math.sin(t*9+k)*1.4*560*g/DZ;q.vz=Math.max(q.vz,200*g);}
+  if(!reduce)shake=Math.max(shake,.22);hitStop=Math.max(hitStop,.05);sfx.whoosh();
+  if(did)chain(1,'spin');}
+/* DIGGY-DOWN's emergence. 5.8: one pushOut, so she never surfaces inside an obstacle. */
+function digOut(){R.under=0;pushOut(R,24*R.sc);
+  if(!reduce)shake=Math.max(shake,.25);sfx.boom();pop(R.x,R.y-190*R.sc,'TA-DAAA!','#ffd23f',34);
+  for(let k=0;k<16;k++)addPart({type:'soil',x:R.x+rand(-30,30),by:R.y,y:R.y-rand(0,40),vx:rand(-240,240),vy:rand(-460,-160),life:.9,max:.9,size:rand(2.5,6),g:1});
+  for(let s=snakes.length-1;s>=0;s--){const sn=snakes[s];
+    if(Math.hypot(sn.x-R.x,(sn.y-R.y)*DZ)<90*R.sc)hitSnake(sn,DIG_DMG);}
+  const w=rope[weak];
+  if(w&&J.winded>0&&w.z<=40&&Math.hypot(w.x-R.x,(w.y-R.y)*DZ)<90*R.sc){
+    R.ang=Math.atan2((w.y-R.y)*DZ,w.x-R.x);hitFeel(weak,2);doBite(weak);}}
+/* MEGA BONK's effect frame. Spends the chain, and 5.5 samples chainDmg() right here. */
+function bonkHit(){const wi=R.sp?R.sp.wi:weak,w=rope[wi];
+  R.iframe=Math.max(R.iframe,1.0);                                         // 5.7: the airborne second
+  sfx.rip();sfx.boom();hitFeel(wi,3);hitStop=Math.max(hitStop,.16);if(!reduce)shake=Math.max(shake,.5);
+  fovKick=Math.max(fovKick,10);flash=Math.max(flash,.5);
+  for(let k=0;k<24;k++)addPart({type:'bit',x:w.x,y:w.y,vx:rand(-260,260),vy:rand(-470,-150),life:1,max:1,size:rand(3,7),g:1,c:Math.random()<.5?'#3cc062':'#1d6b33'});
+  for(let k=0;k<16;k++)addPart({type:'water',x:w.x+rand(-10,10),y:w.y,vx:rand(-200,200),vy:rand(-560,-220),life:.9,max:.9,size:rand(2,4),g:1});
+  if(J.winded<=0){pop(R.x,R.y-170,'...too late!','#cfd8dc',24);return;}    // 5.4: the window closed during the wind-up
+  hoseHP=Math.max(0,hoseHP-unitDmg()*FIN_W*chainDmg());
+  score+=Math.round(150*level*(1+Math.min(combo-1,12)*.2));
+  if(!booga)power=Math.min(pMax(),power+2);
+  spRip(wi);chainSet(0);spPhase();                                          // the chain IS the cooldown
+  if(hoseHP<=0){burst();return;}
+  moveWeak();}
+/* The one state machine. Called before updRosie so dig velocity is integrated the same frame.
+   5.12: paused never reaches here, so R.sp.t freezes and resumes in the same phase. */
+function updSpecial(dt){
+  for(const k in R.spCd)R.spCd[k]=Math.max(0,R.spCd[k]-dt);
+  if(Mot.hintT>0)Mot.hintT=Math.max(0,Mot.hintT-dt);
+  if(Mot.pend&&motT-Mot.pendT>MOT_BTN)Mot.pend=null;
+  const sp=R.sp;if(!sp)return;
+  if(state!=='play'){R.sp=null;R.air=0;R.under=0;return;}
+  const p0=sp.t;sp.t+=dt;const T=sp.t;
+  if(sp.id==='slam'){
+    R.air=(T>.25&&T<.62)?1:0;                                              // 5.7: ground rings and the hot band only
+    if(p0<.60&&T>=.60)slamHit();
+    if(T>=.85){R.sp=null;R.air=0;R.recover=Math.max(R.recover,.08);}
+    return;}
+  if(sp.id==='spin'){
+    if(p0<.10&&T>=.10)spinHit();
+    if(T>=.55){R.sp=null;R.recover=Math.max(R.recover,.1);}
+    return;}
+  if(sp.id==='bonk'){
+    if(p0<.25&&T>=.25)bonkHit();
+    if(T>=.40&&T<1.25){const wi=sp.wi;                                     // the helicopter drags the bitten section
+      for(let k=-7;k<=7;k++){const q=rope[wi+k];if(!q)continue;const g=Math.exp(-(k*k)/18);
+        q.vx+=(R.x-q.x)*30*dt*g;q.vy+=(R.y-q.y)*30*dt*g;q.vz=Math.max(q.vz,150*g);}}
+    if(p0<1.25&&T>=1.25){const q=rope[sp.wi];if(q)q.vz=720;
+      pop(R.x,R.y-215*R.sc,'MEGA BONK!!','#ffd23f',54);if(!reduce)shake=Math.max(shake,.4);sfx.win();
+      for(let k=0;k<30;k++)addPart({type:'star',x:R.x+rand(-70,70),by:R.y,y:R.y-rand(20,150),vx:rand(-220,220),vy:rand(-280,-60),life:.9,max:.9,size:rand(6,12),g:0,hue:rand(260,330)});}
+    if(T>=1.40){R.sp=null;R.recover=Math.max(R.recover,.12);}
+    return;}
+  if(sp.id==='dig'){
+    if(T<.30){if(Math.random()<dt*40)addPart({type:'soil',x:R.x+Math.cos(R.ang)*40,by:R.y,y:R.y-12,vx:rand(-140,140),vy:rand(-330,-120),life:.6,max:.6,size:rand(2.5,5),g:1});return;}
+    if(T<.30+DIG_T){R.under=1;
+      let dx=inX,dy=inY;if(Math.hypot(dx,dy)<.2){dx=Math.cos(R.ang);dy=Math.sin(R.ang);}
+      const m=Math.hypot(dx,dy)||1;R.vx=dx/m*DIG_SP;R.vy=dy/m*DIG_SP/DZ;R.ang=Math.atan2(R.vy*DZ,R.vx);
+      if(Math.random()<dt*26)addPart({type:'soil',x:R.x+rand(-18,18),by:R.y,y:R.y-8,vx:rand(-70,70),vy:rand(-230,-70),life:.5,max:.5,size:rand(2,4.5),g:1});
+      if(dashBuf>0){dashBuf=0;sp.t=.30+DIG_T;}                             // tap Dash again to surface early
+      if(R.x<=44||R.x>=WORLD-44||R.y<=GY0+14||R.y>=GY1-2)sp.t=.30+DIG_T;   // or hit a world edge
+      return;}
+    if(!sp.fired){sp.fired=true;digOut();}
+    R.under=0;R.vx*=.08;R.vy*=.08;
+    if(T>=.30+DIG_T+.15){R.sp=null;R.recover=Math.max(R.recover,.1);}
+    return;}}
+/* ---------- 3.2: poseSpecial - the animations ----------
+   THIS RIG PITCHES ON dogP.rotation.z. Local +X is forward and +Y is up (the head sits at
+   x=30,y=116), so every rotation.x pitch in the GDD is remapped to +z = nose up; rotation.x stays
+   the roll it already drives, and leg SWING is .z while leg SPLAY is .x. The flip also compensates
+   dogP.position so the tumble pivots on her ribs instead of her paws. */
+function poseSpecial(sp){const T=sp.t,fr=[dLegs[0].g,dLegs[1].g],bk=[dLegs[2].g,dLegs[3].g],
+  ez=function(u){const v=clamp(u,0,1);return v*v*(3-2*v);},
+  setL=function(a,z,x){for(let i=0;i<a.length;i++){a[i].rotation.z=z;a[i].rotation.x=(x||0)*(i?-1:1);}},
+  ears=function(v){dEars.forEach(function(e,i){e.rotation.x=(i?1:-1)*v;e.rotation.z=0;});};
+  dogP.position.set(0,0,0);dogP.rotation.set(0,0,0);dogP.scale.set(1,1,1);
+  dHead.position.set(30,116,0);dHead.rotation.set(0,0,0);dTail.rotation.set(0,0,0);
+  dTongue.scale.set(4.5,2.5,4.5);dShadow.scale.set(1,1,1);dMouth.visible=true;dTongue.visible=true;
+  digMound.visible=false;dog.visible=true;
+  if(sp.id==='slam'){
+    if(T<.25){const u=ez(T/.25);                                            // rear back, both paws overhead
+      dogP.rotation.z=.95*u;dogP.position.y=14*u;setL(fr,2.2*u,.1*u);setL(bk,.25*u,0);
+      dHead.rotation.z=-.5*u;ears(.12+.55*u);dTail.rotation.z=.7*u;}
+    else if(T<.60){const u=clamp((T-.25)/.35,0,1),a=.95+6.4*ez(u),lift=200*Math.sin(Math.PI*u);
+      dogP.rotation.z=a;dogP.position.y=lift+70-70*Math.cos(a);dogP.position.x=70*Math.sin(a);
+      setL(fr,-1.4,.2);setL(bk,1.1,.2);dHead.rotation.z=-.3;ears(.12+1.2*Math.sin(Math.PI*u));dTail.rotation.z=-.7;
+      dShadow.scale.setScalar(Math.max(.45,1-lift/300));
+      if(Math.random()<.55)addPart({type:'sparkle',x:R.x+rand(-34,34),by:R.y,y:R.y-lift*.55-rand(20,80),vx:rand(-40,40),vy:-28,life:.5,max:.5,size:rand(4,8),g:0,hue:rand(150,200)});}
+    else if(T<.70){const u=(T-.60)/.10;                                     // belly-first slam, legs splayed
+      dogP.rotation.z=-.30+.12*u;dogP.scale.set(1.35-.18*u,.65+.14*u,1.1);dogP.position.y=0;
+      setL(fr,.5,.9);setL(bk,-.5,.9);dHead.rotation.z=-.25;ears(.9);}
+    else{const u=(T-.70)/.15;
+      dogP.scale.set(lerp(1.17,1,u),lerp(.79,1,u),1);dogP.rotation.z=-.18*(1-u);
+      setL(fr,.3*(1-u),.6*(1-u));setL(bk,-.3*(1-u),.6*(1-u));
+      dHead.rotation.y=Math.sin(t*113)*.4*(1-u);dHead.rotation.z=-.2*(1-u);ears(.5);}
+    return;}
+  if(sp.id==='bonk'){
+    if(T<.25){const u=ez(T/.25);                                            // up on the hind legs, paws clasped overhead
+      dogP.rotation.z=1.25*u;dogP.position.y=30*u;setL(fr,2.0*u,-.22*u);setL(bk,-.3*u,0);
+      dHead.rotation.z=-.6*u;ears(.12+.6*u);dTail.rotation.z=.9*u;}
+    else if(T<.40){const u=ez((T-.25)/.15);                                 // the hammer
+      dogP.rotation.z=1.25-1.75*u;dogP.position.y=30*(1-u);dogP.scale.set(1+.3*u,1-.3*u,1+.15*u);
+      setL(fr,lerp(2.0,.6,u),-.1);setL(bk,-.3,0);dHead.rotation.z=-.6+.5*u;ears(.7);dTail.rotation.z=.9-1.4*u;}
+    else if(T<1.25){const u=(T-.40)/.85,eo=1-Math.pow(1-u,2.4);             // teeth in: the helicopter
+      dogP.rotation.y=10*Math.PI*eo;dogP.rotation.z=-.25;
+      dogP.position.y=130*Math.sin(Math.min(1,u*1.3)*Math.PI*.8);
+      setL(fr,.9,.35);setL(bk,-.9,.35);dTail.rotation.z=-1.2;dTail.rotation.y=Math.sin(t*30)*.5;
+      ears(.05);dTongue.scale.set(6.7,3.7,6.7);dHead.rotation.z=.15;
+      dShadow.scale.setScalar(Math.max(.45,1-dogP.position.y/260));
+      if(Math.random()<.5)addPart({type:'star',x:R.x+Math.cos(dogP.rotation.y)*54,by:R.y,y:R.y-dogP.position.y-rand(0,40),vx:rand(-30,30),vy:-40,life:.6,max:.6,size:rand(5,9),g:0,hue:rand(260,330)});}
+    else{const u=(T-1.25)/.15;
+      dogP.position.y=0;dogP.rotation.z=-.18*(1-u);dogP.scale.set(1.2-.18*u,.8+.18*u,1.1-.1*u);
+      setL(fr,.4,.95);setL(bk,-.4,.95);ears(.6);dHead.rotation.y=Math.sin(t*100)*.3;}
+    return;}
+  if(sp.id==='spin'){
+    if(T<.10){const u=T/.10;
+      dogP.rotation.y=-.9*u;dogP.scale.set(1.15,.85,1.15);dTail.rotation.z=.8;
+      setL(fr,.6*u,0);setL(bk,-.6*u,0);ears(.3);}
+    else if(T<.45){const u=(T-.10)/.35,eo=1-Math.pow(1-u,2.2);
+      dogP.rotation.y=-.9+(4*Math.PI+.9)*eo;dogP.rotation.z=.35;
+      setL(fr,1.3,.3);setL(bk,-1.3,.3);dTail.rotation.z=-1.1;dTail.rotation.y=Math.sin(t*40)*.6;
+      ears(.9);dTongue.scale.set(6.7,3.7,6.7);
+      if(Math.random()<.8){const a=rand(0,6.283),d=rand(60,SPIN_R*R.sc);
+        addPart({type:'dust',x:R.x+Math.cos(a)*d,by:R.y+Math.sin(a)*d/DZ,y:R.y+Math.sin(a)*d/DZ-8,vx:Math.cos(a)*130,vy:-10,life:.4,max:.4,size:rand(6,12),g:0});}}
+    else{const u=clamp((T-.45)/.10,0,1);
+      dogP.rotation.y=4*Math.PI;dogP.rotation.x=Math.sin(u*Math.PI*3)*.25*(1-u);dogP.rotation.z=.12*(1-u);
+      setL(fr,.4*(1-u),0);setL(bk,-.4*(1-u),0);ears(.2+.7*(1-u));}
+    return;}
+  if(sp.id==='dig'){
+    if(T<.30){const u=T/.30;
+      dogP.rotation.z=-.5*u;dogP.position.y=-70*u*u;
+      fr[0].rotation.z=1.0+Math.sin(t*40)*1.4;fr[1].rotation.z=1.0-Math.sin(t*40)*1.4;setL(bk,-.3,0);
+      dHead.rotation.z=-.8*u;ears(.5);dTail.rotation.z=.6;}
+    else if(T<.30+DIG_T){dog.visible=false;digMound.visible=true;
+      digMound.position.set(R.x,6+Math.sin(t*18)*2,zOf(R.y));digMound.rotation.y=-R.ang;}
+    else{const u=clamp((T-.30-DIG_T)/.15,0,1);
+      dogP.position.y=u<.5?lerp(-70,60,u/.5):lerp(60,0,(u-.5)/.5);
+      dogP.rotation.z=1.3*(1-u*.55);setL(fr,-.9,.8);setL(bk,.4,.8);
+      dHead.rotation.z=.4;ears(.8);dTail.rotation.z=-.5;}
+    return;}}
 
 /* ---------- the waterer and the loose hose head ---------- */
 function updHuman(dt){Hm.shock=Math.max(0,Hm.shock-dt);
@@ -914,10 +1210,10 @@ function updAttacks(dt){
     else if(a.type==='sweep'){if(k<a.act){const ang=a.ang+a.dir*(-a.half+2*a.half*k/a.act);a.cur=ang;const cx=Math.cos(ang),cy=Math.sin(ang)*.6;
         for(let i=0;i<3;i++){const u=Math.random()*a.range;addPart({type:'water',x:a.o.x+cx*u,by:a.o.y+cy*u,y:a.o.y+cy*u-a.o.h*(1-u/a.range),vx:cx*80,vy:-40,life:.3,max:.3,size:rand(2,4),g:1});}
         const rx=R.x-a.o.x,ry=(R.y-a.o.y)/.6,rd=Math.hypot(rx,ry),ra=Math.atan2(ry,rx),da=Math.abs(Math.atan2(Math.sin(ra-ang),Math.cos(ra-ang)));
-        if(rd<a.range&&da<.12+26/Math.max(rd,60))hurt(11,cx,cy);}}
+        if(rd<a.range&&da<.12+26/Math.max(rd,60)&&!R.air)hurt(11,cx,cy);}}
     else if(a.type==='bomb'){if(!a.landed){a.landed=true;sfx.splash();for(const s of a.spots){puddles.push({x:s.x,y:s.y,r:54,life:7});
         for(let i=0;i<14;i++)addPart({type:'water',x:s.x,y:s.y,vx:rand(-160,160),vy:rand(-320,-100),life:.6,max:.6,size:rand(2,4.5),g:1});
-        if(Math.hypot(R.x-s.x,(R.y-s.y)*DZ)<56*R.sc)hurt(12,0,0);}}}
+        if(Math.hypot(R.x-s.x,(R.y-s.y)*DZ)<56*R.sc&&!R.air)hurt(12,0,0);}}}
     else if(a.type==='lunge'){if(k<a.act){const dx=a.tx-E.x,dy=a.ty-E.y,d=Math.hypot(dx,dy);if(d>4){const st=Math.min(d,980*dt);E.x+=dx/d*st;E.y+=dy/d*st;}
         if(Math.random()<dt*30)addPart({type:'dust',x:E.x,y:E.y,vx:0,vy:-10,life:.35,max:.35,size:rand(5,9),g:0});
         if(Math.hypot(R.x-E.x,(R.y-E.y)*DZ)<58*R.sc)hurt(16,Math.sign(R.x-E.x),0);}}
@@ -950,7 +1246,7 @@ function startBooga(){booga=1;boogaT=0;beatT=0;beatN=0;sfx.booga();if(!reduce)sh
 function endBooga(){booga=0;power=0;Hm.mode=D().freeSnake?'crank':'regrab';Hm.cower=false;pop(R.x,R.y-170,'Booga time is over!','#e0aaff',26);}
 
 /* ---------- flow ---------- */
-function burst(){state='burst';burstT=0;hitStop=.3;flash=.7;fovKick=9;geysers=[];Hm.shock=3;sfx.boom();if(booga){booga=0;}
+function burst(){state='burst';burstT=0;R.sp=null;R.air=0;R.under=0;motClear();hitStop=.3;flash=.7;fovKick=9;geysers=[];Hm.shock=3;sfx.boom();if(booga){booga=0;}
   Hot.ph='off';Hot.t=0;if(Lass.ph!=='off'){Lass.ph='off';R.held=false;}   // 5.5
   for(let i=0;i<(reduce?90:200);i++){const q=rope[Math.floor(rand(3,N-4))];addPart({type:Math.random()<.2?'mist':'water',x:q.x,y:q.y,vx:rand(-240,240),vy:rand(-680,-280),life:1.5,max:1.5,size:rand(3,5.5),g:1,hue:rand(0,360)});}
   for(let i=0;i<40;i++){const q=rope[Math.floor(rand(3,N-4))];addPart({type:'bit',x:q.x,y:q.y,vx:rand(-260,260),vy:rand(-500,-200),life:1.3,max:1.3,size:rand(4,8),g:1,rot:0,vr:rand(-14,14),c:Math.random()<.5?'#3cc062':'#1d6b33'});}
@@ -967,7 +1263,7 @@ function won(){state='won';sfx.win();
   $('nextBtn').textContent=`Hose #${level+1}`;$('winOv').hidden=false;$('nextBtn').focus({preventScroll:true});
   const cols=['#ff5d8f','#ffd23f','#00bbf9','#9b5de5','#7ae582','#ff9f1c','#ffffff'];
   for(let i=0;i<(reduce?40:160);i++)confetti.push({x:rand(0,VW),y:rand(-300,-10),vx:rand(-30,30),vy:rand(40,140),rot:rand(0,6),vr:rand(-6,6),w:rand(6,11),h:rand(8,14),c:cols[i%cols.length],ph:rand(0,6)});}
-function lose(){state='lost';booga=0;sfx.lose();Hot.ph='off';if(Lass.ph!=='off'){Lass.ph='off';R.held=false;}
+function lose(){state='lost';booga=0;R.sp=null;R.air=0;R.under=0;motClear();sfx.lose();Hot.ph='off';if(Lass.ph!=='off'){Lass.ph='off';R.held=false;}
   $('lHose').textContent=Math.round(hoseHP)+'%';$('lTime').textContent=fmt(elapsed);$('lBest').textContent=writeBest();
   setTimeout(()=>{$('loseOv').hidden=false;$('retryBtn').focus({preventScroll:true});},700);}
 function resetLevel(){mode=pendingMode;                                        // 3.1 / 5.1: the mode changes ONLY here
@@ -976,6 +1272,7 @@ function resetLevel(){mode=pendingMode;                                        /
   hoseHP=100;phase=1;power=0;booga=0;boogaT=0;chainSet(0);dmgTaken=0;elapsed=0;
   attacks=[];puddles=[];treats=[];punct=[];critters=[];parts=[];pops=[];confetti=[];pots=makePots();hangers=makeHangers();
   Object.assign(R,{ang:0,biteT:0,thrash:0,safeT:0,x:260,y:620,vx:0,vy:0,hp:D().hpMax,sc:1,wet:0,chomp:0,recover:0,dash:0,dashCd:0,dashT:0,iframe:0,hurt:0,f:1,stam:dMax(),stamT:0,held:false,pounce:0,shk:0,shkT:0,shkExt:0,shkStep:-1,barkCd:0});
+  R.sp=null;R.air=0;R.under=0;R.wrench=0;for(const k in R.spCd)R.spCd[k]=0;motClear();   // special-moves.md 6
   Object.assign(Hot,{ph:'off',t:0,c:45,w:6,len:3,cd:HOT_FIRST});
   Object.assign(Lass,{ph:'off',t:0,taps:0,tick:0,cd:LASSO_FIRST,mercy:0,sinceWin:1,retreat:0});boogaBuf=0;
   Object.assign(Hm,{x:720,y:600,f:-1,mode:D().freeSnake?'crank':'roam',grabbed:!D().freeSnake,cower:false,shock:0});
@@ -1255,6 +1552,8 @@ ink(dog);const INK_R=INK.clone();INK_R.uniforms.th.value=1.8;INK_R.uniforms.c=IN
 const softTex=ctex(64,64,1,1,g=>{const gr=g.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'#ffffff');gr.addColorStop(.5,'#c8c8c8');gr.addColorStop(1,'#000000');g.fillStyle=gr;g.fillRect(0,0,64,64);});
 softTex.encoding=THREE.LinearEncoding;softTex.wrapS=softTex.wrapT=THREE.ClampToEdgeWrapping;
 const dShadow=new THREE.Mesh(new THREE.CircleGeometry(46,24),MB('#3a2a6e',.34));dShadow.material.alphaMap=softTex;dShadow.material.needsUpdate=true;dShadow.rotation.x=-Math.PI/2;dShadow.position.y=1.2;dog.add(dShadow);
+/* special-moves.md 3.2: the travelling dig mound - one flattened sphere, hidden unless R.under */
+const digMound=sph(scene,M('#6b4426'),1,0,0,0,34,8,26,false);digMound.visible=false;
 let browS=0,happyT=0,rearK=0,rearU=0,rearDir=-1,rearHold=0;
 
 /* ================= pause + wardrobe (design/ux/pause-and-wardrobe.md) =================
@@ -1683,6 +1982,15 @@ function render3D(dt){
   dHead.position.set(30+dip*.35,116-dip+rearK*4*Math.sin(t*4.8),0);dHead.rotation.z=-dip*.035+(moving?0:Math.sin(t*1.3)*.04)-rearK*.75;dHead.rotation.x=dance?Math.sin(t*6)*.25:0;dHead.scale.setScalar(1+.22*Math.sin(Math.min(1,R.biteT/.3)*Math.PI));dHead.rotation.y=R.thrash>0?Math.sin(t*42)*.75:0;
   dEars.forEach((e,i)=>{e.rotation.x=(i?1:-1)*(.12+Math.abs(Math.sin(t*(moving?15:2.5)))*(moving?.5:.1)*(1+.6*rearK));e.rotation.z=rearK*.10;});dTail.rotation.y=Math.sin(t*(moving?18:9))*(.7+.4*rearK);dTail.rotation.z=rearK*.50;dShadow.scale.x=1-.35*rearK;
   const shut=R.wet>0||R.recover>0||(t%3.7)<.12;happyT=R.thrash>0?1.6:Math.max(0,happyT-dt);const happy=booga||happyT>0;dEyes.forEach(e=>{e.scale.y=13.2*(shut?.18:happy?.35:1);});{const warn=attacks.some(a=>a.t<a.tele&&(a.type==='jet'?segDist(R.x,R.y,a.o.x,a.o.y,a.o.x+a.dx*a.len,a.o.y+a.dy*a.len):a.type==='sweep'?Math.hypot(a.o.x-R.x,a.o.y-R.y)-a.range:a.type==='bomb'?Math.min(...a.spots.map(q=>Math.hypot(q.x-R.x,q.y-R.y))):Math.hypot(a.tx-R.x,a.ty-R.y))<200);browS=lerp(browS,R.chomp>0||R.biteT>0?-.55:warn?.5:0,1-Math.exp(-dt*14));dBrows.forEach((b,i)=>{b.rotation.x=(i?-1:1)*browS;b.position.y=21+Math.max(0,browS)*5;});}dMouth.visible=R.chomp>0||rearK>.5;dTongue.visible=(moving||rearK>.5)&&R.chomp<=0;
+  /* special-moves.md 3.2: poseSpecial owns the whole rig for the length of a move; the wrench is
+     the hit-reaction follow-through (user request), and the else-branch restores what the gait
+     pose does not write every frame. */
+  if(R.sp)poseSpecial(R.sp);
+  else{dogP.position.x=0;dogP.rotation.y=0;digMound.visible=false;dShadow.scale.y=1;
+    if(dTongue.scale.x!==4.5)dTongue.scale.set(4.5,2.5,4.5);
+    for(const l of dLegs)l.g.rotation.x=0;
+    if(R.wrench>0){const e=Math.sin(clamp(R.wrench/HIT_WR[R.wrenchW-1],0,1)*Math.PI)*(.45+.22*R.wrenchW);
+      dogP.rotation.z+=e*.30;dHead.rotation.z-=e*.55;dHead.position.x-=e*9;dogP.scale.set(1+e*.14,1-e*.12,1+e*.06);}}
   furM.color.copy(FURC).lerp(FWET,Math.min(1,R.wet)*.8);furS.color.copy(FURS).lerp(FWET,Math.min(1,R.wet)*.8);dAura.material.opacity=(booga?1:power/POWER_MAX)*.13*(.75+.25*Math.sin(t*8));dAura.material.color.set(Math.sin(t*5)>0||!booga?'#c77dff':'#39d98a');
   /* the waterer */
   const cower=Hm.cower,up=Hm.shock>0||!Hm.grabbed,sw=Hm.moving?Math.sin(Hm.walkT*9):0,cw=Hm.moving?Math.cos(Hm.walkT*9):0;
@@ -1762,6 +2070,10 @@ function drawOverlay(){ctx.setTransform(ovDpr,0,0,ovDpr,0,0);ctx.clearRect(0,0,V
     label(left+(left===1?' more tap!':' more taps!'),q.x,q.y+22*us,16*us,'#ffffff');
     for(let k=0;k<LASSO_TAPS;k++){ctx.beginPath();ctx.arc(q.x+(k-(LASSO_TAPS-1)/2)*19*us,q.y+42*us,6*us,0,Math.PI*2);
       ctx.fillStyle=k<Lass.taps?'#80ffdb':'rgba(255,255,255,.55)';ctx.fill();ctx.lineWidth=2.5;ctx.strokeStyle='#3b2416';ctx.stroke();}}}
+  /* 3.1: the hint chip. Positive-only - it costs nothing, so triggering it by accident is how
+     players find out the moves exist. */
+  if(state==='play'&&Mot.hintT>0){const q=proj(R.x,R.y,215*R.sc);
+    if(q.z<1){ctx.globalAlpha=clamp(Mot.hintT/.2,0,1);label(Mot.hint,q.x,q.y,26*us,'#80ffdb');ctx.globalAlpha=1;}}
   if(flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(.6,flash)})`;ctx.fillRect(0,0,VW,VH);}
   drawBanner();drawIndicator();drawConfetti();}
 function drawBanner(){if(!booga)return;const txt="IT'S BOOGA TIME!",intro=Math.min(1,boogaT/.6),sc=intro<1?(.3+.7*intro)*(1+Math.sin(intro*Math.PI)*.4):1+(reduce?0:Math.sin(t*6)*.05);
@@ -1804,7 +2116,7 @@ window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();
   if(!e.repeat){if(k===' '||k==='j'){biteBuf=.2;biteHeld=true;}if(k==='shift'||k==='k')dashBuf=.2;if(k==='b')barkNow();if(k==='v')boogaNow();}
   if(state==='play'&&['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();});
 window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if(k===' '||k==='j')biteHeld=false;});
-window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;ptr=null;joy=null;biteHeld=false;
+window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;ptr=null;joy=null;biteHeld=false;motClear();   // 5.13
   if(state==='play')pause();});   /* 1.2: tab-away never costs health */
 const toLogical=e=>({x:e.clientX,y:e.clientY});
 cv.addEventListener('pointerdown',e=>{ptr=toLogical(e);try{cv.setPointerCapture(e.pointerId);}catch(_){}});
@@ -1863,7 +2175,7 @@ function frame(now){const raw=Math.min(.05,(now-last)/1000);last=now;
   dtS=lerp(dtS,raw,.2);let dt=dtS;if(hitStop>0){hitStop-=raw;dt*=.03;}t+=dt;
   if(state==='play'){elapsed+=dt;if(booga){boogaT+=dt;beatT+=dt;if(beatT>.25){beatT=0;sfx.beat(beatN++);}if(boogaT>bLen())endBooga();}}
   if(state==='burst'){burstT+=dt;if(burstT>1.6)won();}
-  readInput();if(biteBuf>0){biteBuf-=raw;if(tryBite())biteBuf=0;}if(dashBuf>0){dashBuf-=raw;if(tryDash())dashBuf=0;}
+  readInput();motT+=raw;motDir(raw);if(biteBuf>0){biteBuf-=raw;if(tryBite())biteBuf=0;}if(dashBuf>0){dashBuf-=raw;if(tryDash())dashBuf=0;}
   if(chainT>0){chainT-=dt;if(chainT<=0)chainDrop();}          // 3.4: the chain cools, it never zeroes
   if(boogaBuf>0){boogaBuf-=raw;if(!booga&&power>=pMax()&&state==='play'){boogaBuf=0;startBooga();}}   // 3.5flash=Math.max(0,flash-raw*2.4);
   for(const g of geysers){g.t-=dt;const q=rope[g.i];for(let k=0;k<2;k++)if(Math.random()<dt*40)addPart({type:'water',x:q.x+rand(-5,5),y:q.y,vx:rand(-60,60),vy:rand(-620,-380)*Math.min(1,g.t+.3),life:1.1,max:1.1,size:3,g:1});}geysers=geysers.filter(g=>g.t>0&&state==='play');
@@ -1872,7 +2184,7 @@ function frame(now){const raw=Math.min(.05,(now-last)/1000);last=now;
   for(const p of puddles)p.life-=dt;puddles=puddles.filter(p=>p.life>0);
   for(const tr of treats)tr.life-=dt;
   treatCd-=dt;if(state==='play'&&treatCd<=0&&treats.length<3){for(let k=0;k<12;k++){const x=clamp(R.x+rand(-520,520),60,WORLD-60),y=clamp(R.y+rand(-260,170),GY0+20,GY1-10);if(!blocked(x,y,30)){treats.push({x,y,life:14,ph:rand(0,6)});break;}}treatCd=rand(D().treatMin,D().treatMax);}
-  updHuman(dt);updHead(dt);updRope(dt);hoseDodge(dt);updRosie(dt);updShake(dt);updSnakes(dt);updLass(dt);updAttacks(dt);updHot(dt);updSprinkler(dt);updParts(dt);updCritters(dt);
+  updHuman(dt);updHead(dt);updRope(dt);hoseDodge(dt);updSpecial(dt);updRosie(dt);updShake(dt);updSnakes(dt);updLass(dt);updAttacks(dt);updHot(dt);updSprinkler(dt);updParts(dt);updCritters(dt);
   shake=Math.max(0,shake-dt);hud();render3D(dt);drawOverlay();
   requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
