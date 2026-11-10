@@ -3,11 +3,13 @@
 const fs=require('fs'),{chromium}=require('playwright');const REPO='/home/claude/rosie-vs-the-hose-2';
 const HOOK=`window.__T={R,J,Hot,Lass,rope,E,Hm,DIFF,D,tryBite,tryDash,doBite,doBark,startBooga,endBooga,freeLass,burn,hurt,
  moveWeak,resetLevel,leapAway,dmgOf,unitDmg,leapsFor,windLen,chainDmg,allowedSnakes,spawnSnake,hitSnake,updSnakes,
+ barkNow,boogaNow,chain,chainSet,
  get state(){return state},set state(v){state=v},get level(){return level},set level(v){level=v},
  get power(){return power},set power(v){power=v},get hoseHP(){return hoseHP},set hoseHP(v){hoseHP=v},
  get booga(){return booga},get weak(){return weak},set weak(v){weak=v},
  get attacks(){return attacks},set attacks(v){attacks=v},
- get score(){return score},set score(v){score=v},get combo(){return combo},set combo(v){combo=v},
+ get score(){return score},set score(v){score=v},get combo(){return combo},set combo(v){chainSet(v)},
+ get chainP(){return chainP},get chainRep(){return chainRep},get chainMove(){return chainMove},
  get chainT(){return chainT},set chainT(v){chainT=v},get dmgTaken(){return dmgTaken},
  get mode(){return mode},get pendingMode(){return pendingMode},get runMinMode(){return runMinMode},
  get secondWind(){return secondWind},set secondWind(v){secondWind=v},
@@ -15,7 +17,7 @@ const HOOK=`window.__T={R,J,Hot,Lass,rope,E,Hm,DIFF,D,tryBite,tryDash,doBite,doB
  get crankT(){return crankT},set crankT(v){crankT=v},get crankW(){return crankW},set crankW(v){crankW=v},
  get biteHeld(){return biteHeld},set biteHeld(v){biteHeld=v},
  get calls(){return renderer.info.render.calls},get elapsed(){return elapsed},
- K:{N,DZ,SN_N,SN_HP,SN_MAX_ROPES,SHAKE_T,SHAKE_MAX,SHAKE_EXT,SHAKE_EXT_CAP,BARK_R,BARK_CD,BARK_HOLD,
+ K:{N,DZ,SN_N,SN_HP,SN_MAX_ROPES,SHAKE_T,SHAKE_MAX,SHAKE_EXT,SHAKE_EXT_CAP,BARK_R,BARK_CD,CHAIN_VARY,CHAIN_REP,
     CHAIN_W,CHAIN_STEP,POUNCE_DMG,POUNCE_SP,POUNCE_T,SNAKE_COIL,CRANK_CD,CRANK_WIND,HARD_SPACING,BITE_W,WIND_GRANT}};
 requestAnimationFrame(frame);
 })();`;
@@ -249,9 +251,9 @@ await calm();
 const ch=await E(()=>{const T=window.__T;T.combo=0;T.power=0;const out=[];
   for(let i=0;i<8;i++){T.J.winded=5;T.J.hits=0;T.doBite(T.weak);out.push({c:T.combo,p:T.power});}
   return {out,chip:document.getElementById('comboChip').hidden,txt:document.getElementById('combo').textContent};});
-ok('AC14 every landed bite step raises the chain by 1',ch.out[0].c===1&&ch.out[7].c===8,
-   'chain after 8 bites = '+ch.out[7].c);
-ok('AC14 +1 power on every 4th chain step',ch.out[3].p>=1&&ch.out[7].p>=2,
+ok('AC14 (freeflow) a bite opens the chain at 1, then repeats advance 0.4 each',
+   ch.out[0].c===1&&ch.out[7].c===3,'chain after 8 repeated bites = '+ch.out[7].c+' (was 8 under the flat rule)');
+ok('AC14 the power feed still runs off the chain (bites also charge it directly)',ch.out[3].p>=1&&ch.out[7].p>=2,
    'power after 4 steps = '+ch.out[3].p+', after 8 = '+ch.out[7].p);
 const dmgBonus=await E(()=>{const T=window.__T;const o={};T.combo=0;o.c0=T.chainDmg();T.combo=4;o.c4=T.chainDmg();
   T.combo=9;o.c9=T.chainDmg();T.combo=50;o.c50=T.chainDmg();return o;});
@@ -341,6 +343,59 @@ const spacing=await E(()=>{const T=window.__T;const o={};
   o.held=T.attacks.filter(a=>a.src==='snake').length;T.R.held=false;return o;});
 ok('AC9/3.2c extra snakes never attack during an earned window or while Rosie is held',
    spacing.winded===0&&spacing.held===0,'snake jets started: '+spacing.winded+' (winded) / '+spacing.held+' (held)');
+
+
+/* ===== Decision 2026-11-10 A: Bark and BOOGA are separate controls ===== */
+await calm();
+const sep=await E(()=>{const a=document.getElementById('barkBtn'),b=document.getElementById('boogaBtn');
+  return {bark:!!a,booga:!!b,distinct:!!a&&!!b&&a!==b,noHoldTimer:typeof window.boogaTick,holdK:window.__T.K.BARK_HOLD===undefined};});
+ok('BARK-1 Bark and BOOGA are two separate buttons',sep.distinct,JSON.stringify(sep));
+ok('BARK-2 the tap-vs-hold hold timer is gone',sep.noHoldTimer==='undefined'&&sep.holdK,JSON.stringify(sep));
+await E(()=>{const T=window.__T;T.power=999;T.R.stam=3;T.R.barkCd=0;T.attacks=[];});await W(200);
+await p.keyboard.press('b');await W(250);
+const kB=await E(()=>({booga:window.__T.booga,cd:window.__T.R.barkCd}));
+ok('BARK-3 B barks and never starts BOOGA, even on a full meter',kB.cd>0&&kB.booga===0,'barkCd='+kB.cd.toFixed(2)+' booga='+kB.booga);
+await E(()=>{const T=window.__T;T.R.barkCd=0;T.R.stam=3;});await p.keyboard.press('v');await W(250);
+const kV=await E(()=>({booga:window.__T.booga,cd:window.__T.R.barkCd}));
+ok('BARK-4 V starts BOOGA and never barks',kV.booga===1&&kV.cd===0,'booga='+kV.booga+' barkCd='+kV.cd);
+await E(()=>{const T=window.__T;T.endBooga();T.power=0;T.R.hp=T.D().hpMax;});await W(400);await calm();
+await E(()=>{const T=window.__T;T.power=3;T.R.barkCd=T.K.BARK_CD;});await W(300);
+const btn=await E(()=>({bdis:document.getElementById('boogaBtn').disabled,
+  cool:document.getElementById('barkBtn').classList.contains('cool'),
+  cd:parseFloat(document.getElementById('barkBtn').style.getPropertyValue('--cd'))}));
+ok('BARK-5 BOOGA stays disabled below a full meter; Bark shows its own cooldown',
+   btn.bdis===true&&btn.cool===true&&btn.cd>0,JSON.stringify(btn));
+await E(()=>{const T=window.__T;T.R.barkCd=0;T.power=999;});await W(300);
+const en=await E(()=>document.getElementById('boogaBtn').disabled);
+ok('BARK-6 the BOOGA button enables the moment the meter fills',en===false,'disabled='+en);
+await E(()=>{window.__T.power=0;});await calm();
+
+/* ===== Decision 2026-11-10 B: the chain rewards variety ===== */
+const vary=await E(()=>{const T=window.__T;const o={};
+  T.combo=0;for(let i=0;i<6;i++)T.chain(1,'bite');o.rep=T.chainP;o.repC=T.combo;o.repFlag=T.chainRep;
+  T.combo=0;['bite','pounce','bark','shake','bite','pounce'].forEach(m=>T.chain(1,m));
+  o.var=T.chainP;o.varC=T.combo;o.varFlag=T.chainRep;
+  T.combo=0;T.power=0;for(let i=0;i<12;i++)T.chain(1,'bite');o.repPow=T.power;
+  T.combo=0;T.power=0;for(let i=0;i<12;i++)T.chain(1,i%2?'bark':'bite');o.varPow=T.power;
+  o.ceil=[];[0,4,9,20,60].forEach(c=>{T.combo=c;o.ceil.push(+T.chainDmg().toFixed(3));});
+  T.combo=0;return o;});
+ok('CHAIN-1 six varied moves ramp ~2x faster than six repeats',near(vary.var,6,1e-6)&&near(vary.rep,3,1e-6),
+   'varied chainP='+vary.var+' vs repeated '+vary.rep);
+ok('CHAIN-2 the counter marks a repeat vs a varied step',vary.repFlag===true&&vary.varFlag===false,
+   'repeat flag '+vary.repFlag+' / varied flag '+vary.varFlag);
+ok('CHAIN-3 the power feed follows the same ratio (12 moves: repeat vs varied)',
+   vary.repPow===1&&vary.varPow===3,'repeat +'+vary.repPow+' power, varied +'+vary.varPow);
+ok('CHAIN-4 the chainDmg ceiling is unchanged at 1.48',
+   vary.ceil[0]===1&&vary.ceil[2]===1.48&&vary.ceil[4]===1.48,'chainDmg = '+vary.ceil.join(' / '));
+const win3=await E(()=>{const T=window.__T;T.combo=0;T.J.winded=5;T.J.hits=0;const o=[];
+  for(let i=0;i<3;i++){T.doBite(T.weak);o.push(T.chainP);}return {o,hits:T.J.hits};});
+ok('CHAIN-5 all three bites of one window count as the same move',
+   win3.o[0]===1&&Math.abs(win3.o[2]-1.8)<1e-6,'chainP after 3 bites in one window: '+win3.o.join(' -> '));
+const onlyBite=await E(()=>{const T=window.__T;T.combo=0;T.chain(1,'bite');
+  for(let i=0;i<20;i++)T.chain(1,'bite');return {c:T.combo,dmg:+T.chainDmg().toFixed(3)};});
+ok('CHAIN-6 a bite-only player still reaches the full ceiling, just slower',
+   onlyBite.dmg===1.48,'21 repeated bites -> chain '+onlyBite.c+', chainDmg '+onlyBite.dmg);
+await calm();
 
 /* ===== draw calls ===== */
 await W(500);
