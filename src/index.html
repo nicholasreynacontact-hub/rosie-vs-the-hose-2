@@ -199,7 +199,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
     <div class="meter"><span class="port rosie" aria-hidden="true"></span><small>Rosie</small><div class="bar"><div class="fill rosie" id="rFill"></div></div></div>
     <div class="meter"><span class="port foe" aria-hidden="true"></span><small id="phaseLbl">Hose</small><div class="bar"><div class="fill" id="hFill"></div></div></div>
     <div class="meter"><span class="port star" aria-hidden="true"></span><small id="powLbl">Power</small><div class="bar"><div class="fill pow" id="pFill" style="width:0%"></div></div></div>
-    <div class="stam" id="stamPips" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i></div>
+    <div class="stam" id="stamPips" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i hidden></i></div>
   </div>
 </div>
 
@@ -229,7 +229,10 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
       <dt>Dash</dt><dd><kbd>Shift</kbd> through the water to dodge</dd>
       <dt>Watch</dt><dd>Red and amber shapes mean water is coming</dd>
       <dt>Power</dt><dd>Bites and dodges charge BOOGA TIME</dd>
-      <dt>Booga</dt><dd><kbd>B</kbd> or the star button when the meter is full</dd>
+      <dt>Booga</dt><dd><strong>Hold</strong> <kbd>B</kbd> or the star button when the meter is full</dd>
+      <dt>Pounce</dt><dd>Dash, then <kbd>Space</kbd> mid-dash to leap the last stretch</dd>
+      <dt>Shake</dt><dd><strong>Hold</strong> <kbd>Space</kbd> after a bite to thrash for extra damage</dd>
+      <dt>Bark</dt><dd><strong>Tap</strong> <kbd>B</kbd> to interrupt a wind-up or stop the reel</dd>
     </dl>
     <button class="go" id="playBtn" type="button">Let Rosie loose</button>
   </div>
@@ -321,23 +324,52 @@ let hitStop=0,fovKick=0,flash=0,biteBuf=0,dashBuf=0,dtS=1/60,geysers=[];
 let attackCd=2.5,head2Cd=3,treatCd=5,critterCd=0,inX=0,inY=0;
 const keys={};let ptr=null,joy=null;
 // ang starts in three-quarter view so the title card shows Rosie's face, not her back; resetLevel squares her up for play
-const R={x:300,y:500,f:1,vx:0,vy:0,hp:100,sc:1,wet:0,chomp:0,recover:0,dash:0,dashCd:0,dashT:0,dx:1,dy:0,iframe:0,hurt:0,speed:0,perfect:false,gait:0,fs:1,ang:Math.PI/2.9,biteT:0,thrash:0,thrashI:45,safeT:0};
+const R={x:300,y:500,f:1,vx:0,vy:0,hp:100,sc:1,wet:0,chomp:0,recover:0,dash:0,dashCd:0,dashT:0,dx:1,dy:0,iframe:0,hurt:0,speed:0,perfect:false,gait:0,fs:1,ang:Math.PI/2.9,biteT:0,thrash:0,thrashI:45,safeT:0,stam:3,stamT:0,held:false,pounce:0,shk:0,shkT:0,shkExt:0,shkStep:-1,barkCd:0};
 const Hm={x:720,y:470,f:-1,tx:600,ty:470,mode:'roam',moving:false,walkT:0,cower:false,shock:0,cx:0,cy:0,grabbed:true,wpT:0};
-const E={x:0,y:0,vx:0,vy:0,ph:0};
+const E={x:0,y:0,vx:0,vy:0,ph:0,stagger:0};
 const J={cd:0,streak:0,winded:0,last:1,lastT:9,hits:0};
 /* ---------- fight-upgrade.md 3.1-3.6: tuning knobs (section 7) and the two new threat states ---------- */
 const HOT_LVL=2,HOT_FIRST=14,HOT_WARN=1.2,HOT_COOL=.6,HOT_DMG=10,HOT_BITE_DMG=8,HOT_RAD=52;
 const LASSO_LVL=4,LASSO_FIRST=22,LASSO_TELE=.9,LASSO_R=95,LASSO_TAPS=6,LASSO_TICK=4,LASSO_TICK_T=.9,LASSO_MAX=4,LASSO_TOSS=6,LASSO_MERCY=8;
 const DASH_MAX=3,DASH_REGEN=1.6,DASH_CANCEL_COST=2,BITE_W=[1,1.4,2.4],WIND_GRANT=[.42,.30],WHIFF_COST=.25,HP_CAP_LEVEL=5;
+/* ---------- difficulty-and-combos.md 3.1: one frozen table drives every balance value ----------
+   The 'med' column IS the pre-change build, so a Medium run must behave identically (AC1).
+   teleMul is 1.00 on Hard by rule (section 7 fairness invariant): more threats, never a shorter warning. */
+const DIFF=Object.freeze({
+  easy:Object.freeze({hpMax:150,regenMul:2,regenWait:2.5,dmgMul:.6,hitCap:.15,iframe:1.4,windGrantMul:1.35,windLenMul:1.3,leapAdj:-1,atkCdMul:1.35,teleMul:1.25,hotLvl:4,hotCdMul:1.5,lassoLvl:6,lassoCdMul:1.5,dashMax:4,dashRegen:1.1,treatMin:6,treatMax:9,treatHeal:25,powerMax:8,boogaLen:18,unitBase:20,secondWind:true,freeSnake:false,maxSnakes:1}),
+  med:Object.freeze({hpMax:100,regenMul:1,regenWait:4,dmgMul:1,hitCap:.2,iframe:1,windGrantMul:1,windLenMul:1,leapAdj:0,atkCdMul:1,teleMul:1,hotLvl:2,hotCdMul:1,lassoLvl:4,lassoCdMul:1,dashMax:3,dashRegen:1.6,treatMin:8,treatMax:12,treatHeal:20,powerMax:10,boogaLen:15,unitBase:28,secondWind:false,freeSnake:false,maxSnakes:1}),
+  hard:Object.freeze({hpMax:85,regenMul:.6,regenWait:5,dmgMul:1.25,hitCap:.25,iframe:.8,windGrantMul:.85,windLenMul:.85,leapAdj:1,atkCdMul:.82,teleMul:1,hotLvl:1,hotCdMul:.8,lassoLvl:2,lassoCdMul:.8,dashMax:3,dashRegen:1.9,treatMin:11,treatMax:15,treatHeal:15,powerMax:12,boogaLen:12,unitBase:34,secondWind:false,freeSnake:true,maxSnakes:3})
+});
+const MODES=['easy','med','hard'],MRANK={easy:0,med:1,hard:2};
+let mode=MODES.includes(store.get('rosie2-mode'))?store.get('rosie2-mode'):'med',pendingMode=mode,runMinMode=mode,secondWind=false;
+const D=()=>DIFF[mode],pMax=()=>D().powerMax,bLen=()=>D().boogaLen,dMax=()=>D().dashMax,dRegen=()=>D().dashRegen;
+/* 4.1: every damage source funnels through dmgOf, so hitCap cannot be bypassed */
+function dmgOf(base){return Math.min(base*(booga?.5:1)*Math.min(1,.55+.15*level)*D().dmgMul,D().hitCap*D().hpMax);}
+/* 3.2/3.3 tuning knobs (section 7). TWO DELIBERATE DEVIATIONS, both rulings on the designer's
+   flagged conflicts: SHAKE_EXT_CAP is 0.24 s, not 0.48 - the non-extending bite window keeps
+   half of what Shake would sell back; BARK_HOLD is 0.30 s, not 0.35. */
+const SNAKE_COIL=.35,SN_HP=30,SN_N=36,SN_BITE=6,SN_JET_DMG=10,SN_MAX_ROPES=3,CRANK_CD=26,CRANK_WIND=3,HARD_SPACING=.8;
+const POUNCE_DMG=8,POUNCE_T=.26,POUNCE_SP=1020,SHAKE_T=.3,SHAKE_MAX=1.2,SHAKE_TICK=.5,SHAKE_EXT=.12,SHAKE_EXT_CAP=.24;
+const BARK_R=260,BARK_CONE=Math.cos(70*Math.PI/180),BARK_CD=2.5,BARK_HOLD=.3,CHAIN_W=1.6,CHAIN_STEP=.08;
+let chainT=0,snakes=[],lastAtkT=-9,crankT=CRANK_CD,crankW=0,biteS=null;
+let biteHeld=false,boogaDown=false,boogaHold=0,boogaFired=false;
+/* 3.4 / 4.3: one counter on screen. It cools rather than zeroes, and never costs HP or score. */
+const chainDmg=()=>1+CHAIN_STEP*Math.min(Math.max(combo-3,0),6);
+function chain(n){for(let k=0;k<(n||1);k++){combo++;if(combo%4===0&&!booga)power=Math.min(pMax(),power+1);}chainT=CHAIN_W;}
+function chainDrop(){if(combo>=4)pop(R.x,R.y-200,'chain cooling','#cfd8dc',22);combo=Math.floor(combo/2);chainT=combo>0?CHAIN_W:0;}
+/* 3.3 BARK input: tap = bark, hold 0.30 s = BOOGA. A tap can never spend a banked BOOGA (5.10). */
+function boogaRelease(){if(!boogaDown)return;boogaDown=false;if(!boogaFired)doBark();boogaFired=false;}
+function boogaTick(raw){if(!boogaDown||boogaFired)return;boogaHold+=raw;
+  if(boogaHold>=BARK_HOLD){boogaFired=true;if(!booga&&power>=pMax()&&state==='play')startBooga();else doBark();}}
 const Hot={ph:'off',t:0,c:45,w:6,len:3,cd:HOT_FIRST};
 const Lass={ph:'off',t:0,x:0,y:0,tele:.9,taps:0,tick:0,cd:LASSO_FIRST,mercy:0,sinceWin:1,retreat:0};
 let boogaBuf=0,biteI=-1;
 /* fight-upgrade.md 4.1/4.3. unit() uses divisor base 28, not the spec's 16: a level is ~10 full
    combos instead of 15 (section 9.2, resolved). Every scaler below hits its floor by level 12. */
-const unitDmg=()=>100/(28+4*Math.min(level,HP_CAP_LEVEL));
+const unitDmg=()=>100/(D().unitBase+4*Math.min(level,HP_CAP_LEVEL));
 const LCAP=()=>Math.min(level,12);   // 4.3: difficulty is frozen from level 12 on
 const atkMult=()=>Math.max(.70,1-.04*Math.max(0,LCAP()-5));
-const leapsFor=()=>Math.min(9,1+Math.min(level,3)+(phase-1)+Math.floor(Math.max(0,LCAP()-5)/2));
+const leapsFor=()=>clamp(Math.min(9,1+Math.min(level,3)+(phase-1)+Math.floor(Math.max(0,LCAP()-5)/2))+D().leapAdj,1,10);
 
 /* ---------- sound ---------- */
 let ac=null,muted=false;
@@ -397,22 +429,26 @@ function updRope(dt){const h=headPos(),damp=Math.exp(-5*dt),live=state==='play'&
   if(phase===3&&Hm.grabbed&&state!=='won'){for(let k=-5;k<=5;k++){const p=rope[MID+k],zz=50*Math.cos(k/5*Math.PI/2)+Math.sin(t*5)*4;if(p.z<zz){p.z=zz;p.vz=0;}}}
 }
 // Only the glowing weak spot can be bitten. It leaps back and forth when Rosie closes in, then runs out of breath for a moment.
-function moveWeak(){const c=[];let far=-1,fd=-1;for(let i=8;i<N-8;i++){if(Math.abs(i-weak)<14)continue;if(phase===3&&Math.abs(i-MID)<8)continue;
+function moveWeak(){const c=[];let far=-1,fd=-1;const lo=D().freeSnake?12:8,hi=D().freeSnake?N-14:N-8;   // 3.2: on Hard the last fourteen segments whip too fast to bite on purpose
+  for(let i=lo;i<hi;i++){if(Math.abs(i-weak)<14)continue;if(phase===3&&Math.abs(i-MID)<8)continue;
     const d=Math.hypot(rope[i].x-R.x,rope[i].y-R.y);if(d>fd){fd=d;far=i;}if(d>260+40*Math.min(level,4)&&d<700+100*Math.min(level,4)&&!blocked(rope[i].x,rope[i].y,30))c.push(i);}
   weak=c.length?pick(c):(far>=0?far:weak);}
-function spotBurst(){const w=rope[weak];attacks.push({type:'bomb',src:'spot',t:0,o:{x:w.x,y:w.y,h:10},spots:[{x:w.x,y:w.y},{x:R.x,y:R.y}],tele:.6*speedK(),act:.2,landed:false});sfx.warn();}
+function spotBurst(){const w=rope[weak];attacks.push({type:'bomb',src:'spot',t:0,o:{x:w.x,y:w.y,h:10},spots:[{x:w.x,y:w.y},{x:R.x,y:R.y}],tele:.6*speedK()*D().teleMul,act:.2,landed:false});sfx.warn();}
+const windLen=()=>Math.max(.8,Math.max(.9,1.75-.15*level)*D().windLenMul);   // 4.2
+/* the leap is its own function so a Pounce and a Bark (3.3) can bait one too */
+function leapAway(){const w=rope[weak],m=mouth(),ni=weak,[nx,ny]=nrm(ni);let side=((w.x-m.x)*nx+(w.y-m.y)*ny)>=0?1:-1;
+  if(J.lastT<.9&&J.streak>0)side=-J.last;J.last=side;J.lastT=0;
+  const imp=(600+40*level)*(booga?1.15:1);
+  for(let k=-8;k<=8;k++){const i=ni+k;if(i<2||i>N-3)continue;const g=Math.exp(-(k*k)/18),p=rope[i];p.vx+=nx*side*imp*g;p.vy+=ny*side*imp*g*.56;p.vz=Math.max(p.vz,420*g);}
+  J.cd=Math.max(.16,(.46-.04*level-.04*(phase-1))*(booga?.7:1));J.streak++;sfx.swish();
+  if(J.streak>=(booga?1:leapsFor())){J.streak=0;J.hits=0;J.winded=windLen();J.cd=J.winded+.2;R.shkExt=0;R.shkStep=-1;Lass.sinceWin=1;pop(w.x,w.y-70,'*pant pant*','#ffffff',22);}}
 function hoseDodge(dt){J.cd-=dt;J.lastT+=dt;const w=rope[weak];
   if(J.winded>0){J.winded-=dt;if(Math.random()<dt*9)addPart({type:'bubble',x:w.x+rand(-16,16),by:w.y,y:w.y-14,vx:rand(-15,15),vy:-50,life:.8,max:.8,size:rand(2,4),g:0});
     if(J.winded<=0&&state==='play'){if(J.hits>0){J.hits=0;J.streak=0;J.cd=.5;moveWeak();}else if(level>=2)spotBurst();}return;}
   if(state!=='play')return;
   const m=mouth(),nd=Math.hypot(w.x-m.x,(w.y-m.y)*DZ);
   if(nd>165*R.sc||J.cd>0)return;
-  const ni=weak,[nx,ny]=nrm(ni);let side=((w.x-m.x)*nx+(w.y-m.y)*ny)>=0?1:-1;
-  if(J.lastT<.9&&J.streak>0)side=-J.last;J.last=side;J.lastT=0;
-  const imp=(600+40*level)*(booga?1.15:1);
-  for(let k=-8;k<=8;k++){const i=ni+k;if(i<2||i>N-3)continue;const g=Math.exp(-(k*k)/18),p=rope[i];p.vx+=nx*side*imp*g;p.vy+=ny*side*imp*g*.56;p.vz=Math.max(p.vz,420*g);}
-  J.cd=Math.max(.16,(.46-.04*level-.04*(phase-1))*(booga?.7:1));J.streak++;sfx.swish();
-  if(J.streak>=(booga?1:leapsFor())){J.streak=0;J.hits=0;J.winded=Math.max(.9,1.75-.15*level);J.cd=J.winded+.2;Lass.sinceWin=1;pop(w.x,w.y-70,'*pant pant*','#ffffff',22);}
+  leapAway();
 }
 
 /* ---------- fight-upgrade.md 3.1: the hot band ---------- */
@@ -421,7 +457,7 @@ function hoseDodge(dt){J.cd-=dt;J.lastT+=dt;const w=rope[weak];
    request; the tired weak spot moved to white-gold so the two never read the same. */
 const hotW=()=>Math.min(9,6+Math.floor(level/4));
 const hotLen=()=>Math.min(4.5,2.6+.16*level);
-const hotCd=()=>Math.max(6.5,13-.6*level)+rand(0,1.5);
+const hotCd=()=>(Math.max(6.5,13-.6*level)+rand(0,1.5))*D().hotCdMul;
 function startHot(){const W=hotW();
   for(let k=0;k<12;k++){const c=Math.floor(rand(10,N-9));                    // reject-and-retry: never near the weak spot
     if(Math.abs(c-weak)>=W+6){Hot.c=c;Hot.w=W;Hot.ph='warn';Hot.t=0;hotCurve.points=hotV.slice(0,2*W+1);sfx.warn();sfx.hiss();return;}}
@@ -434,11 +470,11 @@ function hotContact(){if(R.iframe>0||R.held)return;
     const p=rope[i];if(p.z>46)continue;
     if(Math.hypot(p.x-R.x,(p.y-R.y)*DZ)<HOT_RAD*R.sc){const dx=R.x-p.x,dy=R.y-p.y,d=Math.hypot(dx,dy*DZ)||1;burn(HOT_DMG,dx/d,dy/d);return;}}}
 function updHot(dt){
-  if(state!=='play'||level<HOT_LVL){if(Hot.ph!=='off'){Hot.ph='off';Hot.t=0;}return;}
+  if(state!=='play'||level<D().hotLvl){if(Hot.ph!=='off'){Hot.ph='off';Hot.t=0;}return;}
   Hot.t+=dt;
   if(Hot.ph==='off'){Hot.cd-=dt;if(Hot.cd<=0)startHot();return;}
   if(Hot.ph==='warn'){if(!reduce&&Math.random()<dt*26)hotEmber(true);
-    if(Hot.t>=HOT_WARN){Hot.ph='hot';Hot.t=0;Hot.len=hotLen();const p=rope[Hot.c];pop(p.x,p.y-70,'RED HOT!','#ff7a1a',28);sfx.hiss();}return;}
+    if(Hot.t>=HOT_WARN*D().teleMul){Hot.ph='hot';Hot.t=0;Hot.len=hotLen();const p=rope[Hot.c];pop(p.x,p.y-70,'RED HOT!','#ff7a1a',28);sfx.hiss();}return;}
   if(Hot.ph==='hot'){
     if(Math.abs(Hot.c-weak)<=Hot.w+3){Hot.ph='cool';Hot.t=0;return;}          // moveWeak walked the spot in: force-cool
     if(!reduce&&Math.random()<dt*34)hotEmber(false);
@@ -448,28 +484,28 @@ function updHot(dt){
 /* burn differs from hurt in exactly one way: no Perfect Dodge. A static hazard that refunded a
    stamina charge for brushing it would be a stamina farm. Dash does not make Rosie fireproof. */
 function burn(dmg,kx,ky){if(state!=='play'||R.iframe>0)return;
-  const d=dmg*(booga?.5:1)*Math.min(1,.55+.15*level);R.hp=Math.max(0,R.hp-d);dmgTaken+=d;R.iframe=1;R.hurt=1;R.safeT=0;combo=0;R.vx+=kx*320;R.vy+=ky*200;
+  const d=dmgOf(dmg);R.hp=Math.max(0,R.hp-d);dmgTaken+=d;R.iframe=D().iframe;R.hurt=1;R.safeT=0;chainDrop();endShake();R.vx+=kx*320;R.vy+=ky*200;   // 5.7: a burn cancels the Shake
   pop(R.x,R.y-140*R.sc,'-'+Math.round(d),'#ff9f1c',26);sfx.yelp();sfx.sizzle();if(!reduce)shake=Math.max(shake,.2);
   for(let k=0;k<8;k++)addPart({type:'star',x:R.x+rand(-22,22),by:R.y,y:R.y-rand(10,60),vx:rand(-70,70),vy:rand(-170,-40),life:.5,max:.5,size:rand(3,6),g:0,hue:rand(8,40)});
-  if(R.hp<=0)lose();}
+  if(R.hp<=0&&!saveWind())lose();}
 
 /* ---------- fight-upgrade.md 3.2: the lasso grab ---------- */
 /* Telegraphed red ring, deterministic catch, dashable. Held: input dead, the hose stops
    attacking, 4 damage every 0.9 s, six Bite taps or 4 s frees her. Mercy rule on every escape. */
-const lassoCd=()=>Math.max(9,19-.9*level)+rand(0,2);
+const lassoCd=()=>(Math.max(9,19-.9*level)+rand(0,2))*D().lassoCdMul;
 const lassScale=()=>Math.min(1,.55+.15*level);
 function lassOff(){Lass.ph='off';Lass.t=0;Lass.cd=lassoCd();}
 function updLass(dt){
   if(Lass.mercy>0)Lass.mercy-=dt;if(Lass.retreat>0)Lass.retreat-=dt;
   if(state!=='play'){if(Lass.ph!=='off'){Lass.ph='off';R.held=false;}return;}
   if(Lass.ph==='off'){
-    if(level<LASSO_LVL)return;                                               // staged in at level 4
+    if(level<D().lassoLvl)return;                                               // staged in at level 4
     Lass.cd-=dt;
     if(Lass.cd>0||Lass.mercy>0||Lass.sinceWin<1||booga||J.winded>0)return;   // never steals an earned bite window
     if(attacks.some(a=>a.src==='head'||a.src==='human'))return;
     if(R.hp<=LASSO_TICK+LASSO_TOSS){Lass.cd=2;return;}                       // 5.8: never the killing blow
     const h=headPos();if(Math.hypot(R.x-h.x,(R.y-h.y)*DZ)>900){Lass.cd=1.5;return;}
-    Lass.ph='tele';Lass.t=0;Lass.tele=LASSO_TELE*speedK();
+    Lass.ph='tele';Lass.t=0;Lass.tele=LASSO_TELE*speedK()*D().teleMul;
     Lass.x=clamp(R.x+R.vx*.35,40,WORLD-40);Lass.y=clamp(R.y+R.vy*.35,GY0+10,GY1);
     sfx.warn();sfx.whoosh();return;}
   Lass.t+=dt;
@@ -483,8 +519,8 @@ function updLass(dt){
   R.held=true;R.thrash=Math.max(R.thrash,.12);R.thrashI=N-5;
   for(let k=0;k<=8;k++){const p=rope[N-k];if(!p)continue;const g=(1-k/10)*48;p.vx+=(R.x-p.x)*g*dt;p.vy+=(R.y-p.y)*g*dt;}
   Lass.tick+=dt;
-  if(Lass.tick>=LASSO_TICK_T){Lass.tick-=LASSO_TICK_T;const d=LASSO_TICK*(booga?.5:1)*lassScale();
-    R.hp=Math.max(0,R.hp-d);dmgTaken+=d;R.safeT=0;combo=0;R.hurt=1;
+  if(Lass.tick>=LASSO_TICK_T){Lass.tick-=LASSO_TICK_T;const d=dmgOf(LASSO_TICK);
+    R.hp=Math.max(0,R.hp-d);dmgTaken+=d;R.safeT=0;chainDrop();endShake();R.hurt=1;
     pop(R.x,R.y-140*R.sc,'-'+Math.round(d),'#4cc9f0',24);sfx.yelp();if(!reduce)shake=Math.max(shake,.12);
     if(R.hp<=0){freeLass(false);lose();return;}}
   if(Lass.t>=LASSO_MAX)freeLass(true);}                                      // the accessibility floor
@@ -492,11 +528,11 @@ function updLass(dt){
    structurally impossible - a second grab needs 8 s AND a weak-spot window in between. */
 function freeLass(toss){const was=Lass.ph==='held';
   Lass.ph='off';Lass.t=0;Lass.taps=0;Lass.tick=0;R.held=false;Lass.retreat=1;
-  R.iframe=Math.max(R.iframe,.8);Lass.mercy=LASSO_MERCY;Lass.cd=lassoCd();Lass.sinceWin=0;attackCd=Math.max(attackCd,.8);
+  R.iframe=Math.max(R.iframe,.8*D().iframe);Lass.mercy=LASSO_MERCY;Lass.cd=lassoCd();Lass.sinceWin=0;attackCd=Math.max(attackCd,.8);
   if(!was)return;
-  if(toss){const d=LASSO_TOSS*(booga?.5:1)*lassScale();R.hp=Math.max(0,R.hp-d);dmgTaken+=d;
+  if(toss){const d=dmgOf(LASSO_TOSS);R.hp=Math.max(0,R.hp-d);dmgTaken+=d;
     pop(R.x,R.y-150*R.sc,'-'+Math.round(d),'#4cc9f0',24);R.vx+=rand(-340,340);R.vy+=rand(-180,180);sfx.yelp();}
-  else{pop(R.x,R.y-180,'FREE!','#80ffdb',34);sfx.rip();score+=20*level;
+  else{pop(R.x,R.y-180,'FREE!','#80ffdb',34);sfx.rip();score+=20*level;chain(1);   // 3.4
     for(let k=0;k<14;k++)addPart({type:'sparkle',x:R.x+rand(-45,45),by:R.y,y:R.y-rand(20,100),vx:rand(-60,60),vy:-50,life:.6,max:.6,size:rand(4,8),g:0,hue:rand(140,180)});}
   if(!reduce)shake=Math.max(shake,.25);
   if(R.hp<=0)lose();}
@@ -504,74 +540,184 @@ function lassTap(){if(Lass.ph!=='held')return;Lass.taps++;R.chomp=.12;sfx.tap(La
   for(let k=0;k<5;k++)addPart({type:'star',x:R.x+rand(-30,30),by:R.y,y:R.y-rand(20,70),vx:rand(-90,90),vy:rand(-160,-40),life:.4,max:.4,size:rand(3,6),g:0,hue:rand(150,190)});
   if(Lass.taps>=LASSO_TAPS)freeLass(false);}
 /* fight-upgrade.md 3.7: best score persists, written on a win AND on a death */
-function bestScore(){return parseInt(store.get('rosie2-best')||'0',10)||0;}
-function writeBest(){const b=Math.max(bestScore(),score);store.set('rosie2-best',String(b));
-  const e=$('tBest');if(e){e.textContent=b;$('bestLine').hidden=false;}return b;}
+/* 3.1: best is per mode and banks under runMinMode, so dropping to Easy at hose 8 can never
+   raise the Hard best. 9.3: the legacy 'rosie2-best' key is kept and still written. */
+const bestKey=m=>'rosie2-best-'+(m||mode);
+function bestScore(m){return parseInt(store.get(bestKey(m))||'0',10)||0;}
+function writeBest(){const k=bestKey(runMinMode),b=Math.max(parseInt(store.get(k)||'0',10)||0,score);store.set(k,String(b));
+  store.set('rosie2-best',String(Math.max(parseInt(store.get('rosie2-best')||'0',10)||0,score)));
+  const e=$('tBest');if(e){e.textContent=bestScore();$('bestLine').hidden=false;}return b;}
 
 /* ---------- Rosie ---------- */
 const WORDS=['CHOMP!','CRUNCH!','RIP!','GNAW!','SHRED!','NOM!'],POPC=['#ffd23f','#ff5d8f','#00bbf9','#9b5de5','#ff9f1c','#7ae582'];
 function mouthHit(p){const m=mouth();return Math.hypot(p.x-m.x,(p.y-m.y)*DZ)<48*R.sc;}
 // 1 = clean bite on the weak spot, 2 = teeth on the armoured hose, 0 = nothing there
-function findBite(){biteI=-1;for(let k=-2;k<=2;k++){const p=rope[weak+k];if(p.z<=24&&mouthHit(p)){biteI=weak+k;return 1;}}
+function findBite(){biteI=-1;biteS=null;for(let k=-2;k<=2;k++){const p=rope[weak+k];if(p.z<=24&&mouthHit(p)){biteI=weak+k;return 1;}}
+  for(const s of snakes)for(const p of s.rope)if(mouthHit(p)){biteS=s;return 3;}   // 3.2: extra snakes are bitable anywhere
   for(let i=2;i<N-2;i++)if(rope[i].z<=30&&mouthHit(rope[i])){biteI=i;return 2;}return 0;}
 function tryBite(){if(state!=='play')return false;
   if(R.held){lassTap();return true;}                                      // 3.2: Bite is also the mash-free input
-  if(R.recover>0||R.chomp>0||R.dash>0)return false;
+  if(R.dash>0)return R.pounce?false:doPounce();                            // 3.3 POUNCE: Bite during a dash
+  if(R.recover>0||R.chomp>0||R.shk>0)return false;
   const w=rope[weak];if(w.z<=24&&Math.hypot(w.x-R.x,(w.y-R.y)*DZ)<120*R.sc)R.ang=Math.atan2((w.y-R.y)*DZ,w.x-R.x);
   const h=findBite();R.chomp=.16;if(h===1){doBite(weak);return true;}
+  if(h===3){hitSnake(biteS,SN_BITE*chainDmg());return true;}
   R.recover=.28;if(J.winded>0)J.winded=Math.max(.001,J.winded-WHIFF_COST);  // 3.3: mashing on approach costs window
   if(h===2){pop(R.x,R.y-120*R.sc,'TOO TOUGH!','#cfd8dc',22);sfx.clank();
     if(Hot.ph==='hot'&&biteI>=0&&Math.abs(biteI-Hot.c)<=Hot.w)burn(HOT_BITE_DMG,-Math.cos(R.ang),-Math.sin(R.ang));}  // 3.1
   else{pop(R.x,R.y-120*R.sc,'whiff','#ffffff',20);sfx.whiff();}return true;}
 // A tired weak spot can be chewed three times in a row. Every bite hits harder than the last:
 // freeze-frame, camera punch, louder crunch, more spray. The third bite is the RIP, with a head-shaking thrash.
-function doBite(i){const p=rope[i],step=++J.hits,fin=step>=3,unit=unitDmg();hoseHP=Math.max(0,hoseHP-unit*BITE_W[Math.min(step,3)-1]);  // 3.3: 1 / 1.4 / 2.4
-  if(!punct.some(e=>Math.abs(e-i)<2))punct.push(i);combo++;const mult=1+Math.min(combo-1,12)*.2;score+=Math.round((fin?30:10)*level*mult);
+function doBite(i){const p=rope[i],step=++J.hits,fin=step>=3,unit=unitDmg();hoseHP=Math.max(0,hoseHP-unit*BITE_W[Math.min(step,3)-1]*chainDmg());  // 3.3: 1 / 1.4 / 2.4
+  if(!punct.some(e=>Math.abs(e-i)<2))punct.push(i);chain(1);const mult=1+Math.min(combo-1,12)*.2;score+=Math.round((fin?30:10)*level*mult);
   hitStop=fin?.16:.07;fovKick=fin?7:3.5;flash=fin?.45:.2;if(!reduce)shake=Math.max(shake,fin?.4:.16);R.biteT=.3;R.safeT=Math.max(R.safeT,0);
-  pop(p.x,p.y-50,fin?'RRRIP!':step===1?'CHOMP!':'CRUNCH!',fin?'#ff5d8f':step===1?'#ffd23f':'#ff9f1c',fin?48:28+step*5);if(fin&&combo>=6)pop(R.x,R.y-190,'COMBO x'+combo,'#80ffdb',26);
+  pop(p.x,p.y-50,fin?'RRRIP!':step===1?'CHOMP!':'CRUNCH!',fin?'#ff5d8f':step===1?'#ffd23f':'#ff9f1c',fin?48:28+step*5);if(fin&&combo>=6)pop(R.x,R.y-190,'CHAIN x'+combo,'#80ffdb',26);
   const ca=Math.cos(R.ang),sa=Math.sin(R.ang),nb=6+step*6;
   for(let k=0;k<nb;k++)addPart({type:'bit',x:p.x,y:p.y,vx:rand(-200,200)+ca*120,vy:rand(-380,-120),life:1,max:1,size:rand(3,6),g:1,c:Math.random()<.5?'#3cc062':'#1d6b33'});
   for(let k=0;k<10+step*8;k++)addPart({type:'water',x:p.x+rand(-8,8),y:p.y,vx:rand(-150,150),vy:rand(-520,-200),life:.9,max:.9,size:rand(2,4),g:1});
   for(let k=0;k<4+step*3;k++)addPart({type:'star',x:p.x+rand(-14,14),by:p.y,y:p.y-24,vx:rand(-160,160),vy:rand(-220,-60),life:.55,max:.55,size:rand(6,10),g:0,hue:rand(30,330)});
   for(let k=-7;k<=7;k++){const j=i+k;if(j<2||j>N-3)continue;const g=Math.exp(-(k*k)/14),q=rope[j];q.vz=Math.max(q.vz,(fin?520:260)*g);q.vx+=ca*(fin?260:120)*g;q.vy+=sa*(fin?260:120)*g/DZ;}
   R.vx+=ca*140;R.vy+=sa*140/DZ;sfx.chomp(step);
-  if(fin){sfx.rip();R.thrash=.45;R.thrashI=i;geysers.push({i,t:1.4});J.winded=0;J.hits=0;J.streak=0;J.cd=.8;}else J.winded=WIND_GRANT[Math.min(step,2)-1];  // 3.3: a shrinking grant - the window never extends itself
+  if(fin){sfx.rip();R.thrash=.45;R.thrashI=i;geysers.push({i,t:1.4});J.winded=0;J.hits=0;J.streak=0;J.cd=.8;}else{J.winded=WIND_GRANT[Math.min(step,2)-1]*D().windGrantMul;R.shkExt=0;R.shkStep=-1;}  // 3.3: a shrinking grant - the window never extends itself
   try{if(navigator.vibrate)navigator.vibrate(fin?[30,30,70]:18);}catch(e){}
-  if(!booga)power=Math.min(POWER_MAX,power+1);
+  if(!booga)power=Math.min(pMax(),power+1);
   const np=hoseHP>66?1:hoseHP>33?2:3;if(np!==phase&&hoseHP>0){phase=np;pop(R.x,R.y-180,np===2?'The hose is getting angry!':'TWO HEADS?!','#ff5d8f',30);sfx.phase();attackCd=Math.min(attackCd,1);}
   if(hoseHP<=0)burst();else if(fin)moveWeak();}
+/* ---------- difficulty-and-combos.md 3.3: Rosie's three moves ---------- */
+/* POUNCE - Bite during a dash. Extends the dash to 0.26 s at 1020 px/s (~265 px) and carries a
+   bite. R.dashT is untouched, so a Pounce can still Perfect Dodge. Costs nothing beyond the dash. */
+function doPounce(){if(R.dashT<=0||R.recover>0)return false;
+  R.pounce=1;R.dash=POUNCE_T;R.chomp=.16;sfx.whiff();
+  for(let k=0;k<8;k++)addPart({type:'dust',x:R.x-R.dx*18,y:R.y,vx:-R.dx*90,vy:-20,life:.35,max:.35,size:rand(5,9),g:0});
+  return true;}
+function endPounce(hit){R.pounce=0;R.dash=0;R.recover=Math.max(R.recover,hit?.18:.30);}
+function pounceHit(){const w=rope[weak];
+  if(w&&w.z<=40&&Math.hypot(w.x-R.x,(w.y-R.y)*DZ)<70*R.sc){
+    if(J.winded>0){endPounce(true);doBite(weak);}                          // 5.5: only a winded spot takes damage
+    else{endPounce(true);J.cd=0;leapAway();chain(1);pop(R.x,R.y-150,'BAITED!','#80ffdb',22);}
+    return;}
+  for(const s of snakes)for(const p of s.rope)if(Math.hypot(p.x-R.x,(p.y-R.y)*DZ)<70*R.sc){endPounce(true);hitSnake(s,POUNCE_DMG);return;}}
+/* SHAKE - hold Bite after a landed, non-final bite. Rooted, no iframes, cancelled by any damage.
+   The window extension is capped at SHAKE_EXT_CAP (0.24 s) per window by ruling, not 0.48. */
+function updShake(dt){
+  if(R.shk>0){
+    if(!biteHeld||J.winded<=0||R.held||state!=='play'||J.hits>=3||R.shk>=SHAKE_MAX){endShake();return;}  // 5.8
+    R.shk+=dt;R.shkT+=dt;R.vx=0;R.vy=0;R.thrash=Math.max(R.thrash,.1);R.thrashI=weak;
+    if(R.shkT>=SHAKE_T){R.shkT-=SHAKE_T;
+      hoseHP=Math.max(0,hoseHP-unitDmg()*SHAKE_TICK*chainDmg());chain(1);
+      const ext=Math.min(SHAKE_EXT,SHAKE_EXT_CAP-R.shkExt);if(ext>0){J.winded+=ext;R.shkExt+=ext;}
+      const w=rope[weak];sfx.chomp(2);pop(w.x,w.y-40,'SHAKE!','#ff9f1c',24);if(!reduce)shake=Math.max(shake,.1);
+      for(let k=0;k<8;k++)addPart({type:'water',x:w.x+rand(-8,8),y:w.y,vx:rand(-180,180),vy:rand(-320,-120),life:.6,max:.6,size:rand(2,4),g:1});
+      if(hoseHP<=0){endShake();burst();}}
+    return;}
+  if(state!=='play'||!biteHeld||R.held)return;                             // 5.9: while held, Bite is the mash input
+  if(R.biteT>0&&J.winded>0&&J.hits>0&&J.hits<3&&J.hits!==R.shkStep&&mouthHit(rope[weak])){R.shk=.001;R.shkT=0;R.shkStep=J.hits;}}
+function endShake(){if(R.shk<=0)return;R.shk=0;R.shkT=0;R.recover=Math.max(R.recover,.25);}
+/* BARK - a tap on B / the BOOGA button. 1 stamina, 0 damage, 2.5 s cooldown, 0.3 s recovery. */
+function doBark(){if(state!=='play'||R.held||R.barkCd>0||R.stam<1)return false;
+  R.stam--;R.barkCd=BARK_CD;R.recover=Math.max(R.recover,.3);R.chomp=.12;sfx.bark();
+  const rr0=BARK_R*R.sc,ca=Math.cos(R.ang),sa=Math.sin(R.ang);
+  const inCone=(x,y)=>{const dx=x-R.x,dy=(y-R.y)*DZ,d=Math.hypot(dx,dy);return d<rr0&&(d<1||(dx*ca+dy*sa)/d>BARK_CONE);};
+  let did=0;
+  const tl=attacks.filter(a=>a.t<a.tele&&inCone(a.o.x,a.o.y)).slice(0,2);  // 5.11: only telegraphs, max 2
+  if(tl.length){attacks=attacks.filter(a=>tl.indexOf(a)<0);pop(R.x,R.y-170,'INTERRUPTED!','#80ffdb',28);did++;}
+  if(!Hm.grabbed&&inCone(E.x,E.y)){E.stagger=Math.max(E.stagger,1.2);did++;}
+  for(const s of snakes)if(inCone(s.x,s.y)){s.stagger=Math.max(s.stagger,1.2);did++;}
+  if(inCone(Hm.x,Hm.y)){Hm.shock=3;crankT+=6;if(crankW>0)crankW=0;pop(Hm.x,Hm.y-150,'!!','#ffd23f',30);did++;}   // 3.2 / 5.14
+  const w=rope[weak];if(J.cd<=0&&inCone(w.x,w.y)&&Math.hypot(w.x-R.x,(w.y-R.y)*DZ)<300*R.sc){leapAway();did++;}
+  for(let k=0;k<14;k++){const a=R.ang+rand(-1.22,1.22),d=rand(40,rr0),gy=R.y+Math.sin(a)*d/DZ;
+    addPart({type:'sparkle',x:R.x+Math.cos(a)*d,by:gy,y:gy-40,vx:Math.cos(a)*60,vy:-30,life:.45,max:.45,size:rand(3,7),g:0,hue:rand(40,70)});}
+  if(did)chain(1);else pop(R.x,R.y-150,'woof','#ffffff',20);               // a bark that achieves nothing still costs
+  return true;}
+/* 3.1: Easy's one free death-save per level. Consumed once, re-armed by resetLevel. */
+function saveWind(){if(!secondWind)return false;secondWind=false;R.hp=20;R.iframe=Math.max(R.iframe,2);
+  pop(R.x,R.y-200,'ROSIE SHAKES IT OFF!','#80ffdb',32);sfx.perfect();if(!reduce)shake=Math.max(shake,.3);return true;}
+/* 3.2: extra snakes have no weak spot and cannot touch hoseHP */
+function hitSnake(s,dmg){if(!s)return;s.hp-=dmg;chain(1);sfx.chomp(1);R.chomp=.16;hitStop=Math.max(hitStop,.05);
+  for(let k=0;k<10;k++)addPart({type:'bit',x:s.x,y:s.y,vx:rand(-200,200),vy:rand(-360,-120),life:.9,max:.9,size:rand(3,6),g:1,c:Math.random()<.5?'#3cc062':'#1d6b33'});
+  pop(s.x,s.y-50,'CHOMP!','#ffd23f',24);if(s.hp<=0)killSnake(s);}
+function killSnake(s){const i=snakes.indexOf(s);if(i>=0)snakes.splice(i,1);
+  score+=40*level;if(!booga)power=Math.min(pMax(),power+1);chain(1);
+  for(let k=0;k<40;k++){const p=pick(s.rope);addPart({type:'water',x:p.x,y:p.y,vx:rand(-240,240),vy:rand(-520,-200),life:1.1,max:1.1,size:rand(3,5),g:1,hue:rand(0,360)});}
+  pop(s.x,s.y-80,'BURST! +'+40*level,'#7ae582',30);sfx.boom();if(!reduce)shake=Math.max(shake,.25);}
+function allowedSnakes(){return Math.max(0,Math.min(D().maxSnakes-1,Math.floor(level/3)+(phase===3?1:0),SN_MAX_ROPES-1));}
+/* 3.2 extra snakes: SN_N=36 nodes each, so the ceiling is 91 + 2*36 = 163 nodes of tube
+   rebuilt per frame across at most SN_MAX_ROPES=3 ropes. No mode and no level raises it. */
+function spawnSnake(){
+  if(booga||snakes.length>=allowedSnakes()||1+snakes.length>=SN_MAX_ROPES){            // 5.13 / 5.15
+    pop(Hm.x,Hm.y-150,'...rusted shut!','#cfd8dc',22);sfx.clank();return;}
+  const base={x:REEL.x+18,y:clamp(REEL.y+(snakes.length?110:-110),GY0+20,GY1-20)};
+  const x=clamp(base.x+rand(220,420),80,WORLD-80),y=clamp(base.y+rand(-90,140),GY0+30,GY1-20),rp=[];
+  for(let i=0;i<=SN_N;i++)rp.push({x:lerp(base.x,x,i/SN_N),y:lerp(base.y,y,i/SN_N)+Math.sin(i*.6)*10,vx:0,vy:0});
+  snakes.push({x,y,vx:0,vy:0,ph:rand(0,6),hp:SN_HP,rope:rp,base,atkCd:rand(2.5,3.5),stagger:0});
+  pop(x,y-90,'ANOTHER ONE!','#ff5d8f',30);sfx.phase();if(!reduce)shake=Math.max(shake,.3);}
+function snakeJet(s){const o={x:s.x,y:s.y,h:18},tx=R.x+R.vx*.3,ty=R.y+R.vy*.3;
+  let dx=tx-o.x,dy=ty-o.y;const l=Math.hypot(dx,dy)||1;
+  attacks.push({type:'jet',src:'snake',t:0,o,dx:dx/l,dy:dy/l,len:380,tele:.8*speedK()*D().teleMul,act:.45,landed:false,dmg:SN_JET_DMG});
+  lastAtkT=t;sfx.warn();}
+function updSnakes(dt){
+  if(!snakes.length||state!=='play')return;
+  /* (d) free-arc rule: three bodies inside 260 px and the furthest disengages for 2.5 s */
+  const bods=[];if(!Hm.grabbed)bods.push(E);for(const s of snakes)bods.push(s);
+  if(bods.length>=3){const ds=bods.map(o=>Math.hypot(o.x-R.x,(o.y-R.y)*DZ));
+    if(ds.every(d=>d<260)){let fi=0;for(let i=1;i<ds.length;i++)if(ds[i]>ds[fi])fi=i;bods[fi].stagger=Math.max(bods[fi].stagger,2.5);}}
+  for(const s of snakes){
+    s.stagger=Math.max(0,s.stagger-dt);
+    s.ph+=dt;const dx=s.x-R.x,dy=s.y-R.y,d=Math.hypot(dx,dy)||1,coil=J.winded>0?SNAKE_COIL:1;
+    const sp=(130+12*level)*coil*(s.stagger>0?.45:1);
+    let ax=Math.cos(s.ph*1.1)*.6,ay=Math.sin(s.ph*1.5)*.6;
+    if(s.stagger>0){ax-=dx/d*1.6;ay-=dy/d*1.6;}else if(d<300&&J.winded<=0){ax+=dx/d*1.4;ay+=dy/d*1.4;}
+    if(s.x<160)ax+=1.2;if(s.x>WORLD-160)ax-=1.2;if(s.y<GY0+40)ay+=1;if(s.y>GY1-25)ay-=1;
+    const m=Math.hypot(ax,ay)||1,k=Math.min(1,dt*4);
+    s.vx=lerp(s.vx,ax/m*sp,k);s.vy=lerp(s.vy,ay/m*sp/DZ,k);
+    s.x=clamp(s.x+s.vx*dt,60,WORLD-60);s.y=clamp(s.y+s.vy*dt,GY0+12,GY1-4);pushOut(s,10);
+    const rp=s.rope,damp=Math.exp(-5*dt);
+    for(let i=1;i<SN_N;i++){const p=rp[i],a=rp[i-1],b=rp[i+1];
+      p.vx+=((a.x+b.x)/2-p.x)*7*dt;p.vy+=((a.y+b.y)/2-p.y)*7*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=damp;p.vy*=damp;}
+    rp[0].x=s.base.x;rp[0].y=s.base.y;rp[SN_N].x=s.x;rp[SN_N].y=s.y;
+    for(let it=0;it<8;it++)for(let i=0;i<SN_N;i++){const a=rp[i],b=rp[i+1],qx=b.x-a.x,qy=b.y-a.y,q=Math.hypot(qx,qy);
+      if(q>SEG){const df=(q-SEG)/q,pa=i===0,pb=i+1===SN_N,ia=pa?0:(pb?1:.5),ib=pb?0:(pa?1:.5);a.x+=qx*df*ia;a.y+=qy*df*ia;b.x-=qx*df*ib;b.y-=qy*df*ib;}}
+    for(let i=1;i<SN_N;i++){const p=rp[i];p.y=clamp(p.y,GY0,GY1);p.x=clamp(p.x,10,WORLD-10);}
+    /* anti-surround (a)(b)(c): one non-main telegraph at a time, 0.8 s global spacing,
+       and never while the window is earned, while Rosie is held, or during a hot band. */
+    s.atkCd-=dt;if(s.atkCd>0)continue;
+    if(J.winded>0||R.held||Hot.ph==='hot'||booga||s.stagger>0||
+       attacks.some(a=>a.src==='snake'&&a.t<a.tele)||t-lastAtkT<HARD_SPACING){s.atkCd=.3;continue;}
+    if(Math.hypot(R.x-s.x,(R.y-s.y)*DZ)<520){snakeJet(s);s.atkCd=rand(3.4,4.8)*speedK()*D().atkCdMul;}
+    else s.atkCd=.6;}}
 function tryDash(){const cost=R.recover>0?DASH_CANCEL_COST:1;                 // 3.4: cancelling the stall is not free
-  if(state!=='play'||R.dashCd>0||R.held||R.stam<cost)return false;let dx=inX,dy=inY;if(Math.hypot(dx,dy)<.2){dx=Math.cos(R.ang);dy=Math.sin(R.ang);}const m=Math.hypot(dx,dy);
+  if(state!=='play'||R.dashCd>0||R.held||R.shk>0||R.stam<cost)return false;let dx=inX,dy=inY;if(Math.hypot(dx,dy)<.2){dx=Math.cos(R.ang);dy=Math.sin(R.ang);}const m=Math.hypot(dx,dy);
   R.stam-=cost;R.dx=dx/m;R.dy=dy/m;R.dash=.17;R.dashT=.3;R.dashCd=DASH_CD;R.perfect=false;R.ang=Math.atan2(R.dy,R.dx);R.recover=0;sfx.dash();return true;}
 function hurt(dmg,kx,ky){if(state!=='play')return;
-  if(R.dashT>0){if(!R.perfect){R.perfect=true;R.stam=Math.min(DASH_MAX,R.stam+1);score+=25*level;  // 3.4: a perfect dash is freepop(R.x,R.y-140*R.sc,'PERFECT DODGE!','#80ffdb',26);sfx.perfect();
+  if(R.dashT>0){if(!R.perfect){R.perfect=true;R.stam=Math.min(dMax(),R.stam+1);score+=25*level;chain(1);  // 3.4: a perfect dash is freepop(R.x,R.y-140*R.sc,'PERFECT DODGE!','#80ffdb',26);sfx.perfect();
     for(let k=0;k<10;k++)addPart({type:'sparkle',x:R.x+rand(-40,40),by:R.y,y:R.y-rand(20,90),vx:0,vy:-40,life:.6,max:.6,size:rand(4,7),g:0,hue:rand(140,180)});
-    if(!booga)power=Math.min(POWER_MAX,power+1);}return;}
-  if(R.iframe>0)return;const d=dmg*(booga?.5:1)*Math.min(1,.55+.15*level);R.hp=Math.max(0,R.hp-d);dmgTaken+=d;R.iframe=1;R.hurt=1;R.safeT=0;R.wet=1.4;combo=0;R.vx+=kx*320;R.vy+=ky*200;
-  pop(R.x,R.y-140*R.sc,'-'+Math.round(d),'#4cc9f0',26);sfx.yelp();if(!reduce)shake=Math.max(shake,.2);if(R.hp<=0)lose();}
+    if(!booga)power=Math.min(pMax(),power+1);}return;}
+  if(R.iframe>0)return;const d=dmgOf(dmg);R.hp=Math.max(0,R.hp-d);dmgTaken+=d;R.iframe=D().iframe;R.hurt=1;R.safeT=0;R.wet=1.4;chainDrop();endShake();R.vx+=kx*320;R.vy+=ky*200;
+  pop(R.x,R.y-140*R.sc,'-'+Math.round(d),'#4cc9f0',26);sfx.yelp();if(!reduce)shake=Math.max(shake,.2);if(R.hp<=0&&!saveWind())lose();}
 function knock(p){p.fallen=true;p.dir=R.f;score+=25*level;pop(p.x,p.y-70,'CRASH! +'+25*level,'#ff9f1c');sfx.crash();
   for(let i=0;i<16;i++)addPart({type:'soil',x:p.x,by:p.y,y:p.y-30,vx:rand(-160,160)+R.f*80,vy:rand(-320,-120),life:.8,max:.8,size:rand(2.5,5),g:1});}
 function updRosie(dt){
   R.sc=lerp(R.sc,booga?1.5:1,Math.min(1,dt*3));
-  for(const k of ['wet','chomp','recover','dash','dashCd','dashT','iframe','hurt','biteT','thrash'])R[k]=Math.max(0,R[k]-dt);
-  R.stamT+=dt;while(R.stam<DASH_MAX&&R.stamT>=DASH_REGEN){R.stam++;R.stamT-=DASH_REGEN;}if(R.stam>=DASH_MAX)R.stamT=0;  // 3.4
-  if(R.held){R.vx=0;R.vy=0;}                                                 // 3.2: a lassoed dog does not move
+  for(const k of ['wet','chomp','recover','dash','dashCd','dashT','iframe','hurt','biteT','thrash','barkCd'])R[k]=Math.max(0,R[k]-dt);
+  if(R.pounce&&R.dash<=0){R.pounce=0;R.recover=Math.max(R.recover,.30);}    // 3.3: 0.30 s on a whiffed Pounce
+  R.stamT+=dt;while(R.stam<dMax()&&R.stamT>=dRegen()){R.stam++;R.stamT-=DASH_REGEN;}if(R.stam>=dMax())R.stamT=0;  // 3.4
+  if(R.held||R.shk>0){R.vx=0;R.vy=0;}                                        // 3.2 / 3.3: a lassoed or shaking dog does not move
   // the kill-shake: Rosie whips the bitten section side to side
   if(R.thrash>0){const sd=Math.sin(t*42)>0?1:-1,ca=Math.cos(R.ang),sa=Math.sin(R.ang);for(let k=-4;k<=4;k++){const q=rope[R.thrashI+k];if(!q)continue;const g=Math.exp(-(k*k)/8);q.vx+=-sa*sd*5200*dt*g;q.vy+=ca*sd*5200*dt*g/DZ;q.vz=Math.max(q.vz,240*g);}}
   // out of danger for a few seconds, she catches her breath and dries off
-  if(state==='play'){R.safeT+=dt;if(R.safeT>4&&R.hp<100)R.hp=Math.min(100,R.hp+Math.max(1,4-level)*1.2*dt);}
+  if(state==='play'){R.safeT+=dt;const hm=D().hpMax;if(R.safeT>D().regenWait&&R.hp<hm)R.hp=Math.min(hm,R.hp+Math.max(1,4-level)*1.2*D().regenMul*dt);}
   let sp=280*(booga?1.3:1);if(R.wet>0)sp*=.78;if(R.recover>0)sp*=.7;if(MUD.some(m=>inEll(R,m)))sp*=.55;
-  const slip=puddles.some(p=>inEll(R,p,.5)),ix=(state==='play'&&!R.held)?inX:0,iy=(state==='play'&&!R.held)?inY:0;
-  if(R.dash>0){R.vx=R.dx*760;R.vy=R.dy*760/DZ;if(Math.random()<dt*50)addPart({type:'dust',x:R.x-R.dx*20,y:R.y,vx:-R.dx*40,vy:-10,life:.4,max:.4,size:rand(6,11),g:0});}
+  const slip=puddles.some(p=>inEll(R,p,.5)),mv=state==='play'&&!R.held&&R.shk<=0,ix=mv?inX:0,iy=mv?inY:0;
+  if(R.dash>0){const dsp=R.pounce?POUNCE_SP:760;R.vx=R.dx*dsp;R.vy=R.dy*dsp/DZ;if(Math.random()<dt*50)addPart({type:'dust',x:R.x-R.dx*20,y:R.y,vx:-R.dx*40,vy:-10,life:.4,max:.4,size:rand(6,11),g:0});}
   else{const k=1-Math.exp(-dt*(slip?1.6:(ix||iy)?9:12));R.vx=lerp(R.vx,ix*sp,k);R.vy=lerp(R.vy,iy*sp/DZ,k);}
-  R.x=clamp(R.x+R.vx*dt,40,WORLD-40);R.y=clamp(R.y+R.vy*dt,GY0+10,GY1);pushOut(R,24*R.sc);
+  R.x=clamp(R.x+R.vx*dt,40,WORLD-40);R.y=clamp(R.y+R.vy*dt,GY0+10,GY1);pushOut(R,24*R.sc);if(R.pounce)pounceHit();
   R.speed=Math.hypot(R.vx,R.vy*DZ);if(R.speed>30&&R.chomp<=0)R.ang=Math.atan2(R.vy*DZ,R.vx);R.f=Math.cos(R.ang)>=0?1:-1;
   {const g0=Math.floor(R.gait/Math.PI);R.gait+=R.speed*dt*.05;if(R.speed>170&&R.dash<=0&&Math.floor(R.gait/Math.PI)!==g0)addPart({type:'dust',x:R.x-R.f*18*R.sc,y:R.y+2,vx:-R.vx*.12,vy:-14,life:.35,max:.35,size:rand(3,5.5),g:0});}
   if(R.wet>0&&Math.random()<dt*14)addPart({type:'water',x:R.x+rand(-30,30)*R.sc,by:R.y,y:R.y-rand(20,70)*R.sc,vx:rand(-20,20),vy:40,life:.5,max:.5,size:rand(1.5,3),g:1});
   if(slip&&R.speed>60&&Math.random()<dt*12)addPart({type:'water',x:R.x,y:R.y,vx:rand(-60,60),vy:rand(-120,-40),life:.4,max:.4,size:2,g:1});
   if(state!=='play')return;
   for(const p of pots)if(!p.fallen&&Math.abs(R.x-p.x)<36*p.s+10&&Math.abs(R.y-p.y)<26)knock(p);
-  for(const tr of treats)if(Math.hypot(R.x-tr.x,(R.y-tr.y)*DZ)<46*R.sc){tr.got=true;R.hp=Math.min(100,R.hp+20);score+=30;pop(tr.x,tr.y-60,'Yum! +20','#ffd23f',24);sfx.treat();
+  for(const tr of treats)if(Math.hypot(R.x-tr.x,(R.y-tr.y)*DZ)<46*R.sc){tr.got=true;const th=D().treatHeal;R.hp=Math.min(D().hpMax,R.hp+th);score+=30;pop(tr.x,tr.y-60,'Yum! +'+th,'#ffd23f',24);sfx.treat();
     for(let k=0;k<8;k++)addPart({type:'sparkle',x:tr.x+rand(-25,25),by:tr.y,y:tr.y-rand(5,40),vx:0,vy:-40,life:.6,max:.6,size:rand(3,6),g:0,hue:rand(30,60)});}
   treats=treats.filter(tr=>!tr.got&&tr.life>0);
 }
@@ -585,6 +731,15 @@ function updHuman(dt){Hm.shock=Math.max(0,Hm.shock-dt);
       if(Math.random()<dt*4)addPart({type:'water',x:Hm.x+rand(-6,16),by:Hm.y,y:Hm.y-92,vx:rand(-60,60),vy:rand(-120,-40),life:.6,max:.6,size:2,g:1});}return;}
   Hm.cower=false;
   if(Hm.mode==='regrab'){go(E.x,E.y,250);if(Math.hypot(E.x-Hm.x,E.y-Hm.y)<38){Hm.grabbed=true;Hm.mode='roam';pop(Hm.x,Hm.y-170,'Got it back!','#ffffff',22);pickWaypoint();}return;}
+  if(Hm.mode==='crank'){                                                     // 3.2: he stops shooting and becomes the escalation engine
+    if(Hm.shock>0){crankW=0;Hm.moving=false;return;}
+    if(!go(REEL.x+120,clamp(REEL.y,GY0+30,GY1-20),150)){return;}
+    Hm.moving=false;Hm.f=-1;
+    if(crankW>0){crankW+=dt;if(!reduce&&Math.random()<dt*7)sfx.clank();
+      if(crankW>=CRANK_WIND){crankW=0;crankT=CRANK_CD;spawnSnake();}return;}
+    crankT-=dt;
+    if(crankT<=0){crankW=.001;pop(Hm.x,Hm.y-150,"He's cranking the reel!",'#ff9f1c',26);sfx.warn();}
+    return;}
   if(attacks.some(a=>a.src==='human')){Hm.moving=false;Hm.f=Math.sign(R.x-Hm.x)||Hm.f;return;}
   if(state==='title'){if(go(Hm.tx,Hm.ty,80)){Hm.tx=rand(380,900);Hm.ty=rand(420,560);}return;}
   const d=Math.hypot(R.x-Hm.x,R.y-Hm.y),near=d<190;Hm.wpT+=dt;
@@ -595,8 +750,12 @@ function updHead(dt){if(Hm.grabbed||state!=='play')return;
   if(Lass.retreat>0){const dx=E.x-R.x,dy=(E.y-R.y)*DZ,d=Math.hypot(dx,dy)||1;      // 3.2: the head retreats after a grab
     E.vx=dx/d*300;E.vy=dy/d*300/DZ;E.x=clamp(E.x+E.vx*dt,60,WORLD-60);E.y=clamp(E.y+E.vy*dt,GY0+12,GY1-4);return;}
   const own=attacks.find(a=>a.src==='head');if(own&&own.type==='lunge'&&own.t>=own.tele)return;
-  E.ph+=dt;const dx=E.x-R.x,dy=E.y-R.y,d=Math.hypot(dx,dy)||1,sp=(booga?250:170)+15*level;
-  let ax=Math.cos(E.ph*1.3)*.5,ay=Math.sin(E.ph*1.7)*.5;if(d<300){ax+=dx/d*1.6;ay+=dy/d*1.6;}
+  E.stagger=Math.max(0,E.stagger-dt);
+  /* 3.2 the coil: while the window is earned the head slows to 35 % and stops chasing, so a
+     hose can never sprint the weak spot out of reach mid-pant. */
+  const coil=J.winded>0?SNAKE_COIL:1;
+  E.ph+=dt;const dx=E.x-R.x,dy=E.y-R.y,d=Math.hypot(dx,dy)||1,sp=((booga?250:170)+15*level)*coil*(E.stagger>0?.35:1);
+  let ax=Math.cos(E.ph*1.3)*.5,ay=Math.sin(E.ph*1.7)*.5;if(d<300&&J.winded<=0){ax+=dx/d*1.6;ay+=dy/d*1.6;}
   if(E.x<200)ax+=1.2;if(E.x>WORLD-200)ax-=1.2;if(E.y<GY0+40)ay+=1;if(E.y>GY1-25)ay-=1;
   const m=Math.hypot(ax,ay)||1,k=Math.min(1,dt*4),slow=own?.25:1;E.vx=lerp(E.vx,ax/m*sp*slow,k);E.vy=lerp(E.vy,ay/m*sp*slow/DZ,k);
   E.x=clamp(E.x+E.vx*dt,60,WORLD-60);E.y=clamp(E.y+E.vy*dt,GY0+12,GY1-4);pushOut(E,10);}
@@ -609,13 +768,14 @@ function startAttack(type,src){const o=originOf(src),k=speedK(),a={type,src,t:0,
   else if(type==='bomb'){a.spots=[{x:R.x+R.vx*.4,y:R.y+R.vy*.4}];for(let i=0;i<1+phase;i++)a.spots.push({x:R.x+rand(-170,170),y:R.y+rand(-70,70)});
     for(const s of a.spots){s.x=clamp(s.x,40,WORLD-40);s.y=clamp(s.y,GY0+10,GY1);}a.tele=1.05*k;a.act=.2;}
   else{a.tx=R.x;a.ty=R.y;a.tele=.65*k;a.act=.45;}
+  a.tele*=D().teleMul;lastAtkT=t;    // 3.1: teleMul is never below 1.0; 3.2b: the global spacing clock
   attacks.push(a);sfx.warn();if(src==='human')Hm.f=Math.sign(R.x-Hm.x)||Hm.f;}
 function segDist(px,py,ax,ay,bx,by){const vx=bx-ax,vy=by-ay,l2=vx*vx+vy*vy;const u=l2?clamp(((px-ax)*vx+(py-ay)*vy)/l2,0,1):0;return Math.hypot(px-(ax+vx*u),py-(ay+vy*u));}
 function updAttacks(dt){
   for(const a of attacks){a.t+=dt;const k=a.t-a.tele;if(k<0||state!=='play')continue;
     if(a.type==='jet'){const ex=a.o.x+a.dx*a.len,ey=a.o.y+a.dy*a.len;
       if(k<a.act){for(let i=0;i<4;i++){const u=Math.random();addPart({type:Math.random()<.15?'mist':'water',x:lerp(a.o.x,ex,u)+rand(-6,6),by:lerp(a.o.y,ey,u),y:lerp(a.o.y,ey,u)-a.o.h*(1-u),vx:a.dx*140+rand(-40,40),vy:rand(-80,20),life:.35,max:.35,size:rand(2,4),g:1,hue:rand(0,360)});}
-        if(segDist(R.x,R.y*DZ,a.o.x,a.o.y*DZ,ex,ey*DZ)<34*R.sc)hurt(15,a.dx,a.dy);}}
+        if(segDist(R.x,R.y*DZ,a.o.x,a.o.y*DZ,ex,ey*DZ)<34*R.sc)hurt(a.dmg||15,a.dx,a.dy);}}
     else if(a.type==='sweep'){if(k<a.act){const ang=a.ang+a.dir*(-a.half+2*a.half*k/a.act);a.cur=ang;const cx=Math.cos(ang),cy=Math.sin(ang)*.6;
         for(let i=0;i<3;i++){const u=Math.random()*a.range;addPart({type:'water',x:a.o.x+cx*u,by:a.o.y+cy*u,y:a.o.y+cy*u-a.o.h*(1-u/a.range),vx:cx*80,vy:-40,life:.3,max:.3,size:rand(2,4),g:1});}
         const rx=R.x-a.o.x,ry=(R.y-a.o.y)/.6,rd=Math.hypot(rx,ry),ra=Math.atan2(ry,rx),da=Math.abs(Math.atan2(Math.sin(ra-ang),Math.cos(ra-ang)));
@@ -634,7 +794,7 @@ function updAttacks(dt){
   attackCd-=dt;
   if(attackCd<=0&&!attacks.some(a=>a.src===src)){const o=originOf(src);
     if(Math.hypot(R.x-o.x,R.y-o.y)<720){const list=src==='head'?['lunge','jet','lunge','bomb','sweep']:phase===1?['jet','jet','bomb']:phase===2?['jet','sweep','bomb','jet']:['jet','sweep','bomb','sweep'];
-      startAttack(pick(list),src);attackCd=(1.25+rand(0,.7))*speedK()*(booga?.65:1)*atkMult();}}  // 4.3
+      startAttack(pick(list),src);attackCd=(1.25+rand(0,.7))*speedK()*(booga?.65:1)*atkMult()*D().atkCdMul;}}  // 4.3
   if(phase===3&&Hm.grabbed){head2Cd-=dt;if(head2Cd<=0&&!attacks.some(a=>a.src==='mid')){const o=originOf('mid');if(Math.hypot(R.x-o.x,R.y-o.y)<650)startAttack('jet','mid');head2Cd=rand(2.2,3.2)*speedK();}}
 }
 const sprOn=s=>(s.cyc%6)>=1.1&&(s.cyc%6)<3.3;
@@ -649,20 +809,23 @@ function startBooga(){booga=1;boogaT=0;beatT=0;beatN=0;sfx.booga();if(!reduce)sh
   Hm.grabbed=false;Hm.mode='flee';Hm.cower=false;Hm.shock=0;const dir=Hm.x>=R.x?1:-1;Hm.cx=clamp(Hm.x+dir*420,90,WORLD-90);
   if(Math.abs(Hm.cx-R.x)<260)Hm.cx=clamp(Hm.x-dir*420,90,WORLD-90);Hm.cy=clamp(Hm.y-220,GY0+28,GY1-10);
   attacks=attacks.filter(a=>a.src==='head');attackCd=1.2;
+  if(D().freeSnake){crankT=bLen()+4;crankW=0;for(const s of snakes)s.stagger=Math.max(s.stagger,1.5);}   // 5.15
   for(let i=0;i<5;i++)spawnCritter(true);
   for(let i=0;i<30;i++)addPart({type:'star',x:R.x+rand(-60,60),by:R.y,y:R.y-rand(20,120),vx:rand(-200,200),vy:rand(-260,-60),life:.9,max:.9,size:rand(6,12),g:0,hue:rand(260,320)});}
-function endBooga(){booga=0;power=0;Hm.mode='regrab';Hm.cower=false;pop(R.x,R.y-170,'Booga time is over!','#e0aaff',26);}
+function endBooga(){booga=0;power=0;Hm.mode=D().freeSnake?'crank':'regrab';Hm.cower=false;pop(R.x,R.y-170,'Booga time is over!','#e0aaff',26);}
 
 /* ---------- flow ---------- */
 function burst(){state='burst';burstT=0;hitStop=.3;flash=.7;fovKick=9;geysers=[];Hm.shock=3;sfx.boom();if(booga){booga=0;}
   Hot.ph='off';Hot.t=0;if(Lass.ph!=='off'){Lass.ph='off';R.held=false;}   // 5.5
   for(let i=0;i<(reduce?90:200);i++){const q=rope[Math.floor(rand(3,N-4))];addPart({type:Math.random()<.2?'mist':'water',x:q.x,y:q.y,vx:rand(-240,240),vy:rand(-680,-280),life:1.5,max:1.5,size:rand(3,5.5),g:1,hue:rand(0,360)});}
   for(let i=0;i<40;i++){const q=rope[Math.floor(rand(3,N-4))];addPart({type:'bit',x:q.x,y:q.y,vx:rand(-260,260),vy:rand(-500,-200),life:1.3,max:1.3,size:rand(4,8),g:1,rot:0,vr:rand(-14,14),c:Math.random()<.5?'#3cc062':'#1d6b33'});}
+  for(const s of snakes)for(let i=0;i<22;i++){const q=pick(s.rope);addPart({type:'water',x:q.x,y:q.y,vx:rand(-240,240),vy:rand(-520,-200),life:1.3,max:1.3,size:rand(3,5),g:1,hue:rand(0,360)});}
+  snakes.length=0;                                                       // 5.16
   pop(R.x,R.y-200,'KABOOSH!','#7ae582',56);
   const tb=Math.max(0,Math.round((90+20*level-elapsed)*5*level)),hb=Math.round(R.hp*3*level);score+=tb+hb;
   if(tb)pop(R.x,R.y-150,'Speed bonus +'+tb,'#ffd23f',24);if(!reduce)shake=.5;}
 function won(){state='won';sfx.win();
-  const stars=1+(dmgTaken<35?1:0)+(elapsed<70+20*level?1:0),key='rosie2-stars-'+level,prev=parseInt(store.get(key)||'0',10);if(stars>prev)store.set(key,String(stars));
+  const stars=1+(dmgTaken<35?1:0)+(elapsed<70+20*level?1:0),key='rosie2-stars-'+mode+'-'+level,prev=parseInt(store.get(key)||'0',10);if(stars>prev)store.set(key,String(stars));
   $('winLbl').textContent=`Level ${level} cleared`;$('wStars').innerHTML='★'.repeat(stars)+'<span class="off">'+'★'.repeat(3-stars)+'</span>';
   $('wTime').textContent=fmt(elapsed);$('wDmg').textContent=Math.round(dmgTaken);$('wScore').textContent=score;$('wBest').textContent=writeBest();
   $('wTip').textContent=stars===3?'Perfect run. Next hose is faster.':dmgTaken>=35?'Dash through attacks to take less damage for another star.':'Finish faster for another star.';
@@ -672,12 +835,16 @@ function won(){state='won';sfx.win();
 function lose(){state='lost';booga=0;sfx.lose();Hot.ph='off';if(Lass.ph!=='off'){Lass.ph='off';R.held=false;}
   $('lHose').textContent=Math.round(hoseHP)+'%';$('lTime').textContent=fmt(elapsed);$('lBest').textContent=writeBest();
   setTimeout(()=>{$('loseOv').hidden=false;$('retryBtn').focus({preventScroll:true});},700);}
-function resetLevel(){hoseHP=100;phase=1;power=0;booga=0;boogaT=0;combo=0;dmgTaken=0;elapsed=0;
+function resetLevel(){mode=pendingMode;                                        // 3.1 / 5.1: the mode changes ONLY here
+  if(MRANK[mode]<MRANK[runMinMode])runMinMode=mode;                            // 3.1: the run banks under the easiest mode used
+  secondWind=D().secondWind;chainT=0;snakes.length=0;crankT=CRANK_CD;crankW=0;lastAtkT=-9;biteS=null;
+  hoseHP=100;phase=1;power=0;booga=0;boogaT=0;combo=0;dmgTaken=0;elapsed=0;
   attacks=[];puddles=[];treats=[];punct=[];critters=[];parts=[];pops=[];confetti=[];pots=makePots();hangers=makeHangers();
-  Object.assign(R,{ang:0,biteT:0,thrash:0,safeT:0,x:260,y:620,vx:0,vy:0,hp:100,sc:1,wet:0,chomp:0,recover:0,dash:0,dashCd:0,dashT:0,iframe:0,hurt:0,f:1,stam:DASH_MAX,stamT:0,held:false});
+  Object.assign(R,{ang:0,biteT:0,thrash:0,safeT:0,x:260,y:620,vx:0,vy:0,hp:D().hpMax,sc:1,wet:0,chomp:0,recover:0,dash:0,dashCd:0,dashT:0,iframe:0,hurt:0,f:1,stam:dMax(),stamT:0,held:false,pounce:0,shk:0,shkT:0,shkExt:0,shkStep:-1,barkCd:0});
   Object.assign(Hot,{ph:'off',t:0,c:45,w:6,len:3,cd:HOT_FIRST});
   Object.assign(Lass,{ph:'off',t:0,taps:0,tick:0,cd:LASSO_FIRST,mercy:0,sinceWin:1,retreat:0});boogaBuf=0;
-  Object.assign(Hm,{x:720,y:600,f:-1,mode:'roam',grabbed:true,cower:false,shock:0});Object.assign(J,{cd:0,streak:0,winded:0,lastT:9,hits:0});
+  Object.assign(Hm,{x:720,y:600,f:-1,mode:D().freeSnake?'crank':'roam',grabbed:!D().freeSnake,cower:false,shock:0});
+  if(D().freeSnake){E.x=REEL.x+300;E.y=clamp(REEL.y,GY0+40,GY1-30);E.vx=E.vy=0;E.ph=0;E.stagger=0;}   // 3.2: the hose is loose from level 1Object.assign(J,{cd:0,streak:0,winded:0,lastT:9,hits:0});
   pickWaypoint();attackCd=2.2;head2Cd=3;treatCd=5;for(const o of SPRS)o.cyc=o.off;initRope();camX=0;camY=0;weak=45;levelScore=score;state='play';}
 
 function fail3D(){$('startOv').querySelector('p').textContent="This browser or device can't show 3D graphics, so the game can't run here. Try another browser, or turn on hardware acceleration.";$('playBtn').hidden=true;$('hud').hidden=true;$('controls').hidden=true;document.querySelector('.how').hidden=true;}
@@ -913,6 +1080,13 @@ ink(man);let hatT=0,wasCower=false;
 const hoseTex=ctex(64,64,Math.round(N*SEG/64),1,g=>{g.fillStyle='#c8c8c8';g.fillRect(0,0,64,64);g.fillStyle='#e6e6a8';g.fillRect(0,26,64,13);g.fillStyle='#86868f';g.fillRect(4,0,4,64);g.fillStyle='#4e4e58';g.fillRect(0,0,4,64);});
 const hoseM=M('#28cd6d',{roughness:.25,map:hoseTex}),HOSE_G=new THREE.Color('#28cd6d'),HOSE_Y=new THREE.Color('#e4f76a'),HOSE_P=new THREE.Color('#b5179e'),BLK=new THREE.Color('#000000');
 const hv=[...Array(N+1)].map(()=>new THREE.Vector3()),hCurve=new THREE.CatmullRomCurve3(hv),hose3=new THREE.Mesh(new THREE.BufferGeometry(),hoseM);hose3.castShadow=true;hose3.receiveShadow=true;hose3.frustumCulled=false;scene.add(hose3);const ink3=new THREE.Mesh(hose3.geometry,INK);ink3.frustumCulled=false;scene.add(ink3);
+/* 3.2: the extra snakes reuse the hose's rope+TubeGeometry approach at 36 nodes and a
+   darker clone of hoseM, so the main hose keeps its own winded/BOOGA tint. Two meshes are
+   reserved up front (2 draw calls when visible) and never exceeded. */
+const snakeM=hoseM.clone();snakeM.color.set('#1b8f4b');
+const SN_MESH=[0,1].map(()=>{const v=[...Array(SN_N+1)].map(()=>new THREE.Vector3());
+  const o={v,c:new THREE.CatmullRomCurve3(v),m:new THREE.Mesh(new THREE.BufferGeometry(),snakeM)};
+  o.m.castShadow=true;o.m.receiveShadow=true;o.m.frustumCulled=false;o.m.visible=false;scene.add(o.m);return o;});
 const shred=new THREE.InstancedMesh(G_C,hoseM,30);shred.visible=false;shred.castShadow=true;shred.frustumCulled=false;scene.add(shred);let shredDone=false;
 const weakM=M('#ffd23f',{roughness:.3,emissive:'#aa7700'}),weak3=sph(scene,weakM,15,0,0,0,1,.8,1),weakGlow=sph(scene,MB('#ffe070',.22),34,0,0,0,1,1,1,false);weakGlow.material.blending=THREE.AdditiveBlending;
 const weakRing=flat(new THREE.RingGeometry(22,28,28),MB('#ffffff',.8),0,1.8,0);weakRing.receiveShadow=false;
@@ -1089,6 +1263,10 @@ function render3D(dt){
     if(!reduce){hoseTex.offset.x=(hoseTex.offset.x+(weak>N/2?-1:1)*(hTele?2:.6)*dt)%1;}
     if(state==='play')for(const i of punct)if(Math.random()<.08){const q=rope[i];addPart({type:'water',x:q.x,y:q.y,vx:rand(-70,70),vy:rand(-280,-160),life:.6,max:.6,size:3,g:1});}}
   else if(!shredDone){shredDone=true;hose3.visible=false;shred.visible=true;const d=new THREE.Object3D();for(let i=0;i<30;i++){const p=rope[3+i*Math.floor((N-6)/30)];d.position.set(p.x+rand(-30,30),7,zOf(p.y)+rand(-30,30));d.rotation.set(Math.PI/2,0,rand(0,6.28));d.scale.set(7,rand(30,60),7);d.updateMatrix();shred.setMatrixAt(i,d.matrix);}shred.instanceMatrix.needsUpdate=true;}
+  SN_MESH.forEach((sm,i)=>{const s=snakes[i];
+    if(!s||ruined){if(sm.m.visible){sm.m.visible=false;sm.m.geometry.dispose();sm.m.geometry=new THREE.BufferGeometry();}return;}
+    for(let j=0;j<=SN_N;j++){const p=s.rope[j];sm.v[j].set(p.x,9,zOf(p.y));}
+    sm.m.geometry.dispose();sm.m.geometry=new THREE.TubeGeometry(sm.c,72,7.5,6,false);sm.m.visible=true;});
   {const ps=punct.slice(-16);scar3.forEach((m,i)=>{const q=!ruined&&ps[i]!==undefined?rope[ps[i]]:null;m.visible=!!q;if(q)m.position.set(q.x,q.z+10,zOf(q.y));});}
   const w=rope[weak],hot=J.winded>0,showW=!ruined;weak3.visible=weakGlow.visible=weakRing.visible=weakCore.visible=weakTickG.visible=weakBeam.visible=showW;
   if(showW){const pul=.6+.4*Math.sin(t*10);weak3.position.set(w.x,w.z+8,zOf(w.y));const sq=Math.sin(Math.min(1,R.biteT/.3)*Math.PI),gw=1+.7*sq;weak3.scale.set(15*gw,12*(1-.5*sq),15*gw);weakGlow.position.copy(weak3.position);weakGlow.scale.setScalar(30+pul*10);weakRing.position.set(w.x,1.8,zOf(w.y));weakRing.scale.setScalar(1+pul*.25);
@@ -1155,7 +1333,7 @@ function drawBanner(){if(!booga)return;const txt="IT'S BOOGA TIME!",intro=Math.m
   ctx.save();ctx.translate(VW/2,Math.max(118,VH*.2));ctx.scale(sc,sc);ctx.font=`${Math.round(Math.min(62,VW/13))}px ${DISPLAY}`;ctx.textBaseline='middle';ctx.textAlign='left';ctx.lineJoin='round';
   const ch=[...txt],ws=ch.map(c=>ctx.measureText(c).width),tw=ws.reduce((a,b)=>a+b,0);let x=-tw/2;
   ch.forEach((c,i)=>{const y=reduce?0:Math.sin(t*8+i*.6)*7;ctx.lineWidth=9;ctx.strokeStyle='#240046';ctx.strokeText(c,x,y);ctx.fillStyle=`hsl(${(i*28+t*160)%360},100%,62%)`;ctx.fillText(c,x,y);x+=ws[i];});
-  const left=Math.max(0,BOOGA_LEN-boogaT);ctx.font=`22px ${DISPLAY}`;ctx.textAlign='center';ctx.lineWidth=6;ctx.strokeText(left.toFixed(1)+'s',0,46);ctx.fillStyle='#fff';ctx.fillText(left.toFixed(1)+'s',0,46);
+  const left=Math.max(0,bLen()-boogaT);ctx.font=`22px ${DISPLAY}`;ctx.textAlign='center';ctx.lineWidth=6;ctx.strokeText(left.toFixed(1)+'s',0,46);ctx.fillStyle='#fff';ctx.fillText(left.toFixed(1)+'s',0,46);
   ctx.restore();ctx.textBaseline='alphabetic';}
 function drawIndicator(){if(state!=='play')return;const w=rope[weak],q=proj(w.x,w.y,w.z+8);let sx=q.x,sy=q.y;if(q.z>1){sx=VW-sx;sy=VH*2;}
   if(q.z<1&&sx>24&&sx<VW-24&&sy>96&&sy<VH-24)return;
@@ -1167,24 +1345,25 @@ function drawConfetti(){for(const c of confetti){ctx.save();ctx.translate(c.x,c.
 /* ---------- HUD ---------- */
 let lastHud='';
 function hud(){const pc=v=>(clamp(v/WORLD,0,1)*100).toFixed(2)+'%';$('mRosie').style.left=pc(R.x);$('mFoe').style.left=pc(rope[weak].x);$('mView').style.left=pc(R.x-600);$('mView').style.width=pc(1200);
-  const bk=!booga&&power>=POWER_MAX&&state==='play';   // 3.5: banked and waiting on the player
-  const k=[level,score,Math.round(R.hp),Math.round(hoseHP),power,booga,combo,phase,R.stam,bk?1:0,booga?Math.ceil(BOOGA_LEN-boogaT):0].join('|');if(k===lastHud)return;lastHud=k;
-  $('lvl').textContent=level;$('score').textContent=score;$('comboChip').hidden=combo<2;$('combo').textContent='Combo x'+combo;
-  const rf=$('rFill');rf.style.width=R.hp+'%';rf.style.backgroundColor=R.hp>50?'#ff8fab':R.hp>25?'#f4b400':'#e63946';
+  const bk=!booga&&power>=pMax()&&state==='play';   // 3.5: banked and waiting on the player
+  const k=[level,score,Math.round(R.hp),Math.round(hoseHP),power,booga,combo,phase,R.stam,bk?1:0,mode,state,snakes.length,booga?Math.ceil(bLen()-boogaT):0].join('|');if(k===lastHud)return;lastHud=k;
+  $('lvl').textContent=level;$('score').textContent=score;$('comboChip').hidden=combo<2;$('combo').textContent='CHAIN x'+combo+(combo>=4?'  bite +'+Math.round((chainDmg()-1)*100)+'%':'');
+  const hpp=clamp(R.hp/D().hpMax*100,0,100),rf=$('rFill');rf.style.width=hpp+'%';rf.style.backgroundColor=hpp>50?'#ff8fab':hpp>25?'#f4b400':'#e63946';
   const hf=$('hFill');hf.style.width=hoseHP+'%';hf.style.backgroundColor=phase===1?'#2fa84f':phase===2?'#f4b400':'#e63946';$('phaseLbl').textContent=phase===1?'Hose':'Hose · Phase '+phase;
-  const pf=$('pFill');pf.style.width=(booga?Math.max(0,1-boogaT/BOOGA_LEN)*100:power/POWER_MAX*100)+'%';pf.classList.toggle('ready',bk);
+  const pf=$('pFill');pf.style.width=(booga?Math.max(0,1-boogaT/bLen())*100:power/pMax()*100)+'%';pf.classList.toggle('ready',bk);
   $('powLbl').textContent=booga?'BOOGA!':bk?'BOOGA READY':'Power';$('powLbl').classList.toggle('boog',!!booga||bk);$('boogaChip').hidden=!bk;
-  const bb=$('boogaBtn');bb.disabled=!bk;bb.classList.toggle('on',bk);
-  const sp=$('stamPips');sp.classList.toggle('dim',R.stam===0);for(let i=0;i<sp.children.length;i++)sp.children[i].classList.toggle('on',i<R.stam);}
+  const bb=$('boogaBtn');bb.disabled=state!=='play';bb.classList.toggle('on',bk);   // 3.3: BARK below full power, BOOGA on a hold at full
+  if(bb.lastChild&&bb.lastChild.nodeType===3)bb.lastChild.nodeValue=bk?'Booga!':'Bark';bb.title=bk?'Tap to bark, hold to BOOGA':'Tap to bark';
+  const sp=$('stamPips'),dm=dMax();sp.classList.toggle('dim',R.stam===0);for(let i=0;i<sp.children.length;i++){const c=sp.children[i];c.hidden=i>=dm;c.classList.toggle('on',i<R.stam);}}
 
 /* ---------- input ---------- */
 function readInput(){let x=0,y=0;if(keys.arrowleft||keys.a)x-=1;if(keys.arrowright||keys.d)x+=1;if(keys.arrowup||keys.w)y-=1;if(keys.arrowdown||keys.s)y+=1;
   if(joy){x+=joy.x;y+=joy.y;}if(ptr){_v.set(ptr.x/VW*2-1,1-ptr.y/VH*2,.5).unproject(cam).sub(cam.position);if(_v.y<-.001){const k=-cam.position.y/_v.y,dx=cam.position.x+_v.x*k-R.x,dz=cam.position.z+_v.z*k-zOf(R.y),d=Math.hypot(dx,dz);if(d>22){x+=dx/d;y+=dz/d;}}}const m=Math.hypot(x,y);if(m>1){x/=m;y/=m;}inX=x;inY=y;}
 window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=true;
-  if(!e.repeat){if(k===' '||k==='j')biteBuf=.2;if(k==='shift'||k==='k')dashBuf=.2;if(k==='b')boogaBuf=.2;}
+  if(!e.repeat){if(k===' '||k==='j'){biteBuf=.2;biteHeld=true;}if(k==='shift'||k==='k')dashBuf=.2;if(k==='b'&&!boogaDown){boogaDown=true;boogaHold=0;boogaFired=false;}}
   if(state==='play'&&['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();});
-window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
-window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;ptr=null;joy=null;});
+window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if(k===' '||k==='j')biteHeld=false;if(k==='b')boogaRelease();});
+window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;ptr=null;joy=null;biteHeld=false;boogaDown=false;boogaFired=false;});
 const toLogical=e=>({x:e.clientX,y:e.clientY});
 cv.addEventListener('pointerdown',e=>{ptr=toLogical(e);try{cv.setPointerCapture(e.pointerId);}catch(_){}});
 cv.addEventListener('pointermove',e=>{if(ptr)ptr=toLogical(e);});
@@ -1194,10 +1373,13 @@ function moveJoy(e){const r=pad.getBoundingClientRect(),cx=r.left+r.width/2,cy=r
 pad.addEventListener('pointerdown',e=>{padId=e.pointerId;try{pad.setPointerCapture(e.pointerId);}catch(_){}moveJoy(e);e.preventDefault();});
 pad.addEventListener('pointermove',e=>{if(e.pointerId===padId)moveJoy(e);});
 ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>pad.addEventListener(ev,e=>{if(e.pointerId===padId){padId=null;joy=null;knob.style.transform='';}}));
-$('biteBtn').addEventListener('pointerdown',e=>{e.preventDefault();biteBuf=.2;});
+/* 3.3: Bite tracks hold (SHAKE) and BOOGA tracks tap-vs-hold (BARK). No fourth button. */
+$('biteBtn').addEventListener('pointerdown',e=>{e.preventDefault();biteBuf=.2;biteHeld=true;try{e.target.setPointerCapture(e.pointerId)}catch(_){}});
+['pointerup','pointercancel','lostpointercapture'].forEach(ev=>$('biteBtn').addEventListener(ev,()=>{biteHeld=false;}));
 $('dashBtn').addEventListener('pointerdown',e=>{e.preventDefault();dashBuf=.2;});
-$('boogaBtn').addEventListener('pointerdown',e=>{e.preventDefault();boogaBuf=.2;});   // 5.10: inert below full power
-$('playBtn').addEventListener('click',()=>{ensureAudio();$('startOv').hidden=true;resetLevel();sfx.bark();});
+$('boogaBtn').addEventListener('pointerdown',e=>{e.preventDefault();if(!boogaDown){boogaDown=true;boogaHold=0;boogaFired=false;}try{e.target.setPointerCapture(e.pointerId)}catch(_){}});
+['pointerup','pointercancel','lostpointercapture'].forEach(ev=>$('boogaBtn').addEventListener(ev,()=>boogaRelease()));
+$('playBtn').addEventListener('click',()=>{ensureAudio();$('startOv').hidden=true;mode=pendingMode;runMinMode=mode;resetLevel();sfx.bark();});   // 5.3
 $('nextBtn').addEventListener('click',()=>{ensureAudio();$('winOv').hidden=true;level++;resetLevel();sfx.bark();});
 $('retryBtn').addEventListener('click',()=>{ensureAudio();$('loseOv').hidden=true;score=levelScore;resetLevel();sfx.bark();});
 $('mute').addEventListener('click',()=>{muted=!muted;$('mute').textContent=muted?'Sound off':'Sound on';if(!muted)ensureAudio();});
@@ -1208,21 +1390,39 @@ fsBtn.addEventListener('click',()=>{try{if(document.fullscreenElement||document.
 document.addEventListener('fullscreenchange',()=>{fsBtn.textContent=document.fullscreenElement?'Exit full screen':'Full screen';setTimeout(resize,50);});
 
 /* ---------- loop ---------- */
-initRope();pickWaypoint();Object.assign(R,{stam:DASH_MAX,stamT:0,held:false});
+initRope();pickWaypoint();Object.assign(R,{stam:dMax(),stamT:0,held:false});
 {const b=bestScore();$('tBest').textContent=b;$('bestLine').hidden=b<=0;}
+/* ---------- 3.1: the ONE entry point the title card / pause menu / win card drive ----------
+   ROSIE_MODE.set(m) mid-fight only sets pendingMode, so the live fight never changes (5.1);
+   resetLevel applies it. Use .label() for the button caption ("Applies at Hose #N+1"). */
+window.ROSIE_MODE={
+  list:MODES,table:DIFF,
+  get current(){return mode},
+  get pending(){return pendingMode},
+  get runMin(){return runMinMode},
+  get live(){return state==='play'},
+  label(){return state==='play'?'Applies at Hose #'+(level+1):'Applies now'},
+  best(m){return bestScore(m)},
+  stars(m,n){return parseInt(store.get('rosie2-stars-'+(m||mode)+'-'+n)||'0',10)||0},
+  set(m){if(!DIFF[m])return false;pendingMode=m;store.set('rosie2-mode',m);
+    if(state!=='play'){mode=m;if(MRANK[m]<MRANK[runMinMode])runMinMode=m;
+      const b=bestScore(),e=$('tBest');if(e){e.textContent=b;$('bestLine').hidden=b<=0;}}
+    if(typeof window.onRosieMode==='function'){try{window.onRosieMode(mode,pendingMode)}catch(_){}}
+    return true;}};
 let last=performance.now();
 function frame(now){const raw=Math.min(.05,(now-last)/1000);last=now;dtS=lerp(dtS,raw,.2);let dt=dtS;if(hitStop>0){hitStop-=raw;dt*=.03;}t+=dt;
-  if(state==='play'){elapsed+=dt;if(booga){boogaT+=dt;beatT+=dt;if(beatT>.25){beatT=0;sfx.beat(beatN++);}if(boogaT>BOOGA_LEN)endBooga();}}
+  if(state==='play'){elapsed+=dt;if(booga){boogaT+=dt;beatT+=dt;if(beatT>.25){beatT=0;sfx.beat(beatN++);}if(boogaT>bLen())endBooga();}}
   if(state==='burst'){burstT+=dt;if(burstT>1.6)won();}
   readInput();if(biteBuf>0){biteBuf-=raw;if(tryBite())biteBuf=0;}if(dashBuf>0){dashBuf-=raw;if(tryDash())dashBuf=0;}
-  if(boogaBuf>0){boogaBuf-=raw;if(!booga&&power>=POWER_MAX&&state==='play'){boogaBuf=0;startBooga();}}   // 3.5flash=Math.max(0,flash-raw*2.4);
+  boogaTick(raw);if(chainT>0){chainT-=dt;if(chainT<=0)chainDrop();}          // 3.4: the chain cools, it never zeroes
+  if(boogaBuf>0){boogaBuf-=raw;if(!booga&&power>=pMax()&&state==='play'){boogaBuf=0;startBooga();}}   // 3.5flash=Math.max(0,flash-raw*2.4);
   for(const g of geysers){g.t-=dt;const q=rope[g.i];for(let k=0;k<2;k++)if(Math.random()<dt*40)addPart({type:'water',x:q.x+rand(-5,5),y:q.y,vx:rand(-60,60),vy:rand(-620,-380)*Math.min(1,g.t+.3),life:1.1,max:1.1,size:3,g:1});}geysers=geysers.filter(g=>g.t>0&&state==='play');
   skyP+=((1-hoseHP/100)-skyP)*Math.min(1,dt*2);boogaK+=((booga?1:0)-boogaK)*Math.min(1,dt*2);
   for(const p of pots)if(p.fallen)p.rot=lerp(p.rot,p.dir*1.45,Math.min(1,dt*10));
   for(const p of puddles)p.life-=dt;puddles=puddles.filter(p=>p.life>0);
   for(const tr of treats)tr.life-=dt;
-  treatCd-=dt;if(state==='play'&&treatCd<=0&&treats.length<3){for(let k=0;k<12;k++){const x=clamp(R.x+rand(-520,520),60,WORLD-60),y=clamp(R.y+rand(-260,170),GY0+20,GY1-10);if(!blocked(x,y,30)){treats.push({x,y,life:14,ph:rand(0,6)});break;}}treatCd=rand(8,12);}
-  updHuman(dt);updHead(dt);updRope(dt);hoseDodge(dt);updRosie(dt);updLass(dt);updAttacks(dt);updHot(dt);updSprinkler(dt);updParts(dt);updCritters(dt);
+  treatCd-=dt;if(state==='play'&&treatCd<=0&&treats.length<3){for(let k=0;k<12;k++){const x=clamp(R.x+rand(-520,520),60,WORLD-60),y=clamp(R.y+rand(-260,170),GY0+20,GY1-10);if(!blocked(x,y,30)){treats.push({x,y,life:14,ph:rand(0,6)});break;}}treatCd=rand(D().treatMin,D().treatMax);}
+  updHuman(dt);updHead(dt);updRope(dt);hoseDodge(dt);updRosie(dt);updShake(dt);updSnakes(dt);updLass(dt);updAttacks(dt);updHot(dt);updSprinkler(dt);updParts(dt);updCritters(dt);
   shake=Math.max(0,shake-dt);hud();render3D(dt);drawOverlay();
   requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
