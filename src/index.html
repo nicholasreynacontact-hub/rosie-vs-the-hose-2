@@ -1064,15 +1064,16 @@ flat(new THREE.PlaneGeometry(1320,GD),M('#ffffff',{map:ctex(512,512,1320/600,GD/
      const rr=Math.max(rx,ry),gr=g.createRadialGradient(0,0,0,0,0,rr);gr.addColorStop(0,c);gr.addColorStop(.5,'rgba(255,170,90,.34)');gr.addColorStop(1,'rgba(0,0,0,0)');
      g.save();g.globalAlpha=a;g.translate(x,y);g.scale(rx/rr,ry/rr);g.fillStyle=gr;g.beginPath();g.arc(0,0,rr,0,7);g.fill();g.restore();}});
  PT.wrapS=PT.wrapT=THREE.ClampToEdgeWrapping;
- const pl=flat(new THREE.PlaneGeometry(1320,GD),new THREE.MeshBasicMaterial({map:PT,transparent:true,opacity:.46,depthWrite:false,blending:THREE.AdditiveBlending}),340,.45,GZ);
+ const pl=flat(new THREE.PlaneGeometry(1320,GD),new THREE.MeshBasicMaterial({map:PT,transparent:true,opacity:.34,depthWrite:false,blending:THREE.AdditiveBlending}),340,.45,GZ);
  pl.receiveShadow=false;}
 /* lawn: one un-tiled painting. Mown stripes 260 wide, 7 clover patches, 20 soft sunlit dapples */
 flat(new THREE.PlaneGeometry(2400,GD),M('#ffffff',{map:ctex(512,512,1,1,g=>{const sx=512/2400,sz=512/GD;
-  for(let i=0;i<10;i++){g.fillStyle=i%2?'#55b85a':'#3f9a52';g.fillRect(i*260*sx,0,260*sx+1,512);}
-  for(let i=0;i<1400;i++){const x=r2()*512,y=r2()*512;g.strokeStyle=r2()<.5?'rgba(44,122,76,.22)':'rgba(159,220,92,.16)';g.lineWidth=1;g.beginPath();g.moveTo(x,y);g.lineTo(x+r2()*2-1,y-2-r2()*3);g.stroke();}
-  g.fillStyle='#2c7a4c';for(const [x,z,r] of [[1330,250,230],[1900,130,170],[2080,930,300],[1500,1180,210],[2700,330,190],[2850,1100,320],[1150,720,150]])
+  for(let i=0;i<10;i++){g.fillStyle=i%2?'#4e8f4b':'#3a7043';g.fillRect(i*260*sx,0,260*sx+1,512);}
+  {const wg=g.createLinearGradient(512,0,0,512);wg.addColorStop(0,'rgba(255,170,96,.30)');wg.addColorStop(.5,'rgba(255,150,90,.12)');wg.addColorStop(1,'rgba(60,40,96,.20)');g.fillStyle=wg;g.fillRect(0,0,512,512);}
+  for(let i=0;i<1400;i++){const x=r2()*512,y=r2()*512;g.strokeStyle=r2()<.5?'rgba(34,86,60,.26)':'rgba(214,206,116,.16)';g.lineWidth=1;g.beginPath();g.moveTo(x,y);g.lineTo(x+r2()*2-1,y-2-r2()*3);g.stroke();}
+  g.fillStyle='#2f5f40';for(const [x,z,r] of [[1330,250,230],[1900,130,170],[2080,930,300],[1500,1180,210],[2700,330,190],[2850,1100,320],[1150,720,150]])
     for(let k=0;k<5;k++){const a=k*1.257+r2(),q=k?r*.5:0,rr=k?r*(.45+r2()*.2):r*.7;g.beginPath();g.ellipse((x-1000+Math.cos(a)*q)*sx,(z+60+Math.sin(a)*q)*sz,rr*sx,rr*sz,0,0,7);g.fill();}
-  for(let i=0;i<20;i++){const x=r2()*512,y=r2()*512,r=14+r2()*22,gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(159,220,92,.12)');gr.addColorStop(.55,'rgba(159,220,92,.09)');gr.addColorStop(1,'rgba(159,220,92,0)');g.fillStyle=gr;g.fillRect(x-r,y-r,r*2,r*2);}})}),2200,0,GZ);
+  for(let i=0;i<20;i++){const x=r2()*512,y=r2()*512,r=14+r2()*22,gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(255,206,130,.20)');gr.addColorStop(.55,'rgba(255,190,118,.11)');gr.addColorStop(1,'rgba(255,190,118,0)');g.fillStyle=gr;g.fillRect(x-r,y-r,r*2,r*2);}})}),2200,0,GZ);
 const woodM=M('#7a4a24'),woodL=M('#9a6234'),whiteM2=M('#f7f3ea',{roughness:.7});
 box(scene,M('#8f4a42'),34,7,GD,1000,3.5,GZ);
 /* deck railing, pergola, string lights */
@@ -1111,31 +1112,38 @@ box(scene,M('#c0392b'),190,140,130,2710,70,-180);{const r=add(scene,G_K4,M('#5c3
      toward the sky. Trees are clustered with bare slopes between, and sit on the hump surface, so the
      treeline is uneven and the humps stop reading as humps. A private PRNG keeps r2() untouched. */
   let tseed=90210;const tr=()=>{tseed=(tseed*48271)%2147483647;return (tseed-1)/2147483646;};
-  const TCONE=new THREE.ConeGeometry(1,1,5),TBALL=new THREE.SphereGeometry(1,7,5);
-  for(const [z,c,y0,x0,x1,ra,rb,tc,bc,rc,nco,nbr] of [
-      [-1500,'#2e4a4e',-10,-2900,5700,900,1350,'#17332e','#26513f','#8a5a4e',300,170],
-      [-2600,'#5c5a86',-80,-3900,6700,1150,1700,'#3b4a63','#4e5a7c','#9a6a76',200,110],
-      [-4000,'#a37fae',0,-5200,8000,1300,1800,'#7f6c9e','#8f7aa8','#c08fa0',140,80]]){
+  /* ONE conifer mesh and ONE broadleaf mesh for all three ridges: two draw calls for the whole forest.
+     Per-instance colour carries both the haze gradient between layers and the warm sun rim on the
+     crests, so the depth is done with value instead of geometry. The ones() colour attribute is what
+     lets instanceColor through in r128 -- vertexColors without it would multiply by black. */
+  const ones=gg=>{gg.setAttribute('color',new THREE.BufferAttribute(new Float32Array(gg.attributes.position.count*3).fill(1),3));return gg;};
+  const TCONE=ones(new THREE.ConeGeometry(1,1,5)),TBALL=ones(new THREE.SphereGeometry(1,7,5));
+  const TCAP=900,BCAP=520,TIM=new THREE.InstancedMesh(TCONE,M('#ffffff',{vertexColors:true}),TCAP),BIM=new THREE.InstancedMesh(TBALL,M('#ffffff',{vertexColors:true}),BCAP);
+  const tcA=new THREE.Color(),tcB=new THREE.Color(),tcR=new THREE.Color('#ffae72'),tcT=new THREE.Color(),tob=new THREE.Object3D();
+  let nTree=0,nBush=0;
+  for(const [z,c,y0,x0,x1,ra,rb,tc,bc,rim,nclu,tsc] of [
+      [-1500,'#2e4a4e',-10,-2900,5700,900,1350,'#13302c','#2a5a42',.62,46,1],
+      [-2600,'#5c5a86',-80,-3900,6700,1150,1700,'#3a4a66','#55658a',.40,38,1.35],
+      [-4000,'#a37fae',0,-5200,8000,1300,1800,'#7e6c9e','#917fac',.22,30,1.75]]){
     const g=grp(scene),m=M(c),hills=[];
     for(let i=0;i<7;i++){const r=ra+r2()*(rb-ra),cx=x0+(x1-x0)*(i+.15+r2()*.7)/7,cz=z-r2()*260;sph(g,m,r,cx,y0,cz,1.15,.35,.5,false);hills.push([cx,cz,r]);}
     if(z===-1500){sph(g,m,620,2330,-130,-1290,1,.26,.7,false);hills.push([2330,-1290,620]);}
     noSh(bake(g,m));
     /* surface height of the tallest hump under (x,zt), or null where there is nothing to stand on */
     const surf=(x,zt)=>{let best=null;for(const [cx,cz,r] of hills){const u=(x-cx)/(1.15*r),v=(zt-cz)/(.5*r),q=1-u*u-v*v;if(q<=.02)continue;const h=y0+.35*r*Math.sqrt(q);if(!best||h>best[0])best=[h,.35*r];}return best;};
-    const CO=new THREE.InstancedMesh(TCONE,M(tc),nco),BR=new THREE.InstancedMesh(TBALL,M(bc),nbr),CR=new THREE.InstancedMesh(TCONE,M(rc),Math.round(nco*.34)),d=new THREE.Object3D();
-    let na=0,nb2=0,nk=0;const put=(im,i,x,yy,zz,w,hh)=>{d.position.set(x,yy,zz);d.scale.set(w,hh,w);d.rotation.set(0,tr()*3,0);d.updateMatrix();im.setMatrixAt(i,d.matrix);};
-    for(let q=0;q<30&&(na<nco||nb2<nbr);q++){
-      const cx=x0+(x1-x0)*tr(),sp=320+tr()*1500,per=5+Math.floor(tr()*16);
-      if(tr()<.15)continue;                                  /* an open, bare slope now and then */
+    tcA.set(tc);tcB.set(bc);
+    const put=(im,i,x,yy,zz,w,hh,lit)=>{tob.position.set(x,yy,zz);tob.scale.set(w,hh,w);tob.rotation.set(0,tr()*3,0);tob.updateMatrix();im.setMatrixAt(i,tob.matrix);
+      tcT.copy(tcA).lerp(tcB,.22+tr()*.78).lerp(tcR,rim*lit*lit);tcT.convertSRGBToLinear();im.setColorAt(i,tcT);};
+    for(let q=0;q<nclu;q++){
+      const cx=x0+(x1-x0)*tr(),sp=300+tr()*1500,per=8+Math.floor(tr()*22);
+      if(tr()<.14)continue;                                  /* an open, bare slope now and then */
       for(let j=0;j<per;j++){
-        const x=cx+(tr()+tr()-1)*sp,zt=z+(tr()-.55)*260,sv=surf(x,zt);if(!sv)continue;
-        const drop=tr()*tr()*sv[1]*.9,yy=sv[0]-drop,rim=1-drop/(sv[1]*.55),tall=tr()<.09?1.8:1;
-        if(tr()<.34){if(nb2>=nbr)continue;const hh=(26+tr()*30)*tall;put(BR,nb2++,x,yy+hh*.46,zt,hh*(.5+tr()*.3),hh*.5);}
-        else{const hh=(34+tr()*46)*tall,w=hh*(.24+tr()*.14);
-          if(rim>.5&&nk<CR.count)put(CR,nk++,x,yy+hh*.5,zt,w,hh);
-          else if(na<nco)put(CO,na++,x,yy+hh*.5,zt,w,hh);}}}
-    CO.count=na;BR.count=nb2;CR.count=nk;
-    for(const im of [CO,BR,CR]){im.castShadow=false;im.receiveShadow=false;im.frustumCulled=false;if(im.count>0)scene.add(im);}}
+        const x=cx+(tr()+tr()-1)*sp,zt=z+(tr()-.6)*300,sv=surf(x,zt);if(!sv)continue;
+        const drop=tr()*tr()*sv[1]*.95,yy=sv[0]-drop,lit=Math.max(0,1-drop/(sv[1]*.5)),tall=tr()<.1?1.75:1;
+        if(tr()<.32){if(nBush>=BCAP)continue;const hh=(70+tr()*95)*tall*tsc;put(BIM,nBush++,x,yy+hh*.46,zt,hh*(.52+tr()*.34),hh*.5,lit);}
+        else{if(nTree>=TCAP)continue;const hh=(85+tr()*115)*tall*tsc,w=hh*(.26+tr()*.14);put(TIM,nTree++,x,yy+hh*.5,zt,w,hh,lit);}}}}
+  TIM.count=nTree;BIM.count=nBush;
+  for(const im of [TIM,BIM]){im.castShadow=false;im.receiveShadow=false;im.frustumCulled=false;if(im.instanceColor)im.instanceColor.needsUpdate=true;scene.add(im);}
   /* landmark: water tower on a knoll of the near ridge, right of centre */
   const tw=grp(scene,2330,-60,-1290),legM=M('#4a2238'),lg=grp(tw);
   for(const [x,z] of [[-95,-95],[95,-95],[-95,95],[95,95]]){const l=cyl(lg,legM,13,270,x*1.12,130,z*1.12,false);l.rotation.z=x>0?.085:-.085;l.rotation.x=z>0?-.085:.085;}
@@ -1213,7 +1221,7 @@ const boneM=M('#fffaf0',{roughness:.4,emissive:'#554422'}),treat3=[0,1,2].map(()
 /* Rosie */
 const WHITE=new THREE.Color('#ffffff'),WETC=new THREE.Color('#b9dcf5');
 /* wardrobe 2.2: FURC/FURS are captured by the wet lerp in render3D, so wFur() rebuilds them -- without this Rosie snaps back to cream the moment she gets wet */
-let FURC=new THREE.Color('#fffaf0').convertSRGBToLinear(),FWET=new THREE.Color('#b9dcf5').convertSRGBToLinear(),FURS=new THREE.Color('#b7b2e8').convertSRGBToLinear();
+let FURC=new THREE.Color('#fffaf0').convertSRGBToLinear(),FWET=new THREE.Color('#b9dcf5').convertSRGBToLinear(),FURS=new THREE.Color('#b9a3cf').convertSRGBToLinear();
 const furM=M('#fffaf0',{roughness:.92}),furS=M('#b7b2e8',{roughness:.92}),collarM=M('#ff4f9a'),peachM=M('#f6ddd0',{roughness:.8}),noseM=M('#3a2030',{roughness:.25}),eyeM=M('#2a1a22',{roughness:.05}),irisM=M('#9c6336'),glintM=new THREE.MeshBasicMaterial({color:'#ffffff'}),glint3M=new THREE.MeshBasicMaterial({color:'#ffd9b0',transparent:true,opacity:.35});
 /* art v2 item 4: big round head (about 60% of her), few fat curls, wide readable eyes. Curl placement is a fixed spiral, not r2(). */
 {for(let i=0;i<24;i++){r2();r2();r2();}for(let i=0;i<46;i++){const a=r2()*Math.PI*2,b=(r2()-.3)*Math.PI*.9;if(Math.cos(a)*Math.cos(b)>.42&&Math.sin(b)<.45)continue;r2();}for(let i=0;i<14;i++){r2();r2();r2();}} /* spend the draft's r2() draws so the seeded scenery built after Rosie stays where it was */
@@ -1321,7 +1329,7 @@ const wPal=s=>s.small?ACCW:ACCW.filter(a=>!a.small);
 const Wdef=()=>{const o={v:1,fur:'marshmallow'};WSLOTS.forEach(s=>{if(!s.fur)o[s.k]={id:s.def,c:s.dc};});return o;};
 let look=Wdef(),wFellBack=false,wTab='fur',wT=null;
 const wGroups={};
-function wFur(hex){const sh=mix(hex,'#6f67c6',.54); /* art v3: deeper, cooler shade side -- what reads as painted form once the ink is thin */
+function wFur(hex){const sh=mix(hex,'#7d5fa8',.50); /* art v3: deeper, cooler shade side -- what reads as painted form once the ink is thin */
   FURC=new THREE.Color(hex).convertSRGBToLinear();FURS=new THREE.Color(sh).convertSRGBToLinear();
   furM.color.copy(FURC);furS.color.copy(FURS);}
 function wLoad(){const raw=store.get(WKEY);if(!raw)return;let o=null;
@@ -1568,7 +1576,7 @@ function updCritters(dt){
 /* yard dressing */
 {const d=new THREE.Object3D(),col=new THREE.Color();
   // grass tufts
-  const tg=new THREE.ConeGeometry(1,1,4),tu=new THREE.InstancedMesh(tg,M('#ffffff'),650),gc=['#3f9a52','#2c7a4c','#55b85a','#3f9a52','#2c7a4c','#9fdc5c'],props=OBST.filter(o=>o.x>1060);
+  const tg=new THREE.ConeGeometry(1,1,4),tu=new THREE.InstancedMesh(tg,M('#ffffff'),650),gc=['#3a7043','#2f5f40','#4e8f4b','#3a7043','#2f5f40','#cbc271'],props=OBST.filter(o=>o.x>1060);
   /* clustered at the fence, the deck edge, prop bases and the front verge; the middle of the lawn stays open */
   for(let i=0;i<650;i++){let x,z;const m=i%10;
     if(m<3){x=1030+r2()*1960;z=r2()*r2()*150;}
