@@ -59,11 +59,12 @@ body{color:var(--ink);font-family:var(--body);font-weight:600;-webkit-user-selec
   padding-bottom:max(16px,env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .pad{pointer-events:auto;touch-action:none;width:128px;height:128px;border-radius:50%;background:rgba(255,248,236,.18);border:3px solid rgba(255,248,236,.8);position:relative}
 .knob{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:var(--cream);border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink)}
-.btns{display:flex;gap:14px;align-items:flex-end}
+.btns{display:grid;grid-template-columns:auto auto;gap:10px;align-items:end;justify-items:center}
 .act{pointer-events:auto;touch-action:none;width:82px;height:82px;border-radius:50%;font-family:var(--display);font-size:21px;color:#fff;border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink);cursor:pointer}
 .act:active{transform:translateY(3px);box-shadow:0 2px 0 var(--ink)}
 .act.bite{background:var(--coral);width:96px;height:96px;font-size:24px}
-.act.dash{background:#3a86ff;margin-bottom:34px}
+.act.dash{background:#3a86ff}
+.act.bark{background:#ffb703}
 @media (hover:hover) and (pointer:fine){.pad{display:none}.act{width:70px;height:70px;font-size:17px}.act.bite{width:78px;height:78px;font-size:19px}}
 .ov{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;overflow:auto;
   padding-block:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-bottom,0px));
@@ -91,6 +92,8 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 .hud .chip{background:var(--paper);color:var(--ink);border:3px solid var(--ui-ink);border-radius:10px 14px 9px 13px;padding:1px 10px 2px;box-shadow:0 3px 0 var(--ui-ink);text-shadow:none;transform:rotate(-1.5deg)}
 .hud .chip:nth-child(2){transform:rotate(1.2deg);background:var(--paper2)}
 .hud .chip.combo{background:#ff5d8f;color:#fff;transform:rotate(-3deg)}
+/* freeflow chain: a repeated move is a dimmer, greyer step than a varied one */
+.hud .chip.combo.rep{background:#6b7b8c;color:#e3eaf0}
 .hud .chip small{opacity:.7}
 .hbtn{background:var(--paper);color:var(--ui-ink);border:3px solid var(--ui-ink);box-shadow:0 3px 0 var(--ui-ink);border-radius:12px 9px 13px 10px}
 .map{height:14px;border:3px solid var(--ui-ink);box-shadow:0 3px 0 var(--ui-ink);border-radius:9px}
@@ -159,7 +162,21 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 @media (hover:hover) and (pointer:fine){.act .g{width:26px;height:21px}.act.bite .g{height:23px}}
 /* fight-upgrade.md 3.5: the third touch button. Matches dash/bite - glyph over a label, 4 px ink.
    Visibly dead until the meter is full, bright and bouncing once BOOGA is banked. */
-.act.booga{background:var(--pow);margin-bottom:62px}
+/* Decision 2026-11-10: FOUR buttons in a 2x2 thumb cluster - Booga/Bark on top, Dash/Bite below.
+   The left column rides higher on position:relative, so the arc costs no layout height and the
+   cluster stays 2 rows x 2 columns wide enough to clear the joystick at 390 px and 320 px. */
+.act.booga{background:var(--pow)}
+.act.bark{background:#ffb703;color:var(--ui-ink);text-shadow:none;position:relative}
+.act.bark .g{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 26'%3E%3Cg fill='%23241538'%3E%3Cpath d='M2 4h14v11H8l-4 4V15H2z'/%3E%3Cpath d='M20 6c2 1.6 2 6 0 7.6l1.6 2c3-2.5 3-9.1 0-11.6z'/%3E%3Cpath d='M24 3.2c3.2 2.8 3.2 11.6 0 14.4l1.6 2c3.9-3.3 3.9-15.1 0-18.4z'/%3E%3C/g%3E%3C/svg%3E")}
+.act.booga,.act.dash{position:relative;bottom:26px}
+/* Bark shows its own cooldown: a dark sweep draining from a full ring, set from hud() */
+.act.bark.cool{filter:saturate(.4) brightness(.88)}
+.act.bark::after{content:'';position:absolute;inset:-4px;border-radius:50%;pointer-events:none;
+  background:conic-gradient(rgba(36,21,56,.5) calc(var(--cd,0) * 1turn),rgba(0,0,0,0) 0)}
+@media (max-width:430px){.act{width:72px;height:72px;font-size:13px}.act.bite{width:80px;height:80px;font-size:14px}
+  .btns{gap:9px}.act .g{width:25px;height:20px}.act.bite .g{height:22px}}
+@media (max-width:360px){.act{width:64px;height:64px;font-size:12px}.act.bite{width:70px;height:70px;font-size:13px}
+  .act.booga,.act.dash{bottom:20px}}
 .act.booga:disabled{filter:grayscale(.8);opacity:.45;box-shadow:inset 0 5px 0 rgba(255,255,255,.18),0 6px 0 var(--ui-ink)}
 .act.booga.on{animation:bbounce .55s ease-in-out infinite}
 @keyframes bbounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
@@ -245,6 +262,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
   <span></span>
   <div class="btns">
     <button class="act booga" id="boogaBtn" type="button" disabled><span class="g" aria-hidden="true"></span>Booga</button>
+    <button class="act bark" id="barkBtn" type="button"><span class="g" aria-hidden="true"></span>Bark</button>
     <button class="act dash" id="dashBtn" type="button"><span class="g" aria-hidden="true"></span>Dash</button>
     <button class="act bite" id="biteBtn" type="button"><span class="g" aria-hidden="true"></span>Bite</button>
   </div>
@@ -266,10 +284,10 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
       <dt>Dash</dt><dd><kbd>Shift</kbd> through the water to dodge</dd>
       <dt>Watch</dt><dd>Red and amber shapes mean water is coming</dd>
       <dt>Power</dt><dd>Bites and dodges charge BOOGA TIME</dd>
-      <dt>Booga</dt><dd><strong>Hold</strong> <kbd>B</kbd> or the star button when the meter is full</dd>
+      <dt>Booga</dt><dd><kbd>V</kbd> or the star button when the meter is full</dd>
       <dt>Pounce</dt><dd>Dash, then <kbd>Space</kbd> mid-dash to leap the last stretch</dd>
       <dt>Shake</dt><dd><strong>Hold</strong> <kbd>Space</kbd> after a bite to thrash for extra damage</dd>
-      <dt>Bark</dt><dd><strong>Tap</strong> <kbd>B</kbd> to interrupt a wind-up or stop the reel</dd>
+      <dt>Bark</dt><dd><kbd>B</kbd> or the amber woof button to interrupt a wind-up or stop the reel</dd>
     </dl>
     <div class="cfm">
       <span class="dlbl" id="tDiffLbl">How tough is the hose?</span>
@@ -337,7 +355,8 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
         <dt>Move</dt><dd><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the joystick</dd>
         <dt>Bite</dt><dd><kbd>Space</kbd></dd>
         <dt>Dash</dt><dd><kbd>Shift</kbd></dd>
-        <dt>Booga</dt><dd><kbd>B</kbd></dd>
+        <dt>Bark</dt><dd><kbd>B</kbd></dd>
+        <dt>Booga</dt><dd><kbd>V</kbd></dd>
         <dt>Pause</dt><dd><kbd>Esc</kbd> or <kbd>P</kbd></dd>
       </dl>
     </div>
@@ -447,21 +466,36 @@ const D=()=>DIFF[mode],pMax=()=>D().powerMax,bLen=()=>D().boogaLen,dMax=()=>D().
 function dmgOf(base){return Math.min(base*(booga?.5:1)*Math.min(1,.55+.15*level)*D().dmgMul,D().hitCap*D().hpMax);}
 /* 3.2/3.3 tuning knobs (section 7). TWO DELIBERATE DEVIATIONS, both rulings on the designer's
    flagged conflicts: SHAKE_EXT_CAP is 0.24 s, not 0.48 - the non-extending bite window keeps
-   half of what Shake would sell back; BARK_HOLD is 0.30 s, not 0.35. */
+   half of what Shake would sell back. The second one, the bark hold length, is GONE as of
+   2026-11-10: Bark and BOOGA are separate buttons, so there is no hold left to time. */
 const SNAKE_COIL=.35,SN_HP=30,SN_N=36,SN_BITE=6,SN_JET_DMG=10,SN_MAX_ROPES=3,CRANK_CD=26,CRANK_WIND=3,HARD_SPACING=.8;
 const POUNCE_DMG=8,POUNCE_T=.26,POUNCE_SP=1020,SHAKE_T=.3,SHAKE_MAX=1.2,SHAKE_TICK=.5,SHAKE_EXT=.12,SHAKE_EXT_CAP=.24;
-const BARK_R=260,BARK_CONE=Math.cos(70*Math.PI/180),BARK_CD=2.5,BARK_HOLD=.3,CHAIN_W=1.6,CHAIN_STEP=.08;
+const BARK_R=260,BARK_CONE=Math.cos(70*Math.PI/180),BARK_CD=2.5,CHAIN_W=1.6,CHAIN_STEP=.08;
+/* Decision 2026-11-10 (freeflow / style-meter chain): a DIFFERENT move than the last advances a
+   full step, REPEATING the same move advances 40 % of one. Window, HUD, power feed and the
+   halve-on-drop are unchanged, and chainDmg still ceilings at 1.48 on bite damage. */
+const CHAIN_VARY=1,CHAIN_REP=.4;
 let chainT=0,snakes=[],lastAtkT=-9,crankT=CRANK_CD,crankW=0,biteS=null;
-let biteHeld=false,boogaDown=false,boogaHold=0,boogaFired=false,boogaT0=0;
+let biteHeld=false;
+let chainP=0,chainMove='',chainRep=false,chainPow=0;   // chainP is float progress; combo is its floor
 /* 3.4 / 4.3: one counter on screen. It cools rather than zeroes, and never costs HP or score. */
 const chainDmg=()=>1+CHAIN_STEP*Math.min(Math.max(combo-3,0),6);
-function chain(n){for(let k=0;k<(n||1);k++){combo++;if(combo%4===0&&!booga)power=Math.min(pMax(),power+1);}chainT=CHAIN_W;}
-function chainDrop(){if(combo>=4)pop(R.x,R.y-200,'chain cooling','#cfd8dc',22);combo=Math.floor(combo/2);chainT=combo>0?CHAIN_W:0;}
-/* 3.3 BARK input: tap = bark, hold 0.30 s = BOOGA. A tap can never spend a banked BOOGA (5.10). */
-function boogaRelease(){if(!boogaDown)return;boogaDown=false;if(!boogaFired)doBark();boogaFired=false;}
-function boogaDownNow(){if(boogaDown)return;boogaDown=true;boogaHold=0;boogaFired=false;boogaT0=(window.performance||Date).now();}
-function boogaTick(){if(!boogaDown||boogaFired)return;boogaHold=((window.performance||Date).now()-boogaT0)/1000;
-  if(boogaHold>=BARK_HOLD){boogaFired=true;if(!booga&&power>=pMax()&&state==='play')startBooga();else doBark();}}
+/* chain(n,mv): mv names the move - 'bite' (all three steps of one window, and snake bites),
+   'pounce', 'shake', 'bark', 'dodge', 'kill', 'lasso'. combo, which drives the counter, the score
+   multiplier and chainDmg, is floor(chainP), so the ceiling and the halving rule are untouched. */
+function chainSet(v){chainP=Math.max(0,v);combo=Math.floor(chainP);chainPow=Math.floor(chainP/4)*4;chainMove='';chainRep=false;}
+function chain(n,mv){const m=mv||'bite';
+  for(let k=0;k<(n||1);k++){const rep=(m===chainMove);chainRep=rep;chainMove=m;
+    chainP+=rep?CHAIN_REP:CHAIN_VARY;combo=Math.floor(chainP);
+    while(chainP>=chainPow+4){chainPow+=4;if(!booga)power=Math.min(pMax(),power+1);}}   // 3.4: power every 4 steps
+  chainT=CHAIN_W;}
+function chainDrop(){if(combo>=4)pop(R.x,R.y-200,'chain cooling','#cfd8dc',22);
+  chainSet(Math.floor(combo/2));chainT=combo>0?CHAIN_W:0;}
+/* Decision 2026-11-10: Bark (B / the amber woof button) and BOOGA (V / the star button) are two
+   separate inputs. The tap-vs-hold overload and its wall-clock hold timer are gone, so neither
+   input can fire the other - 5.10 ("a tap never spends a banked BOOGA") now holds by construction. */
+function barkNow(){if(state!=='play')return false;return doBark();}
+function boogaNow(){if(state!=='play'||booga||power<pMax())return false;startBooga();return true;}
 const Hot={ph:'off',t:0,c:45,w:6,len:3,cd:HOT_FIRST};
 const Lass={ph:'off',t:0,x:0,y:0,tele:.9,taps:0,tick:0,cd:LASSO_FIRST,mercy:0,sinceWin:1,retreat:0};
 let boogaBuf=0,biteI=-1;
@@ -633,7 +667,7 @@ function freeLass(toss){const was=Lass.ph==='held';
   if(!was)return;
   if(toss){const d=dmgOf(LASSO_TOSS);R.hp=Math.max(0,R.hp-d);dmgTaken+=d;
     pop(R.x,R.y-150*R.sc,'-'+Math.round(d),'#4cc9f0',24);R.vx+=rand(-340,340);R.vy+=rand(-180,180);sfx.yelp();}
-  else{pop(R.x,R.y-180,'FREE!','#80ffdb',34);sfx.rip();score+=20*level;chain(1);   // 3.4
+  else{pop(R.x,R.y-180,'FREE!','#80ffdb',34);sfx.rip();score+=20*level;chain(1,'lasso');   // 3.4
     for(let k=0;k<14;k++)addPart({type:'sparkle',x:R.x+rand(-45,45),by:R.y,y:R.y-rand(20,100),vx:rand(-60,60),vy:-50,life:.6,max:.6,size:rand(4,8),g:0,hue:rand(140,180)});}
   if(!reduce)shake=Math.max(shake,.25);
   if(R.hp<=0)lose();}
@@ -670,7 +704,7 @@ function tryBite(){if(state!=='play')return false;
 // A tired weak spot can be chewed three times in a row. Every bite hits harder than the last:
 // freeze-frame, camera punch, louder crunch, more spray. The third bite is the RIP, with a head-shaking thrash.
 function doBite(i){const p=rope[i],step=++J.hits,fin=step>=3,unit=unitDmg();hoseHP=Math.max(0,hoseHP-unit*BITE_W[Math.min(step,3)-1]*chainDmg());  // 3.3: 1 / 1.4 / 2.4
-  if(!punct.some(e=>Math.abs(e-i)<2))punct.push(i);chain(1);const mult=1+Math.min(combo-1,12)*.2;score+=Math.round((fin?30:10)*level*mult);
+  if(!punct.some(e=>Math.abs(e-i)<2))punct.push(i);chain(1,'bite');const mult=1+Math.min(combo-1,12)*.2;score+=Math.round((fin?30:10)*level*mult);
   hitStop=fin?.16:.07;fovKick=fin?7:3.5;flash=fin?.45:.2;if(!reduce)shake=Math.max(shake,fin?.4:.16);R.biteT=.3;R.safeT=Math.max(R.safeT,0);
   pop(p.x,p.y-50,fin?'RRRIP!':step===1?'CHOMP!':'CRUNCH!',fin?'#ff5d8f':step===1?'#ffd23f':'#ff9f1c',fin?48:28+step*5);if(fin&&combo>=6)pop(R.x,R.y-190,'CHAIN x'+combo,'#80ffdb',26);
   const ca=Math.cos(R.ang),sa=Math.sin(R.ang),nb=6+step*6;
@@ -695,7 +729,7 @@ function endPounce(hit){R.pounce=0;R.dash=0;R.recover=Math.max(R.recover,hit?.18
 function pounceHit(){const w=rope[weak];
   if(w&&w.z<=40&&Math.hypot(w.x-R.x,(w.y-R.y)*DZ)<70*R.sc){
     if(J.winded>0){endPounce(true);doBite(weak);}                          // 5.5: only a winded spot takes damage
-    else{endPounce(true);J.cd=0;leapAway();chain(1);pop(R.x,R.y-150,'BAITED!','#80ffdb',22);}
+    else{endPounce(true);J.cd=0;leapAway();chain(1,'pounce');pop(R.x,R.y-150,'BAITED!','#80ffdb',22);}
     return;}
   for(const s of snakes)for(const p of s.rope)if(Math.hypot(p.x-R.x,(p.y-R.y)*DZ)<70*R.sc){endPounce(true);hitSnake(s,POUNCE_DMG);return;}}
 /* SHAKE - hold Bite after a landed, non-final bite. Rooted, no iframes, cancelled by any damage.
@@ -705,7 +739,7 @@ function updShake(dt){
     if(!biteHeld||J.winded<=0||R.held||state!=='play'||J.hits>=3||R.shk>=SHAKE_MAX){endShake();return;}  // 5.8
     R.shk+=dt;R.shkT+=dt;R.vx=0;R.vy=0;R.thrash=Math.max(R.thrash,.1);R.thrashI=weak;
     if(R.shkT>=SHAKE_T){R.shkT-=SHAKE_T;
-      hoseHP=Math.max(0,hoseHP-unitDmg()*SHAKE_TICK*chainDmg());chain(1);
+      hoseHP=Math.max(0,hoseHP-unitDmg()*SHAKE_TICK*chainDmg());chain(1,'shake');
       const ext=Math.min(SHAKE_EXT,SHAKE_EXT_CAP-R.shkExt);if(ext>0){J.winded+=ext;R.shkExt+=ext;}
       const w=rope[weak];sfx.chomp(2);pop(w.x,w.y-40,'SHAKE!','#ff9f1c',24);if(!reduce)shake=Math.max(shake,.1);
       for(let k=0;k<8;k++)addPart({type:'water',x:w.x+rand(-8,8),y:w.y,vx:rand(-180,180),vy:rand(-320,-120),life:.6,max:.6,size:rand(2,4),g:1});
@@ -728,17 +762,17 @@ function doBark(){if(state!=='play'||R.held||R.barkCd>0||R.stam<1)return false;
   const w=rope[weak];if(J.cd<=0&&inCone(w.x,w.y)&&Math.hypot(w.x-R.x,(w.y-R.y)*DZ)<300*R.sc){leapAway();did++;}
   for(let k=0;k<14;k++){const a=R.ang+rand(-1.22,1.22),d=rand(40,rr0),gy=R.y+Math.sin(a)*d/DZ;
     addPart({type:'sparkle',x:R.x+Math.cos(a)*d,by:gy,y:gy-40,vx:Math.cos(a)*60,vy:-30,life:.45,max:.45,size:rand(3,7),g:0,hue:rand(40,70)});}
-  if(did)chain(1);else pop(R.x,R.y-150,'woof','#ffffff',20);               // a bark that achieves nothing still costs
+  if(did)chain(1,'bark');else pop(R.x,R.y-150,'woof','#ffffff',20);               // a bark that achieves nothing still costs
   return true;}
 /* 3.1: Easy's one free death-save per level. Consumed once, re-armed by resetLevel. */
 function saveWind(){if(!secondWind)return false;secondWind=false;R.hp=20;R.iframe=Math.max(R.iframe,2);
   pop(R.x,R.y-200,'ROSIE SHAKES IT OFF!','#80ffdb',32);sfx.perfect();if(!reduce)shake=Math.max(shake,.3);return true;}
 /* 3.2: extra snakes have no weak spot and cannot touch hoseHP */
-function hitSnake(s,dmg){if(!s)return;s.hp-=dmg;chain(1);sfx.chomp(1);R.chomp=.16;hitStop=Math.max(hitStop,.05);
+function hitSnake(s,dmg){if(!s)return;s.hp-=dmg;chain(1,'bite');sfx.chomp(1);R.chomp=.16;hitStop=Math.max(hitStop,.05);
   for(let k=0;k<10;k++)addPart({type:'bit',x:s.x,y:s.y,vx:rand(-200,200),vy:rand(-360,-120),life:.9,max:.9,size:rand(3,6),g:1,c:Math.random()<.5?'#3cc062':'#1d6b33'});
   pop(s.x,s.y-50,'CHOMP!','#ffd23f',24);if(s.hp<=0)killSnake(s);}
 function killSnake(s){const i=snakes.indexOf(s);if(i>=0)snakes.splice(i,1);
-  score+=40*level;if(!booga)power=Math.min(pMax(),power+1);chain(1);
+  score+=40*level;if(!booga)power=Math.min(pMax(),power+1);chain(1,'kill');
   for(let k=0;k<40;k++){const p=pick(s.rope);addPart({type:'water',x:p.x,y:p.y,vx:rand(-240,240),vy:rand(-520,-200),life:1.1,max:1.1,size:rand(3,5),g:1,hue:rand(0,360)});}
   pop(s.x,s.y-80,'BURST! +'+40*level,'#7ae582',30);sfx.boom();if(!reduce)shake=Math.max(shake,.25);}
 function allowedSnakes(){return Math.max(0,Math.min(D().maxSnakes-1,Math.floor(level/3)+(phase===3?1:0),SN_MAX_ROPES-1));}
@@ -790,7 +824,7 @@ function tryDash(){const cost=R.recover>0?DASH_CANCEL_COST:1;                 //
   if(state!=='play'||R.dashCd>0||R.held||R.shk>0||R.stam<cost)return false;let dx=inX,dy=inY;if(Math.hypot(dx,dy)<.2){dx=Math.cos(R.ang);dy=Math.sin(R.ang);}const m=Math.hypot(dx,dy);
   R.stam-=cost;R.dx=dx/m;R.dy=dy/m;R.dash=.17;R.dashT=.3;R.dashCd=DASH_CD;R.perfect=false;R.ang=Math.atan2(R.dy,R.dx);R.recover=0;sfx.dash();return true;}
 function hurt(dmg,kx,ky){if(state!=='play')return;
-  if(R.dashT>0){if(!R.perfect){R.perfect=true;R.stam=Math.min(dMax(),R.stam+1);score+=25*level;chain(1);  // 3.4: a perfect dash is freepop(R.x,R.y-140*R.sc,'PERFECT DODGE!','#80ffdb',26);sfx.perfect();
+  if(R.dashT>0){if(!R.perfect){R.perfect=true;R.stam=Math.min(dMax(),R.stam+1);score+=25*level;chain(1,'dodge');  // 3.4: a perfect dash is freepop(R.x,R.y-140*R.sc,'PERFECT DODGE!','#80ffdb',26);sfx.perfect();
     for(let k=0;k<10;k++)addPart({type:'sparkle',x:R.x+rand(-40,40),by:R.y,y:R.y-rand(20,90),vx:0,vy:-40,life:.6,max:.6,size:rand(4,7),g:0,hue:rand(140,180)});
     if(!booga)power=Math.min(pMax(),power+1);}return;}
   if(R.iframe>0)return;const d=dmgOf(dmg);R.hp=Math.max(0,R.hp-d);dmgTaken+=d;R.iframe=D().iframe;R.hurt=1;R.safeT=0;R.wet=1.4;chainDrop();endShake();R.vx+=kx*320;R.vy+=ky*200;
@@ -939,7 +973,7 @@ function lose(){state='lost';booga=0;sfx.lose();Hot.ph='off';if(Lass.ph!=='off')
 function resetLevel(){mode=pendingMode;                                        // 3.1 / 5.1: the mode changes ONLY here
   if(MRANK[mode]<MRANK[runMinMode])runMinMode=mode;                            // 3.1: the run banks under the easiest mode used
   secondWind=D().secondWind;chainT=0;snakes.length=0;crankT=CRANK_CD;crankW=0;lastAtkT=-9;biteS=null;
-  hoseHP=100;phase=1;power=0;booga=0;boogaT=0;combo=0;dmgTaken=0;elapsed=0;
+  hoseHP=100;phase=1;power=0;booga=0;boogaT=0;chainSet(0);dmgTaken=0;elapsed=0;
   attacks=[];puddles=[];treats=[];punct=[];critters=[];parts=[];pops=[];confetti=[];pots=makePots();hangers=makeHangers();
   Object.assign(R,{ang:0,biteT:0,thrash:0,safeT:0,x:260,y:620,vx:0,vy:0,hp:D().hpMax,sc:1,wet:0,chomp:0,recover:0,dash:0,dashCd:0,dashT:0,iframe:0,hurt:0,f:1,stam:dMax(),stamT:0,held:false,pounce:0,shk:0,shkT:0,shkExt:0,shkStep:-1,barkCd:0});
   Object.assign(Hot,{ph:'off',t:0,c:45,w:6,len:3,cd:HOT_FIRST});
@@ -1274,7 +1308,7 @@ function wShow(on){$('wardPanel').hidden=!on;$('pausePanel').hidden=!!on;closeSt
   if(on){$('wFall').hidden=!wFellBack;wSel(wTab);}}
 function pause(){if(state!=='play'||cinQ)return;state='paused';pauseTgt=1;
   biteBuf=0;dashBuf=0;boogaBuf=0;for(const k in keys)keys[k]=false;joy=null;ptr=null;
-  biteHeld=false;boogaDown=false;boogaFired=false;if(R.hurt>0)R.hurt=0;
+  biteHeld=false;if(R.hurt>0)R.hurt=0;
   try{knob.style.transform='';}catch(e){}
   wShow(false);$('pauseOv').hidden=false;setInert(true);syncSeg();
   $('pMute').textContent=muted?'Sound off':'Sound on';
@@ -1672,14 +1706,18 @@ function drawConfetti(){for(const c of confetti){ctx.save();ctx.translate(c.x,c.
 let lastHud='';
 function hud(){const pc=v=>(clamp(v/WORLD,0,1)*100).toFixed(2)+'%';$('mRosie').style.left=pc(R.x);$('mFoe').style.left=pc(rope[weak].x);$('mView').style.left=pc(R.x-600);$('mView').style.width=pc(1200);
   const bk=!booga&&power>=pMax()&&state==='play';   // 3.5: banked and waiting on the player
-  const k=[level,score,Math.round(R.hp),Math.round(hoseHP),power,booga,combo,phase,R.stam,bk?1:0,mode,state,snakes.length,booga?Math.ceil(bLen()-boogaT):0].join('|');if(k===lastHud)return;lastHud=k;
-  $('lvl').textContent=level;$('score').textContent=score;$('comboChip').hidden=combo<2;$('combo').textContent='CHAIN x'+combo+(combo>=4?'  bite +'+Math.round((chainDmg()-1)*100)+'%':'');
+  const k=[level,score,Math.round(R.hp),Math.round(hoseHP),power,booga,combo,phase,R.stam,bk?1:0,mode,state,snakes.length,booga?Math.ceil(bLen()-boogaT):0,Math.ceil(R.barkCd*10),chainRep?1:0].join('|');if(k===lastHud)return;lastHud=k;
+  $('lvl').textContent=level;$('score').textContent=score;$('comboChip').hidden=combo<2;$('comboChip').classList.toggle('rep',chainRep);
+  $('combo').textContent='CHAIN x'+combo+(chainRep?'  same move':'  VARIED!')+(combo>=4?'  bite +'+Math.round((chainDmg()-1)*100)+'%':'');
   const hpp=clamp(R.hp/D().hpMax*100,0,100),rf=$('rFill');rf.style.width=hpp+'%';rf.style.backgroundColor=hpp>50?'#ff8fab':hpp>25?'#f4b400':'#e63946';
   const hf=$('hFill');hf.style.width=hoseHP+'%';hf.style.backgroundColor=phase===1?'#2fa84f':phase===2?'#f4b400':'#e63946';$('phaseLbl').textContent=phase===1?'Hose':'Hose · Phase '+phase;
   const pf=$('pFill');pf.style.width=(booga?Math.max(0,1-boogaT/bLen())*100:power/pMax()*100)+'%';pf.classList.toggle('ready',bk);
   $('powLbl').textContent=booga?'BOOGA!':bk?'BOOGA READY':'Power';$('powLbl').classList.toggle('boog',!!booga||bk);$('boogaChip').hidden=!bk;
-  const bb=$('boogaBtn');bb.disabled=state!=='play';bb.classList.toggle('on',bk);   // 3.3: BARK below full power, BOOGA on a hold at full
-  if(bb.lastChild&&bb.lastChild.nodeType===3)bb.lastChild.nodeValue=bk?'Booga!':'Bark';bb.title=bk?'Tap to bark, hold to BOOGA':'Tap to bark';
+  const bb=$('boogaBtn');bb.disabled=state!=='play'||!bk;bb.classList.toggle('on',bk);   // visibly dead until the meter is full
+  bb.title=bk?'BOOGA TIME - V or this button':'BOOGA needs a full power meter';
+  const kb=$('barkBtn'),bcd=Math.max(0,R.barkCd);kb.disabled=state!=='play';   // Bark shows its own cooldown
+  kb.classList.toggle('cool',bcd>0);kb.style.setProperty('--cd',(bcd/BARK_CD).toFixed(2));
+  kb.title=bcd>0?'Bark recharging - '+bcd.toFixed(1)+' s':'Bark - B or this button';
   const sp=$('stamPips'),dm=dMax();sp.classList.toggle('dim',R.stam===0);for(let i=0;i<sp.children.length;i++){const c=sp.children[i];c.hidden=i>=dm;c.classList.toggle('on',i<R.stam);}}
 
 /* ---------- input ---------- */
@@ -1688,10 +1726,10 @@ function readInput(){let x=0,y=0;if(keys.arrowleft||keys.a)x-=1;if(keys.arrowrig
 window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();
   if(k==='escape'||k==='p'){if(state==='paused')e.preventDefault();if(!e.repeat)escKey();return;}   /* 1.2 */
   keys[k]=true;
-  if(!e.repeat){if(k===' '||k==='j'){biteBuf=.2;biteHeld=true;}if(k==='shift'||k==='k')dashBuf=.2;if(k==='b')boogaDownNow();}
+  if(!e.repeat){if(k===' '||k==='j'){biteBuf=.2;biteHeld=true;}if(k==='shift'||k==='k')dashBuf=.2;if(k==='b')barkNow();if(k==='v')boogaNow();}
   if(state==='play'&&['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();});
-window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if(k===' '||k==='j')biteHeld=false;if(k==='b')boogaRelease();});
-window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;ptr=null;joy=null;biteHeld=false;boogaDown=false;boogaFired=false;
+window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if(k===' '||k==='j')biteHeld=false;});
+window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;ptr=null;joy=null;biteHeld=false;
   if(state==='play')pause();});   /* 1.2: tab-away never costs health */
 const toLogical=e=>({x:e.clientX,y:e.clientY});
 cv.addEventListener('pointerdown',e=>{ptr=toLogical(e);try{cv.setPointerCapture(e.pointerId);}catch(_){}});
@@ -1702,12 +1740,12 @@ function moveJoy(e){const r=pad.getBoundingClientRect(),cx=r.left+r.width/2,cy=r
 pad.addEventListener('pointerdown',e=>{padId=e.pointerId;try{pad.setPointerCapture(e.pointerId);}catch(_){}moveJoy(e);e.preventDefault();});
 pad.addEventListener('pointermove',e=>{if(e.pointerId===padId)moveJoy(e);});
 ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>pad.addEventListener(ev,e=>{if(e.pointerId===padId){padId=null;joy=null;knob.style.transform='';}}));
-/* 3.3: Bite tracks hold (SHAKE) and BOOGA tracks tap-vs-hold (BARK). No fourth button. */
+/* Bite still tracks hold (SHAKE). Bark and BOOGA are one tap each, on their own button. */
 $('biteBtn').addEventListener('pointerdown',e=>{e.preventDefault();biteBuf=.2;biteHeld=true;try{e.target.setPointerCapture(e.pointerId)}catch(_){}});
 ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>$('biteBtn').addEventListener(ev,()=>{biteHeld=false;}));
 $('dashBtn').addEventListener('pointerdown',e=>{e.preventDefault();dashBuf=.2;});
-$('boogaBtn').addEventListener('pointerdown',e=>{e.preventDefault();boogaDownNow();try{e.target.setPointerCapture(e.pointerId)}catch(_){}});
-['pointerup','pointercancel','lostpointercapture'].forEach(ev=>$('boogaBtn').addEventListener(ev,()=>boogaRelease()));
+$('barkBtn').addEventListener('pointerdown',e=>{e.preventDefault();barkNow();});
+$('boogaBtn').addEventListener('pointerdown',e=>{e.preventDefault();boogaNow();});
 $('playBtn').addEventListener('click',()=>{ensureAudio();$('startOv').hidden=true;mode=pendingMode;runMinMode=mode;resetLevel();sfx.bark();});   // 5.3
 $('nextBtn').addEventListener('click',()=>{ensureAudio();$('winOv').hidden=true;level++;resetLevel();sfx.bark();});
 $('retryBtn').addEventListener('click',()=>{ensureAudio();$('loseOv').hidden=true;score=levelScore;resetLevel();sfx.bark();});
@@ -1751,7 +1789,7 @@ function frame(now){const raw=Math.min(.05,(now-last)/1000);last=now;
   if(state==='play'){elapsed+=dt;if(booga){boogaT+=dt;beatT+=dt;if(beatT>.25){beatT=0;sfx.beat(beatN++);}if(boogaT>bLen())endBooga();}}
   if(state==='burst'){burstT+=dt;if(burstT>1.6)won();}
   readInput();if(biteBuf>0){biteBuf-=raw;if(tryBite())biteBuf=0;}if(dashBuf>0){dashBuf-=raw;if(tryDash())dashBuf=0;}
-  boogaTick();if(chainT>0){chainT-=dt;if(chainT<=0)chainDrop();}          // 3.4: the chain cools, it never zeroes
+  if(chainT>0){chainT-=dt;if(chainT<=0)chainDrop();}          // 3.4: the chain cools, it never zeroes
   if(boogaBuf>0){boogaBuf-=raw;if(!booga&&power>=pMax()&&state==='play'){boogaBuf=0;startBooga();}}   // 3.5flash=Math.max(0,flash-raw*2.4);
   for(const g of geysers){g.t-=dt;const q=rope[g.i];for(let k=0;k<2;k++)if(Math.random()<dt*40)addPart({type:'water',x:q.x+rand(-5,5),y:q.y,vx:rand(-60,60),vy:rand(-620,-380)*Math.min(1,g.t+.3),life:1.1,max:1.1,size:3,g:1});}geysers=geysers.filter(g=>g.t>0&&state==='play');
   skyP+=((1-hoseHP/100)-skyP)*Math.min(1,dt*2);boogaK+=((booga?1:0)-boogaK)*Math.min(1,dt*2);
