@@ -1555,7 +1555,7 @@ const softTex=ctex(64,64,1,1,g=>{const gr=g.createRadialGradient(32,32,0,32,32,3
 softTex.encoding=THREE.LinearEncoding;softTex.wrapS=softTex.wrapT=THREE.ClampToEdgeWrapping;
 const dShadow=new THREE.Mesh(new THREE.CircleGeometry(46,24),MB('#3a2a6e',.34));dShadow.material.alphaMap=softTex;dShadow.material.needsUpdate=true;dShadow.rotation.x=-Math.PI/2;dShadow.position.y=1.2;dog.add(dShadow);
 /* special-moves.md 3.2: the travelling dig mound - one flattened sphere, hidden unless R.under */
-const digMound=sph(scene,M('#6b4426'),1,0,0,0,34,8,26,false);digMound.visible=false;
+const digMound=sph(scene,M('#6b4426'),1,0,0,0,72,26,56,false);digMound.visible=false;
 let browS=0,happyT=0,rearK=0,rearU=0,rearDir=-1,rearHold=0;
 
 /* ================= pause + wardrobe (design/ux/pause-and-wardrobe.md) =================
