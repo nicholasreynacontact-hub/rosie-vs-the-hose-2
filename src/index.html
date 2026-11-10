@@ -13,6 +13,9 @@
 /* Layout: the game canvas fills the whole screen; scoreboard floats across the top, touch controls float at the bottom corners */
 :root{
   --ink:#3b2416; --cream:#fff8ec; --hose:#2fa84f; --hose-dk:#1d6b33; --coral:#ff6b5a; --sun:#ffc93c; --sky:#2f7fe0; --violet:#9b5de5;
+  /* palette v2, UI rows: ink, paper, paper shade, accents */
+  --ui-ink:#241538; --paper:#fff1d8; --paper2:#f3d9b0;
+  --pow:#8b4dff; --dash-b:#3d7bff; --bite-b:#ff5a4d; --rosie-a:#ff7fa8; --go-g:#22b25a;
   --display:"Lilita One","Arial Rounded MT Bold","Trebuchet MS",sans-serif;
   --body:"Nunito",ui-rounded,"Segoe UI",system-ui,sans-serif;
   color-scheme:light;
@@ -85,22 +88,75 @@ kbd{font:800 12px var(--body);border:2px solid var(--ink);border-bottom-width:3p
 button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 /* hand-made HUD: paper tags with ink borders, a little crooked on purpose */
 .hud{background:none;gap:8px}
-.hud .chip{background:#fff3d6;color:var(--ink);border:3px solid #2b1a33;border-radius:10px 14px 9px 13px;padding:1px 10px 2px;box-shadow:0 3px 0 #2b1a33;text-shadow:none;transform:rotate(-1.5deg)}
-.hud .chip:nth-child(2){transform:rotate(1.2deg);background:#ffe9a3}
+.hud .chip{background:var(--paper);color:var(--ink);border:3px solid var(--ui-ink);border-radius:10px 14px 9px 13px;padding:1px 10px 2px;box-shadow:0 3px 0 var(--ui-ink);text-shadow:none;transform:rotate(-1.5deg)}
+.hud .chip:nth-child(2){transform:rotate(1.2deg);background:var(--paper2)}
 .hud .chip.combo{background:#ff5d8f;color:#fff;transform:rotate(-3deg)}
 .hud .chip small{opacity:.7}
-.hbtn{background:#fff3d6;color:#2b1a33;border:3px solid #2b1a33;box-shadow:0 3px 0 #2b1a33;border-radius:12px 9px 13px 10px}
-.map{height:14px;border:3px solid #2b1a33;box-shadow:0 3px 0 #2b1a33;border-radius:9px}
-.meter small{background:#2b1a33;color:#fff3d6;border-radius:7px;padding:2px 7px;opacity:1;transform:rotate(-2deg)}
-.bar{height:17px;border:3px solid #2b1a33;border-radius:10px 12px 9px 11px;background:#fff3d6;box-shadow:0 3px 0 #2b1a33}
+.hbtn{background:var(--paper);color:var(--ui-ink);border:3px solid var(--ui-ink);box-shadow:0 3px 0 var(--ui-ink);border-radius:12px 9px 13px 10px}
+.map{height:14px;border:3px solid var(--ui-ink);box-shadow:0 3px 0 var(--ui-ink);border-radius:9px}
+.meter small{background:var(--ui-ink);color:var(--paper);border-radius:7px;padding:2px 7px;opacity:1;transform:rotate(-2deg)}
+.bar{height:17px;border:3px solid var(--ui-ink);border-radius:10px 12px 9px 11px;background:var(--paper);box-shadow:0 3px 0 var(--ui-ink)}
 .fill{border-radius:5px;background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.28) 0 8px,rgba(255,255,255,0) 8px 16px)}
 .fill.pow{background:repeating-linear-gradient(115deg,rgba(255,255,255,.28) 0 8px,rgba(255,255,255,0) 8px 16px),linear-gradient(90deg,#9b5de5,#39d98a)}
 .boog{background:#9b5de5!important;color:#fff!important}
-.card{border-color:#2b1a33;border-radius:22px 28px 20px 26px;box-shadow:0 8px 0 #2b1a33;background:#fff3d6;position:relative;transform:rotate(-.6deg)}
-.card::before{content:"";position:absolute;inset:8px;border:2px dashed rgba(43,26,51,.3);border-radius:16px 20px 14px 18px;pointer-events:none}
-.card h1{color:#e85d4a;text-shadow:0 3px 0 #2b1a33;-webkit-text-stroke:1.5px #2b1a33;letter-spacing:.5px}
-.act{border-color:#2b1a33;box-shadow:0 6px 0 #2b1a33;border-radius:46% 54% 50% 50%}
-.ov{background:rgba(43,26,51,.42)}
+.card{border-color:var(--ui-ink);border-radius:22px 28px 20px 26px;box-shadow:0 8px 0 var(--ui-ink);background:var(--paper);position:relative;transform:rotate(-.6deg)}
+.card::before{content:"";position:absolute;inset:8px;border:2px dashed rgba(36,21,56,.3);border-radius:16px 20px 14px 18px;pointer-events:none}
+.card h1{color:#e85d4a;text-shadow:0 3px 0 var(--ui-ink);-webkit-text-stroke:1.5px var(--ui-ink);letter-spacing:.5px}
+.act{border-color:var(--ui-ink);box-shadow:0 6px 0 var(--ui-ink);border-radius:46% 54% 50% 50%}
+.ov{background:rgba(36,21,56,.42)}
+/* ---- item 10: title card and HUD ------------------------------------------------ */
+/* HUD: one more chip can join the top row before it wraps (campaign counter, star total) */
+.hud .row{gap:6px 10px}
+.hud .chip{font-size:clamp(14px,2.2vw,19px)}
+.map{flex:1 1 104px;min-width:80px;max-width:300px}
+/* each meter is named by a round CSS portrait, so the bars still read when the label is clipped */
+.port{flex:0 0 auto;width:24px;height:24px;border-radius:50%;border:3px solid var(--ui-ink);box-shadow:0 3px 0 var(--ui-ink);position:relative;background:var(--paper)}
+.port.rosie{background:radial-gradient(circle at 50% 76%,#3a2030 0 15%,rgba(0,0,0,0) 16%),radial-gradient(circle at 18% 58%,#ff8fa3 0 16%,rgba(0,0,0,0) 17%),radial-gradient(circle at 82% 58%,#ff8fa3 0 16%,rgba(0,0,0,0) 17%),radial-gradient(circle at 33% 34%,#1a0f14 0 13%,rgba(0,0,0,0) 14%),radial-gradient(circle at 67% 34%,#1a0f14 0 13%,rgba(0,0,0,0) 14%),#fffaf0}
+.port.foe{background:radial-gradient(circle at 50% 74%,#d9793b 0 26%,rgba(0,0,0,0) 27%),radial-gradient(circle at 34% 36%,#3b0d1c 0 13%,rgba(0,0,0,0) 14%),radial-gradient(circle at 66% 36%,#3b0d1c 0 13%,rgba(0,0,0,0) 14%),linear-gradient(160deg,#7be07a 0 40%,#1fa055 40%)}
+.port.star{background:var(--pow);overflow:hidden}
+.port.star::before{content:"";position:absolute;inset:1px;background:#ffd23f;clip-path:polygon(50% 2%,61% 36%,97% 36%,68% 58%,79% 92%,50% 71%,21% 92%,32% 58%,3% 36%,39% 36%)}
+.meter{gap:6px}
+.bar{height:18px}
+.fill.pow{background:repeating-linear-gradient(115deg,var(--pow) 0 9px,#39d98a 9px 18px)}
+.boog{background:var(--pow)!important}
+@media (max-width:520px){.meter{flex:1 1 118px}.meter small{font-size:9px;padding:1px 5px}.port{width:21px;height:21px}.hbtn{padding:3px 8px}}
+
+/* stacked-word logo: per-letter spans, so the mark still reads hand-lettered when Lilita One
+   never loads and the chunky fallback (Arial Rounded MT Bold, then Trebuchet) takes over */
+.logo{margin:0;display:flex;flex-direction:column;align-items:center;font-family:var(--display);font-weight:400;line-height:.94}
+.logo .w{display:block;white-space:nowrap}
+.logo i{display:inline-block;font-style:normal;color:var(--cream);-webkit-text-stroke:4px var(--ui-ink);paint-order:stroke fill;text-shadow:0 8px 0 var(--ui-ink)}
+.logo .w1{font-size:clamp(36px,8.6vw,62px)}
+.logo .w2{font-size:clamp(16px,3.4vw,25px);margin:3px 0 2px}
+.logo .w2 i{color:var(--sun);-webkit-text-stroke-width:3px;text-shadow:0 5px 0 var(--ui-ink)}
+.logo .w3{font-size:clamp(29px,7vw,51px)}
+.logo .w3 i{color:var(--go-g)}
+.logo i:nth-child(5n+1){transform:rotate(-4deg)}
+.logo i:nth-child(5n+2){transform:rotate(2.6deg)}
+.logo i:nth-child(5n+3){transform:rotate(-1.4deg)}
+.logo i:nth-child(5n+4){transform:rotate(3.4deg)}
+.logo i:nth-child(5n){transform:rotate(-2.4deg)}
+
+/* title: no dim over the scene; card docked left on wide screens, top on a phone, so the
+   camera's hero framing of Rosie (render3D) stays uncovered */
+#startOv{background:none;align-items:flex-start;justify-content:flex-start}
+#startOv .card{box-sizing:border-box;margin:0;width:100%;max-width:none;gap:9px}
+#startOv p{font-size:clamp(12px,2.3vw,14px);max-width:42ch}
+#startOv .how{font-size:clamp(11px,2.4vw,13.5px);gap:3px 10px;align-items:center}
+#startOv .how dd{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.how kbd+kbd{margin-left:3px}
+@media (min-width:720px){#startOv{align-items:center}#startOv .card{width:46%;min-width:340px;max-width:540px}}
+
+/* touch buttons: paw and fang glyphs, inner top highlight, 4 px ink */
+.act{border:4px solid var(--ui-ink);box-shadow:inset 0 5px 0 rgba(255,255,255,.32),0 6px 0 var(--ui-ink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1;font-size:15px;letter-spacing:.04em}
+.act.bite{background:var(--bite-b);font-size:16px}
+.act.dash{background:var(--dash-b)}
+.act:active{transform:translateY(3px);box-shadow:inset 0 5px 0 rgba(255,255,255,.32),0 2px 0 var(--ui-ink)}
+.act>*{pointer-events:none}
+.act .g{display:block;width:30px;height:24px;background-repeat:no-repeat;background-position:center;background-size:contain}
+.act.dash .g{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 26'%3E%3Cg fill='%23fff'%3E%3Cellipse cx='15' cy='19' rx='9' ry='6.4'/%3E%3Ccircle cx='5' cy='9' r='3.4'/%3E%3Ccircle cx='11.5' cy='4.6' r='3.6'/%3E%3Ccircle cx='18.5' cy='4.6' r='3.6'/%3E%3Ccircle cx='25' cy='9' r='3.4'/%3E%3C/g%3E%3C/svg%3E")}
+.act.bite .g{height:26px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 26'%3E%3Cpath fill='%23fff' d='M4 4h22v5l-4.5 13L18 9h-6l-3.5 13L4 9z'/%3E%3C/svg%3E")}
+@media (hover:hover) and (pointer:fine){.act .g{width:26px;height:21px}.act.bite .g{height:23px}}
 </style>
 
 </head>
@@ -119,9 +175,9 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
     <button class="hbtn" id="fsBtn" type="button">Full screen</button>
   </div>
   <div class="row meters">
-    <div class="meter"><small>Rosie</small><div class="bar"><div class="fill rosie" id="rFill"></div></div></div>
-    <div class="meter"><small id="phaseLbl">Hose</small><div class="bar"><div class="fill" id="hFill"></div></div></div>
-    <div class="meter"><small id="powLbl">Power</small><div class="bar"><div class="fill pow" id="pFill" style="width:0%"></div></div></div>
+    <div class="meter"><span class="port rosie" aria-hidden="true"></span><small>Rosie</small><div class="bar"><div class="fill rosie" id="rFill"></div></div></div>
+    <div class="meter"><span class="port foe" aria-hidden="true"></span><small id="phaseLbl">Hose</small><div class="bar"><div class="fill" id="hFill"></div></div></div>
+    <div class="meter"><span class="port star" aria-hidden="true"></span><small id="powLbl">Power</small><div class="bar"><div class="fill pow" id="pFill" style="width:0%"></div></div></div>
   </div>
 </div>
 
@@ -129,22 +185,26 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
   <div class="pad" id="pad"><div class="knob" id="knob"></div></div>
   <span></span>
   <div class="btns">
-    <button class="act dash" id="dashBtn" type="button">Dash</button>
-    <button class="act bite" id="biteBtn" type="button">Bite</button>
+    <button class="act dash" id="dashBtn" type="button"><span class="g" aria-hidden="true"></span>Dash</button>
+    <button class="act bite" id="biteBtn" type="button"><span class="g" aria-hidden="true"></span>Bite</button>
   </div>
 </div>
 
 <div class="ov" id="startOv">
   <div class="card">
     <span class="eyebrow">A backyard boss fight</span>
-    <h1>Rosie vs. the Hose</h1>
-    <p>The hose has taken over the yard. Hunt its weak spot across the whole deck, lawn and garden, time your bites, and dodge the water before Rosie gets soaked.</p>
+    <h1 class="logo" aria-label="Rosie vs. the Hose">
+      <span class="w w1" aria-hidden="true"><i>R</i><i>o</i><i>s</i><i>i</i><i>e</i></span>
+      <span class="w w2" aria-hidden="true"><i>v</i><i>s</i><i>.</i></span>
+      <span class="w w3" aria-hidden="true"><i>t</i><i>h</i><i>e</i>&nbsp;<i>H</i><i>o</i><i>s</i><i>e</i></span>
+    </h1>
+    <p>The hose has taken over the yard. Hunt its weak spot across the deck, lawn and garden before Rosie gets soaked.</p>
     <dl class="how">
-      <dt>Move</dt><dd>Arrow keys or <kbd>WASD</kbd>, drag the joystick, or hold a spot on the ground</dd>
-      <dt>Bite</dt><dd><kbd>Space</kbd> or <kbd>J</kbd>. Only the glowing yellow weak spot can be bitten. It leaps away until it runs out of breath. When it says BITE!, chomp it three times fast for a big RIP</dd>
-      <dt>Dash</dt><dd><kbd>Shift</kbd> or <kbd>K</kbd>. Dash through an attack for a Perfect Dodge</dd>
-      <dt>Watch</dt><dd>Red lines, yellow cones and red circles mean water is coming. The yellow arrow points to the weak spot</dd>
-      <dt>Power</dt><dd>Bites and perfect dodges charge BOOGA TIME</dd>
+      <dt>Move</dt><dd><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the joystick</dd>
+      <dt>Bite</dt><dd><kbd>Space</kbd> the glowing yellow weak spot</dd>
+      <dt>Dash</dt><dd><kbd>Shift</kbd> through the water to dodge</dd>
+      <dt>Watch</dt><dd>Red and amber shapes mean water is coming</dd>
+      <dt>Power</dt><dd>Bites and dodges charge BOOGA TIME</dd>
     </dl>
     <button class="go" id="playBtn" type="button">Let Rosie loose</button>
   </div>
@@ -179,7 +239,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 <script>
 (()=>{
 const WORLD=3000,GY0=392,GY1=1150,WB=1190,DZ=1.8,G=900,N=90,SEG=40,MID=45,POWER_MAX=10,BOOGA_LEN=15,DASH_CD=.7;
-const DISPLAY='"Lilita One","Trebuchet MS",sans-serif';
+const DISPLAY='"Lilita One","Arial Rounded MT Bold","Trebuchet MS",sans-serif';
 const $=id=>document.getElementById(id);
 const cv=$('game'),ctx=cv.getContext('2d');
 let VW=960,VH=600,ovDpr=1;
@@ -829,7 +889,11 @@ const C=h=>new THREE.Color(h),SKY={top:[C('#1f4fd0'),C('#0b7a5a')],mid:[C('#4f9b
 let camTX=300,camTZ=300,dogRot=0,manRot=Math.PI,sfS=0,rollS=0;const lerpAng=(a,b,k)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*k;
 function render3D(dt){
   const rz=zOf(R.y),k5=1-Math.exp(-dt*4.2);camTX=lerp(camTX,R.x+R.vx*.3,k5);camTZ=lerp(camTZ,rz+R.vy*DZ*.22,k5);fovKick*=Math.exp(-dt*8);cam.fov=baseFov-fovKick;cam.updateProjectionMatrix();
-  const wide=cam.aspect>=1.25,ch=wide?340:420,cd=wide?740:860;cam.position.set(camTX+(shake>0?rand(-8,8)*shake*4:0),ch+(shake>0?rand(-6,6)*shake*4:0),camTZ+cd);cam.lookAt(camTX,95,camTZ-210);
+  const wide=cam.aspect>=1.25;let ch=wide?340:420,cd=wide?740:860,hx=0,ly=95;
+  /* title: hero framing - closer in, aimed to Rosie's left so she sits on the right of frame
+     and the docked title card has empty yard to sit on (art-direction-v2, item 10) */
+  if(state==='title'){ch=wide?250:300;cd=wide?450:560;ly=wide?130:190;hx=-Math.tan(baseFov*Math.PI/360)*cam.aspect*cd*(wide?.46:.24);}
+  cam.position.set(camTX+hx+(shake>0?rand(-8,8)*shake*4:0),ch+(shake>0?rand(-6,6)*shake*4:0),camTZ+cd);cam.lookAt(camTX+hx,ly,camTZ-210);
   sun.position.set(camTX-1100,520,camTZ-380);sun.target.position.set(camTX,0,camTZ-60);fill.position.set(camTX+700,420,camTZ-700);fill.target.position.set(camTX,0,camTZ);
   /* sky: blue at the start, greener as the hose is chewed, purple and green during BOOGA TIME */
   for(const k of ['top','mid','bot'])skyU[k].value.copy(SKY[k][0]).lerp(SKY[k][1],skyP);scene.fog.color.copy(FOG_A).lerp(FOG_B,skyP).lerp(FOG_P,boogaK);
@@ -896,7 +960,7 @@ function render3D(dt){
 
 /* ---------- 2D overlay: floating words, warnings, banner, arrow, confetti ---------- */
 function proj(x,gy,h){_v.set(x,h,zOf(gy)).project(cam);return {x:(_v.x+1)/2*VW,y:(1-_v.y)/2*VH,z:_v.z};}
-function label(txt,x,y,size,fill){ctx.font=`${Math.round(size)}px ${DISPLAY}`;ctx.textAlign='center';ctx.lineJoin='round';ctx.lineWidth=Math.max(4,size*.2);ctx.strokeStyle='#3b2416';ctx.strokeText(txt,x,y);ctx.fillStyle=fill;ctx.fillText(txt,x,y);}
+function label(txt,x,y,size,fill){ctx.font=`${Math.round(size)}px ${DISPLAY}`;ctx.textAlign='center';ctx.lineJoin='round';ctx.lineWidth=Math.max(4,size*.2);ctx.strokeStyle='#241538';ctx.strokeText(txt,x,y);ctx.fillStyle=fill;ctx.fillText(txt,x,y);}
 function drawOverlay(){ctx.setTransform(ovDpr,0,0,ovDpr,0,0);ctx.clearRect(0,0,VW,VH);const us=clamp(Math.min(VW,VH)/640,.62,1.15);
   for(const p of parts)if(p.type==='note'){const q=proj(p.x,p.gy,p.h);if(q.z<1){ctx.globalAlpha=clamp(p.life/p.max,0,1);label(p.hue>180?'♪':'♫',q.x,q.y,p.size*us,`hsl(${p.hue},100%,65%)`);}}
   for(const p of pops){const q=proj(p.x,p.gy,p.h+(1.1-p.life)*70);if(q.z>1)continue;ctx.globalAlpha=clamp(p.life/.4,0,1);label(p.text,q.x,q.y,p.size*(1+Math.max(0,p.life-.9)*3)*us,p.color);}ctx.globalAlpha=1;
@@ -913,7 +977,7 @@ function drawBanner(){if(!booga)return;const txt="IT'S BOOGA TIME!",intro=Math.m
 function drawIndicator(){if(state!=='play')return;const w=rope[weak],q=proj(w.x,w.y,w.z+8);let sx=q.x,sy=q.y;if(q.z>1){sx=VW-sx;sy=VH*2;}
   if(q.z<1&&sx>24&&sx<VW-24&&sy>96&&sy<VH-24)return;
   const ang=Math.atan2(sy-VH/2,sx-VW/2),x=clamp(sx,46,VW-46),y=clamp(sy,130,VH-150);ctx.save();ctx.translate(x,y);
-  ctx.save();ctx.rotate(ang);ctx.fillStyle='rgba(255,196,0,.95)';ctx.strokeStyle='#3b2416';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(24,0);ctx.lineTo(-12,-18);ctx.lineTo(-12,18);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+  ctx.save();ctx.rotate(ang);ctx.fillStyle='#ffd23f';ctx.strokeStyle='#241538';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(24,0);ctx.lineTo(-12,-18);ctx.lineTo(-12,18);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
   label(Math.round(Math.hypot(w.x-R.x,(w.y-R.y)*DZ)/40)+'m',0,42,18,'#fff');ctx.restore();}
 function drawConfetti(){for(const c of confetti){ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.rot);ctx.fillStyle=c.c;ctx.fillRect(-c.w/2,-c.h/2,c.w,c.h*Math.abs(Math.cos(c.rot*1.7)));ctx.restore();}}
 
