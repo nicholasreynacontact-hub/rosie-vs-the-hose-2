@@ -571,11 +571,15 @@ const MOVES=Object.freeze([
    button's ordinary action always still runs because this returns false. */
 function motMatch(btn,grace){
   if(state!=='play'||R.held||R.shk>0||R.sp||(!grace&&R.recover>0))return false;
-  for(let k=0;k<MOVES.length;k++){const mv=MOVES[k];
-    if(mv.btn!==btn||R.stam<mv.stam||R.spCd[mv.id]>0||!mv.gate())continue;
-    if(motSeq(mv.seq,motT)===null)continue;
-    startSp(mv);return true;}
-  return false;}
+  let best=null;
+  for(let k=0;k<MOVES.length&&!best;k++){const mv=MOVES[k];                  // 5.3: longest first, ties by declaration order
+    if(mv.btn===btn&&motSeq(mv.seq,motT)!==null)best=mv;}
+  if(!best)return false;
+  /* 5.6: the longest pattern in the tail wins EVEN WHEN IT IS GATED OUT. A MEGA BONK input at
+     chain 7 resolves as an ordinary Bite; it must not fall through to the FLIPPITY-FLOP that
+     MOT_SLOP can find hiding inside it. Gates are checked after the match, never during it. */
+  if(R.stam<best.stam||R.spCd[best.id]>0||!best.gate())return false;
+  startSp(best);return true;}
 /* 3.1: positive-only feedback. Fires when the tail matches all but the last token of an AVAILABLE
    move (gates checked first, so 5.6 holds: the chip never promises a finisher at chain 7). */
 function motHint(){
@@ -997,7 +1001,7 @@ function slamHit(){const w=rope[R.sp?R.sp.wi:weak],wi=R.sp?R.sp.wi:weak,
     pop(w.x,w.y-60,'SLAAAM!','#ff5d8f',48);spRip(wi);spPhase();
     if(hoseHP<=0){burst();return;}
     moveWeak();}
-  else if(near){J.streak++;J.cd=0;leapAway();pop(w.x,w.y-60,'BAITED!','#80ffdb',24);}   // a non-winded spot takes 0, exactly as Pounce does
+  else if(near){J.cd=0;leapAway();pop(w.x,w.y-60,'BAITED!','#80ffdb',24);}   // a non-winded spot takes 0, exactly as Pounce does (leapAway owns the J.streak++)
   for(let s=snakes.length-1;s>=0;s--){const sn=snakes[s];
     if(Math.hypot(sn.x-R.x,(sn.y-R.y)*DZ)<SLAM_R*R.sc)hitSnake(sn,SLAM_SN);}
   if(Math.hypot(Hm.x-R.x,(Hm.y-R.y)*DZ)<SLAM_R*R.sc*1.6){Hm.shock=Math.max(Hm.shock,4);crankT+=6;if(crankW>0)crankW=0;
@@ -1071,6 +1075,7 @@ function updSpecial(dt){
       let dx=inX,dy=inY;if(Math.hypot(dx,dy)<.2){dx=Math.cos(R.ang);dy=Math.sin(R.ang);}
       const m=Math.hypot(dx,dy)||1;R.vx=dx/m*DIG_SP;R.vy=dy/m*DIG_SP/DZ;R.ang=Math.atan2(R.vy*DZ,R.vx);
       if(Math.random()<dt*26)addPart({type:'soil',x:R.x+rand(-18,18),by:R.y,y:R.y-8,vx:rand(-70,70),vy:rand(-230,-70),life:.5,max:.5,size:rand(2,4.5),g:1});
+      sp.d=(sp.d||0)+DIG_SP*dt;if(sp.d>=DIG_T*DIG_SP)sp.t=.30+DIG_T;       // AC11: the tunnel is 630 px by construction
       if(dashBuf>0){dashBuf=0;sp.t=.30+DIG_T;}                             // tap Dash again to surface early
       if(R.x<=44||R.x>=WORLD-44||R.y<=GY0+14||R.y>=GY1-2)sp.t=.30+DIG_T;   // or hit a world edge
       return;}
