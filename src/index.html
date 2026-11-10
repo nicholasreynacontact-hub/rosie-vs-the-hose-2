@@ -157,6 +157,26 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 .act.dash .g{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 26'%3E%3Cg fill='%23fff'%3E%3Cellipse cx='15' cy='19' rx='9' ry='6.4'/%3E%3Ccircle cx='5' cy='9' r='3.4'/%3E%3Ccircle cx='11.5' cy='4.6' r='3.6'/%3E%3Ccircle cx='18.5' cy='4.6' r='3.6'/%3E%3Ccircle cx='25' cy='9' r='3.4'/%3E%3C/g%3E%3C/svg%3E")}
 .act.bite .g{height:26px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 26'%3E%3Cpath fill='%23fff' d='M4 4h22v5l-4.5 13L18 9h-6l-3.5 13L4 9z'/%3E%3C/svg%3E")}
 @media (hover:hover) and (pointer:fine){.act .g{width:26px;height:21px}.act.bite .g{height:23px}}
+/* fight-upgrade.md 3.5: the third touch button. Matches dash/bite - glyph over a label, 4 px ink.
+   Visibly dead until the meter is full, bright and bouncing once BOOGA is banked. */
+.act.booga{background:var(--pow);margin-bottom:62px}
+.act.booga:disabled{filter:grayscale(.8);opacity:.45;box-shadow:inset 0 5px 0 rgba(255,255,255,.18),0 6px 0 var(--ui-ink)}
+.act.booga.on{animation:bbounce .55s ease-in-out infinite}
+@keyframes bbounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.act.booga .g{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 26'%3E%3Cpath fill='%23fff' d='M15 1.5l3.9 7.9 8.7 1.2-6.3 6.1 1.5 8.6L15 21.2 7.2 25.3l1.5-8.6-6.3-6.1 8.7-1.2z'/%3E%3C/svg%3E")}
+/* fight-upgrade.md 3.4: the three stamina pips, beside the power meter */
+.stam{display:flex;gap:5px;align-items:center;flex:0 0 auto}
+.stam i{display:block;width:10px;height:10px;border-radius:50%;border:3px solid var(--ui-ink);background:var(--paper);box-shadow:0 2px 0 var(--ui-ink)}
+.stam i.on{background:var(--dash-b)}
+.stam.dim{opacity:.4}
+/* fight-upgrade.md 3.5: banked-and-ready readout */
+.hud .chip.bready{background:var(--pow);color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.3);animation:bchip .7s ease-in-out infinite}
+@keyframes bchip{0%,100%{transform:rotate(-1.5deg) scale(1)}50%{transform:rotate(1.6deg) scale(1.07)}}
+.fill.pow.ready{animation:sheen .9s linear infinite}
+@keyframes sheen{from{background-position:0 0}to{background-position:36px 0}}
+.best{font-family:var(--display)}
+.best b{color:var(--sun)}
+@media (prefers-reduced-motion:reduce){.act.booga.on,.hud .chip.bready,.fill.pow.ready{animation:none}}
 </style>
 
 </head>
@@ -170,6 +190,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
     <div class="chip"><small>Level</small><span id="lvl">1</span></div>
     <div class="chip"><small>Score</small><span id="score">0</span></div>
     <div class="chip combo" id="comboChip" hidden><span id="combo">x2</span></div>
+    <div class="chip bready" id="boogaChip" hidden><span>BOOGA READY</span></div>
     <div class="map" aria-hidden="true"><i class="deck"></i><i class="lawn"></i><i class="garden"></i><b class="view" id="mView"></b><b class="dot foe" id="mFoe"></b><b class="dot rosie" id="mRosie"></b></div>
     <button class="hbtn" id="mute" type="button">Sound on</button>
     <button class="hbtn" id="fsBtn" type="button">Full screen</button>
@@ -178,6 +199,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
     <div class="meter"><span class="port rosie" aria-hidden="true"></span><small>Rosie</small><div class="bar"><div class="fill rosie" id="rFill"></div></div></div>
     <div class="meter"><span class="port foe" aria-hidden="true"></span><small id="phaseLbl">Hose</small><div class="bar"><div class="fill" id="hFill"></div></div></div>
     <div class="meter"><span class="port star" aria-hidden="true"></span><small id="powLbl">Power</small><div class="bar"><div class="fill pow" id="pFill" style="width:0%"></div></div></div>
+    <div class="stam" id="stamPips" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i></div>
   </div>
 </div>
 
@@ -185,6 +207,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
   <div class="pad" id="pad"><div class="knob" id="knob"></div></div>
   <span></span>
   <div class="btns">
+    <button class="act booga" id="boogaBtn" type="button" disabled><span class="g" aria-hidden="true"></span>Booga</button>
     <button class="act dash" id="dashBtn" type="button"><span class="g" aria-hidden="true"></span>Dash</button>
     <button class="act bite" id="biteBtn" type="button"><span class="g" aria-hidden="true"></span>Bite</button>
   </div>
@@ -199,12 +222,14 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
       <span class="w w3" aria-hidden="true"><i>t</i><i>h</i><i>e</i>&nbsp;<i>H</i><i>o</i><i>s</i><i>e</i></span>
     </h1>
     <p>The hose has taken over the yard. Hunt its weak spot across the deck, lawn and garden before Rosie gets soaked.</p>
+    <p class="best" id="bestLine" hidden>Best score <b id="tBest">0</b></p>
     <dl class="how">
       <dt>Move</dt><dd><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the joystick</dd>
       <dt>Bite</dt><dd><kbd>Space</kbd> the glowing yellow weak spot</dd>
       <dt>Dash</dt><dd><kbd>Shift</kbd> through the water to dodge</dd>
       <dt>Watch</dt><dd>Red and amber shapes mean water is coming</dd>
       <dt>Power</dt><dd>Bites and dodges charge BOOGA TIME</dd>
+      <dt>Booga</dt><dd><kbd>B</kbd> or the star button when the meter is full</dd>
     </dl>
     <button class="go" id="playBtn" type="button">Let Rosie loose</button>
   </div>
@@ -219,6 +244,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
       <span><small>Time</small><b id="wTime">0:00</b></span>
       <span><small>Damage taken</small><b id="wDmg">0</b></span>
       <span><small>Score</small><b id="wScore">0</b></span>
+      <span><small>Best</small><b id="wBest">0</b></span>
     </div>
     <p id="wTip">Three stars means fast and barely wet.</p>
     <button class="go" id="nextBtn" type="button">Next hose</button>
@@ -229,7 +255,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
   <div class="card">
     <span class="eyebrow">Splash out</span>
     <h2>Rosie got soaked!</h2>
-    <div class="stats"><span><small>Hose left</small><b id="lHose">0%</b></span><span><small>Time</small><b id="lTime">0:00</b></span></div>
+    <div class="stats"><span><small>Hose left</small><b id="lHose">0%</b></span><span><small>Time</small><b id="lTime">0:00</b></span><span><small>Best</small><b id="lBest">0</b></span></div>
     <p>Watch for the warning shapes, then dash through the water instead of running from it.</p>
     <button class="go red" id="retryBtn" type="button">Shake it off and retry</button>
   </div>
@@ -299,6 +325,19 @@ const R={x:300,y:500,f:1,vx:0,vy:0,hp:100,sc:1,wet:0,chomp:0,recover:0,dash:0,da
 const Hm={x:720,y:470,f:-1,tx:600,ty:470,mode:'roam',moving:false,walkT:0,cower:false,shock:0,cx:0,cy:0,grabbed:true,wpT:0};
 const E={x:0,y:0,vx:0,vy:0,ph:0};
 const J={cd:0,streak:0,winded:0,last:1,lastT:9,hits:0};
+/* ---------- fight-upgrade.md 3.1-3.6: tuning knobs (section 7) and the two new threat states ---------- */
+const HOT_LVL=2,HOT_FIRST=14,HOT_WARN=1.2,HOT_COOL=.6,HOT_DMG=10,HOT_BITE_DMG=8,HOT_RAD=52;
+const LASSO_LVL=4,LASSO_FIRST=22,LASSO_TELE=.9,LASSO_R=95,LASSO_TAPS=6,LASSO_TICK=4,LASSO_TICK_T=.9,LASSO_MAX=4,LASSO_TOSS=6,LASSO_MERCY=8;
+const DASH_MAX=3,DASH_REGEN=1.6,DASH_CANCEL_COST=2,BITE_W=[1,1.4,2.4],WIND_GRANT=[.42,.30],WHIFF_COST=.25,HP_CAP_LEVEL=5;
+const Hot={ph:'off',t:0,c:45,w:6,len:3,cd:HOT_FIRST};
+const Lass={ph:'off',t:0,x:0,y:0,tele:.9,taps:0,tick:0,cd:LASSO_FIRST,mercy:0,sinceWin:1,retreat:0};
+let boogaBuf=0,biteI=-1;
+/* fight-upgrade.md 4.1/4.3. unit() uses divisor base 28, not the spec's 16: a level is ~10 full
+   combos instead of 15 (section 9.2, resolved). Every scaler below hits its floor by level 12. */
+const unitDmg=()=>100/(28+4*Math.min(level,HP_CAP_LEVEL));
+const LCAP=()=>Math.min(level,12);   // 4.3: difficulty is frozen from level 12 on
+const atkMult=()=>Math.max(.70,1-.04*Math.max(0,LCAP()-5));
+const leapsFor=()=>Math.min(9,1+Math.min(level,3)+(phase-1)+Math.floor(Math.max(0,LCAP()-5)/2));
 
 /* ---------- sound ---------- */
 let ac=null,muted=false;
@@ -323,7 +362,11 @@ const sfx={
   win(){[523,659,784,1046].forEach((f,i)=>tone(f,.2,'triangle',.09,0,i*.12));},
   lose(){[392,330,262].forEach((f,i)=>tone(f,.25,'triangle',.08,0,i*.18));},
   booga(){tone(98,.45,'sawtooth',.1,120);tone(147,.45,'square',.06,160,.2);[392,494,587,784,988].forEach((f,i)=>tone(f,.16,'triangle',.08,0,.45+i*.09));},
-  beat(n){tone(n%4===0?98:n%2?196:147,.07,n%4===0?'square':'triangle',.045);}
+  beat(n){tone(n%4===0?98:n%2?196:147,.07,n%4===0?'square':'triangle',.045);},
+  hiss(){noise(.5,.05,2400);tone(260,.45,'sawtooth',.03,420);},
+  sizzle(){noise(.22,.11,1500);tone(170,.22,'sawtooth',.05,-80);},
+  whoosh(){noise(.24,.06,520);tone(300,.22,'sine',.04,-190);},
+  tap(n){tone(420+n*95,.05,'square',.055);tone(840+n*120,.04,'triangle',.03,0,.02);}
 };
 function ensureAudio(){if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}if(ac&&ac.state==='suspended')ac.resume();}
 
@@ -369,22 +412,120 @@ function hoseDodge(dt){J.cd-=dt;J.lastT+=dt;const w=rope[weak];
   const imp=(600+40*level)*(booga?1.15:1);
   for(let k=-8;k<=8;k++){const i=ni+k;if(i<2||i>N-3)continue;const g=Math.exp(-(k*k)/18),p=rope[i];p.vx+=nx*side*imp*g;p.vy+=ny*side*imp*g*.56;p.vz=Math.max(p.vz,420*g);}
   J.cd=Math.max(.16,(.46-.04*level-.04*(phase-1))*(booga?.7:1));J.streak++;sfx.swish();
-  if(J.streak>=(booga?1:1+Math.min(level,3)+(phase-1))){J.streak=0;J.hits=0;J.winded=Math.max(.9,1.75-.15*level);J.cd=J.winded+.2;pop(w.x,w.y-70,'*pant pant*','#ffffff',22);}
+  if(J.streak>=(booga?1:leapsFor())){J.streak=0;J.hits=0;J.winded=Math.max(.9,1.75-.15*level);J.cd=J.winded+.2;Lass.sinceWin=1;pop(w.x,w.y-70,'*pant pant*','#ffffff',22);}
 }
+
+/* ---------- fight-upgrade.md 3.1: the hot band ---------- */
+/* A stretch of segments heats, not the whole hose: amber warning first (harmless), then
+   red/ember (one hit per invulnerability second), then a green cool-down. Red is the
+   request; the tired weak spot moved to white-gold so the two never read the same. */
+const hotW=()=>Math.min(9,6+Math.floor(level/4));
+const hotLen=()=>Math.min(4.5,2.6+.16*level);
+const hotCd=()=>Math.max(6.5,13-.6*level)+rand(0,1.5);
+function startHot(){const W=hotW();
+  for(let k=0;k<12;k++){const c=Math.floor(rand(10,N-9));                    // reject-and-retry: never near the weak spot
+    if(Math.abs(c-weak)>=W+6){Hot.c=c;Hot.w=W;Hot.ph='warn';Hot.t=0;hotCurve.points=hotV.slice(0,2*W+1);sfx.warn();sfx.hiss();return;}}
+  Hot.cd=hotCd();}
+function hotEmber(warn){const p=rope[clamp(Hot.c+Math.round(rand(-Hot.w,Hot.w)),1,N-1)];
+  addPart({type:'star',x:p.x+rand(-10,10),by:p.y,y:p.y-p.z-12,vx:rand(-22,22),vy:rand(-130,-40),life:.5,max:.5,size:rand(3,6),g:0,hue:warn?42:rand(8,40)});}
+function hotContact(){if(R.iframe>0||R.held)return;
+  for(let i=Hot.c-Hot.w;i<=Hot.c+Hot.w;i++){if(i<1||i>N-1)continue;
+    if(Math.abs(i-weak)<=3)continue;                                          // one wider than findBite's weak+-2
+    const p=rope[i];if(p.z>46)continue;
+    if(Math.hypot(p.x-R.x,(p.y-R.y)*DZ)<HOT_RAD*R.sc){const dx=R.x-p.x,dy=R.y-p.y,d=Math.hypot(dx,dy*DZ)||1;burn(HOT_DMG,dx/d,dy/d);return;}}}
+function updHot(dt){
+  if(state!=='play'||level<HOT_LVL){if(Hot.ph!=='off'){Hot.ph='off';Hot.t=0;}return;}
+  Hot.t+=dt;
+  if(Hot.ph==='off'){Hot.cd-=dt;if(Hot.cd<=0)startHot();return;}
+  if(Hot.ph==='warn'){if(!reduce&&Math.random()<dt*26)hotEmber(true);
+    if(Hot.t>=HOT_WARN){Hot.ph='hot';Hot.t=0;Hot.len=hotLen();const p=rope[Hot.c];pop(p.x,p.y-70,'RED HOT!','#ff7a1a',28);sfx.hiss();}return;}
+  if(Hot.ph==='hot'){
+    if(Math.abs(Hot.c-weak)<=Hot.w+3){Hot.ph='cool';Hot.t=0;return;}          // moveWeak walked the spot in: force-cool
+    if(!reduce&&Math.random()<dt*34)hotEmber(false);
+    hotContact();
+    if(Hot.t>=Hot.len){Hot.ph='cool';Hot.t=0;}return;}
+  if(Hot.t>=HOT_COOL){Hot.ph='off';Hot.t=0;Hot.cd=hotCd();}}
+/* burn differs from hurt in exactly one way: no Perfect Dodge. A static hazard that refunded a
+   stamina charge for brushing it would be a stamina farm. Dash does not make Rosie fireproof. */
+function burn(dmg,kx,ky){if(state!=='play'||R.iframe>0)return;
+  const d=dmg*(booga?.5:1)*Math.min(1,.55+.15*level);R.hp=Math.max(0,R.hp-d);dmgTaken+=d;R.iframe=1;R.hurt=1;R.safeT=0;combo=0;R.vx+=kx*320;R.vy+=ky*200;
+  pop(R.x,R.y-140*R.sc,'-'+Math.round(d),'#ff9f1c',26);sfx.yelp();sfx.sizzle();if(!reduce)shake=Math.max(shake,.2);
+  for(let k=0;k<8;k++)addPart({type:'star',x:R.x+rand(-22,22),by:R.y,y:R.y-rand(10,60),vx:rand(-70,70),vy:rand(-170,-40),life:.5,max:.5,size:rand(3,6),g:0,hue:rand(8,40)});
+  if(R.hp<=0)lose();}
+
+/* ---------- fight-upgrade.md 3.2: the lasso grab ---------- */
+/* Telegraphed red ring, deterministic catch, dashable. Held: input dead, the hose stops
+   attacking, 4 damage every 0.9 s, six Bite taps or 4 s frees her. Mercy rule on every escape. */
+const lassoCd=()=>Math.max(9,19-.9*level)+rand(0,2);
+const lassScale=()=>Math.min(1,.55+.15*level);
+function lassOff(){Lass.ph='off';Lass.t=0;Lass.cd=lassoCd();}
+function updLass(dt){
+  if(Lass.mercy>0)Lass.mercy-=dt;if(Lass.retreat>0)Lass.retreat-=dt;
+  if(state!=='play'){if(Lass.ph!=='off'){Lass.ph='off';R.held=false;}return;}
+  if(Lass.ph==='off'){
+    if(level<LASSO_LVL)return;                                               // staged in at level 4
+    Lass.cd-=dt;
+    if(Lass.cd>0||Lass.mercy>0||Lass.sinceWin<1||booga||J.winded>0)return;   // never steals an earned bite window
+    if(attacks.some(a=>a.src==='head'||a.src==='human'))return;
+    if(R.hp<=LASSO_TICK+LASSO_TOSS){Lass.cd=2;return;}                       // 5.8: never the killing blow
+    const h=headPos();if(Math.hypot(R.x-h.x,(R.y-h.y)*DZ)>900){Lass.cd=1.5;return;}
+    Lass.ph='tele';Lass.t=0;Lass.tele=LASSO_TELE*speedK();
+    Lass.x=clamp(R.x+R.vx*.35,40,WORLD-40);Lass.y=clamp(R.y+R.vy*.35,GY0+10,GY1);
+    sfx.warn();sfx.whoosh();return;}
+  Lass.t+=dt;
+  if(Lass.ph==='tele'){
+    if(J.winded>0||booga){lassOff();return;}                                 // 5.7: cancelled, ring removed
+    if(Lass.t<Lass.tele)return;
+    if(Math.hypot(R.x-Lass.x,(R.y-Lass.y)*DZ)>=LASSO_R*R.sc||R.hp<=LASSO_TICK+LASSO_TOSS){lassOff();return;}
+    if(R.dashT>0||R.dash>0){hurt(0,0,0);pop(R.x,R.y-170,'SLIPPED OUT!','#80ffdb',24);lassOff();Lass.mercy=2;return;}
+    Lass.ph='held';Lass.t=0;Lass.taps=0;Lass.tick=0;R.held=true;R.dash=0;R.dashT=0;R.recover=0;R.vx=0;R.vy=0;
+    pop(R.x,R.y-180,'GRABBED!','#ff3232',32);sfx.rip();if(!reduce)shake=Math.max(shake,.25);return;}
+  R.held=true;R.thrash=Math.max(R.thrash,.12);R.thrashI=N-5;
+  for(let k=0;k<=8;k++){const p=rope[N-k];if(!p)continue;const g=(1-k/10)*48;p.vx+=(R.x-p.x)*g*dt;p.vy+=(R.y-p.y)*g*dt;}
+  Lass.tick+=dt;
+  if(Lass.tick>=LASSO_TICK_T){Lass.tick-=LASSO_TICK_T;const d=LASSO_TICK*(booga?.5:1)*lassScale();
+    R.hp=Math.max(0,R.hp-d);dmgTaken+=d;R.safeT=0;combo=0;R.hurt=1;
+    pop(R.x,R.y-140*R.sc,'-'+Math.round(d),'#4cc9f0',24);sfx.yelp();if(!reduce)shake=Math.max(shake,.12);
+    if(R.hp<=0){freeLass(false);lose();return;}}
+  if(Lass.t>=LASSO_MAX)freeLass(true);}                                      // the accessibility floor
+/* Every release routes through here, so the mercy rule cannot be missed: chain-grabbing is
+   structurally impossible - a second grab needs 8 s AND a weak-spot window in between. */
+function freeLass(toss){const was=Lass.ph==='held';
+  Lass.ph='off';Lass.t=0;Lass.taps=0;Lass.tick=0;R.held=false;Lass.retreat=1;
+  R.iframe=Math.max(R.iframe,.8);Lass.mercy=LASSO_MERCY;Lass.cd=lassoCd();Lass.sinceWin=0;attackCd=Math.max(attackCd,.8);
+  if(!was)return;
+  if(toss){const d=LASSO_TOSS*(booga?.5:1)*lassScale();R.hp=Math.max(0,R.hp-d);dmgTaken+=d;
+    pop(R.x,R.y-150*R.sc,'-'+Math.round(d),'#4cc9f0',24);R.vx+=rand(-340,340);R.vy+=rand(-180,180);sfx.yelp();}
+  else{pop(R.x,R.y-180,'FREE!','#80ffdb',34);sfx.rip();score+=20*level;
+    for(let k=0;k<14;k++)addPart({type:'sparkle',x:R.x+rand(-45,45),by:R.y,y:R.y-rand(20,100),vx:rand(-60,60),vy:-50,life:.6,max:.6,size:rand(4,8),g:0,hue:rand(140,180)});}
+  if(!reduce)shake=Math.max(shake,.25);
+  if(R.hp<=0)lose();}
+function lassTap(){if(Lass.ph!=='held')return;Lass.taps++;R.chomp=.12;sfx.tap(Lass.taps);
+  for(let k=0;k<5;k++)addPart({type:'star',x:R.x+rand(-30,30),by:R.y,y:R.y-rand(20,70),vx:rand(-90,90),vy:rand(-160,-40),life:.4,max:.4,size:rand(3,6),g:0,hue:rand(150,190)});
+  if(Lass.taps>=LASSO_TAPS)freeLass(false);}
+/* fight-upgrade.md 3.7: best score persists, written on a win AND on a death */
+function bestScore(){return parseInt(store.get('rosie2-best')||'0',10)||0;}
+function writeBest(){const b=Math.max(bestScore(),score);store.set('rosie2-best',String(b));
+  const e=$('tBest');if(e){e.textContent=b;$('bestLine').hidden=false;}return b;}
 
 /* ---------- Rosie ---------- */
 const WORDS=['CHOMP!','CRUNCH!','RIP!','GNAW!','SHRED!','NOM!'],POPC=['#ffd23f','#ff5d8f','#00bbf9','#9b5de5','#ff9f1c','#7ae582'];
 function mouthHit(p){const m=mouth();return Math.hypot(p.x-m.x,(p.y-m.y)*DZ)<48*R.sc;}
 // 1 = clean bite on the weak spot, 2 = teeth on the armoured hose, 0 = nothing there
-function findBite(){for(let k=-2;k<=2;k++){const p=rope[weak+k];if(p.z<=24&&mouthHit(p))return 1;}
-  for(let i=2;i<N-2;i++)if(rope[i].z<=30&&mouthHit(rope[i]))return 2;return 0;}
-function tryBite(){if(state!=='play'||R.recover>0||R.chomp>0||R.dash>0)return false;
+function findBite(){biteI=-1;for(let k=-2;k<=2;k++){const p=rope[weak+k];if(p.z<=24&&mouthHit(p)){biteI=weak+k;return 1;}}
+  for(let i=2;i<N-2;i++)if(rope[i].z<=30&&mouthHit(rope[i])){biteI=i;return 2;}return 0;}
+function tryBite(){if(state!=='play')return false;
+  if(R.held){lassTap();return true;}                                      // 3.2: Bite is also the mash-free input
+  if(R.recover>0||R.chomp>0||R.dash>0)return false;
   const w=rope[weak];if(w.z<=24&&Math.hypot(w.x-R.x,(w.y-R.y)*DZ)<120*R.sc)R.ang=Math.atan2((w.y-R.y)*DZ,w.x-R.x);
   const h=findBite();R.chomp=.16;if(h===1){doBite(weak);return true;}
-  R.recover=.28;if(h===2){pop(R.x,R.y-120*R.sc,'TOO TOUGH!','#cfd8dc',22);sfx.clank();}else{pop(R.x,R.y-120*R.sc,'whiff','#ffffff',20);sfx.whiff();}return true;}
+  R.recover=.28;if(J.winded>0)J.winded=Math.max(.001,J.winded-WHIFF_COST);  // 3.3: mashing on approach costs window
+  if(h===2){pop(R.x,R.y-120*R.sc,'TOO TOUGH!','#cfd8dc',22);sfx.clank();
+    if(Hot.ph==='hot'&&biteI>=0&&Math.abs(biteI-Hot.c)<=Hot.w)burn(HOT_BITE_DMG,-Math.cos(R.ang),-Math.sin(R.ang));}  // 3.1
+  else{pop(R.x,R.y-120*R.sc,'whiff','#ffffff',20);sfx.whiff();}return true;}
 // A tired weak spot can be chewed three times in a row. Every bite hits harder than the last:
 // freeze-frame, camera punch, louder crunch, more spray. The third bite is the RIP, with a head-shaking thrash.
-function doBite(i){const p=rope[i],step=++J.hits,fin=step>=3,unit=100/(16+4*level);hoseHP=Math.max(0,hoseHP-unit*(fin?2:1));
+function doBite(i){const p=rope[i],step=++J.hits,fin=step>=3,unit=unitDmg();hoseHP=Math.max(0,hoseHP-unit*BITE_W[Math.min(step,3)-1]);  // 3.3: 1 / 1.4 / 2.4
   if(!punct.some(e=>Math.abs(e-i)<2))punct.push(i);combo++;const mult=1+Math.min(combo-1,12)*.2;score+=Math.round((fin?30:10)*level*mult);
   hitStop=fin?.16:.07;fovKick=fin?7:3.5;flash=fin?.45:.2;if(!reduce)shake=Math.max(shake,fin?.4:.16);R.biteT=.3;R.safeT=Math.max(R.safeT,0);
   pop(p.x,p.y-50,fin?'RRRIP!':step===1?'CHOMP!':'CRUNCH!',fin?'#ff5d8f':step===1?'#ffd23f':'#ff9f1c',fin?48:28+step*5);if(fin&&combo>=6)pop(R.x,R.y-190,'COMBO x'+combo,'#80ffdb',26);
@@ -394,17 +535,18 @@ function doBite(i){const p=rope[i],step=++J.hits,fin=step>=3,unit=100/(16+4*leve
   for(let k=0;k<4+step*3;k++)addPart({type:'star',x:p.x+rand(-14,14),by:p.y,y:p.y-24,vx:rand(-160,160),vy:rand(-220,-60),life:.55,max:.55,size:rand(6,10),g:0,hue:rand(30,330)});
   for(let k=-7;k<=7;k++){const j=i+k;if(j<2||j>N-3)continue;const g=Math.exp(-(k*k)/14),q=rope[j];q.vz=Math.max(q.vz,(fin?520:260)*g);q.vx+=ca*(fin?260:120)*g;q.vy+=sa*(fin?260:120)*g/DZ;}
   R.vx+=ca*140;R.vy+=sa*140/DZ;sfx.chomp(step);
-  if(fin){sfx.rip();R.thrash=.45;R.thrashI=i;geysers.push({i,t:1.4});J.winded=0;J.hits=0;J.streak=0;J.cd=.8;}else J.winded=Math.max(J.winded,.6);
+  if(fin){sfx.rip();R.thrash=.45;R.thrashI=i;geysers.push({i,t:1.4});J.winded=0;J.hits=0;J.streak=0;J.cd=.8;}else J.winded=WIND_GRANT[Math.min(step,2)-1];  // 3.3: a shrinking grant - the window never extends itself
   try{if(navigator.vibrate)navigator.vibrate(fin?[30,30,70]:18);}catch(e){}
-  if(!booga){power=Math.min(POWER_MAX,power+1);if(power>=POWER_MAX)startBooga();}
+  if(!booga)power=Math.min(POWER_MAX,power+1);
   const np=hoseHP>66?1:hoseHP>33?2:3;if(np!==phase&&hoseHP>0){phase=np;pop(R.x,R.y-180,np===2?'The hose is getting angry!':'TWO HEADS?!','#ff5d8f',30);sfx.phase();attackCd=Math.min(attackCd,1);}
   if(hoseHP<=0)burst();else if(fin)moveWeak();}
-function tryDash(){if(state!=='play'||R.dashCd>0)return false;let dx=inX,dy=inY;if(Math.hypot(dx,dy)<.2){dx=Math.cos(R.ang);dy=Math.sin(R.ang);}const m=Math.hypot(dx,dy);
-  R.dx=dx/m;R.dy=dy/m;R.dash=.17;R.dashT=.3;R.dashCd=DASH_CD;R.perfect=false;R.ang=Math.atan2(R.dy,R.dx);R.recover=0;sfx.dash();return true;}
+function tryDash(){const cost=R.recover>0?DASH_CANCEL_COST:1;                 // 3.4: cancelling the stall is not free
+  if(state!=='play'||R.dashCd>0||R.held||R.stam<cost)return false;let dx=inX,dy=inY;if(Math.hypot(dx,dy)<.2){dx=Math.cos(R.ang);dy=Math.sin(R.ang);}const m=Math.hypot(dx,dy);
+  R.stam-=cost;R.dx=dx/m;R.dy=dy/m;R.dash=.17;R.dashT=.3;R.dashCd=DASH_CD;R.perfect=false;R.ang=Math.atan2(R.dy,R.dx);R.recover=0;sfx.dash();return true;}
 function hurt(dmg,kx,ky){if(state!=='play')return;
-  if(R.dashT>0){if(!R.perfect){R.perfect=true;score+=25*level;pop(R.x,R.y-140*R.sc,'PERFECT DODGE!','#80ffdb',26);sfx.perfect();
+  if(R.dashT>0){if(!R.perfect){R.perfect=true;R.stam=Math.min(DASH_MAX,R.stam+1);score+=25*level;  // 3.4: a perfect dash is freepop(R.x,R.y-140*R.sc,'PERFECT DODGE!','#80ffdb',26);sfx.perfect();
     for(let k=0;k<10;k++)addPart({type:'sparkle',x:R.x+rand(-40,40),by:R.y,y:R.y-rand(20,90),vx:0,vy:-40,life:.6,max:.6,size:rand(4,7),g:0,hue:rand(140,180)});
-    if(!booga){power=Math.min(POWER_MAX,power+1);if(power>=POWER_MAX)startBooga();}}return;}
+    if(!booga)power=Math.min(POWER_MAX,power+1);}return;}
   if(R.iframe>0)return;const d=dmg*(booga?.5:1)*Math.min(1,.55+.15*level);R.hp=Math.max(0,R.hp-d);dmgTaken+=d;R.iframe=1;R.hurt=1;R.safeT=0;R.wet=1.4;combo=0;R.vx+=kx*320;R.vy+=ky*200;
   pop(R.x,R.y-140*R.sc,'-'+Math.round(d),'#4cc9f0',26);sfx.yelp();if(!reduce)shake=Math.max(shake,.2);if(R.hp<=0)lose();}
 function knock(p){p.fallen=true;p.dir=R.f;score+=25*level;pop(p.x,p.y-70,'CRASH! +'+25*level,'#ff9f1c');sfx.crash();
@@ -412,12 +554,14 @@ function knock(p){p.fallen=true;p.dir=R.f;score+=25*level;pop(p.x,p.y-70,'CRASH!
 function updRosie(dt){
   R.sc=lerp(R.sc,booga?1.5:1,Math.min(1,dt*3));
   for(const k of ['wet','chomp','recover','dash','dashCd','dashT','iframe','hurt','biteT','thrash'])R[k]=Math.max(0,R[k]-dt);
+  R.stamT+=dt;while(R.stam<DASH_MAX&&R.stamT>=DASH_REGEN){R.stam++;R.stamT-=DASH_REGEN;}if(R.stam>=DASH_MAX)R.stamT=0;  // 3.4
+  if(R.held){R.vx=0;R.vy=0;}                                                 // 3.2: a lassoed dog does not move
   // the kill-shake: Rosie whips the bitten section side to side
   if(R.thrash>0){const sd=Math.sin(t*42)>0?1:-1,ca=Math.cos(R.ang),sa=Math.sin(R.ang);for(let k=-4;k<=4;k++){const q=rope[R.thrashI+k];if(!q)continue;const g=Math.exp(-(k*k)/8);q.vx+=-sa*sd*5200*dt*g;q.vy+=ca*sd*5200*dt*g/DZ;q.vz=Math.max(q.vz,240*g);}}
   // out of danger for a few seconds, she catches her breath and dries off
   if(state==='play'){R.safeT+=dt;if(R.safeT>4&&R.hp<100)R.hp=Math.min(100,R.hp+Math.max(1,4-level)*1.2*dt);}
   let sp=280*(booga?1.3:1);if(R.wet>0)sp*=.78;if(R.recover>0)sp*=.7;if(MUD.some(m=>inEll(R,m)))sp*=.55;
-  const slip=puddles.some(p=>inEll(R,p,.5)),ix=state==='play'?inX:0,iy=state==='play'?inY:0;
+  const slip=puddles.some(p=>inEll(R,p,.5)),ix=(state==='play'&&!R.held)?inX:0,iy=(state==='play'&&!R.held)?inY:0;
   if(R.dash>0){R.vx=R.dx*760;R.vy=R.dy*760/DZ;if(Math.random()<dt*50)addPart({type:'dust',x:R.x-R.dx*20,y:R.y,vx:-R.dx*40,vy:-10,life:.4,max:.4,size:rand(6,11),g:0});}
   else{const k=1-Math.exp(-dt*(slip?1.6:(ix||iy)?9:12));R.vx=lerp(R.vx,ix*sp,k);R.vy=lerp(R.vy,iy*sp/DZ,k);}
   R.x=clamp(R.x+R.vx*dt,40,WORLD-40);R.y=clamp(R.y+R.vy*dt,GY0+10,GY1);pushOut(R,24*R.sc);
@@ -448,6 +592,8 @@ function updHuman(dt){Hm.shock=Math.max(0,Hm.shock-dt);
   if(go(Hm.tx,Hm.ty,(150+18*level)*(near?1.5:1)))pickWaypoint();
 }
 function updHead(dt){if(Hm.grabbed||state!=='play')return;
+  if(Lass.retreat>0){const dx=E.x-R.x,dy=(E.y-R.y)*DZ,d=Math.hypot(dx,dy)||1;      // 3.2: the head retreats after a grab
+    E.vx=dx/d*300;E.vy=dy/d*300/DZ;E.x=clamp(E.x+E.vx*dt,60,WORLD-60);E.y=clamp(E.y+E.vy*dt,GY0+12,GY1-4);return;}
   const own=attacks.find(a=>a.src==='head');if(own&&own.type==='lunge'&&own.t>=own.tele)return;
   E.ph+=dt;const dx=E.x-R.x,dy=E.y-R.y,d=Math.hypot(dx,dy)||1,sp=(booga?250:170)+15*level;
   let ax=Math.cos(E.ph*1.3)*.5,ay=Math.sin(E.ph*1.7)*.5;if(d<300){ax+=dx/d*1.6;ay+=dy/d*1.6;}
@@ -483,11 +629,12 @@ function updAttacks(dt){
   }
   attacks=attacks.filter(a=>a.t<a.tele+a.act);
   if(state!=='play')return;
+  if(R.held){attackCd=Math.max(attackCd,.8);return;}   // 3.2: only the lasso deals damage during a grab
   const src=Hm.grabbed?'human':'head';
   attackCd-=dt;
   if(attackCd<=0&&!attacks.some(a=>a.src===src)){const o=originOf(src);
     if(Math.hypot(R.x-o.x,R.y-o.y)<720){const list=src==='head'?['lunge','jet','lunge','bomb','sweep']:phase===1?['jet','jet','bomb']:phase===2?['jet','sweep','bomb','jet']:['jet','sweep','bomb','sweep'];
-      startAttack(pick(list),src);attackCd=(1.25+rand(0,.7))*speedK()*(booga?.65:1);}}
+      startAttack(pick(list),src);attackCd=(1.25+rand(0,.7))*speedK()*(booga?.65:1)*atkMult();}}  // 4.3
   if(phase===3&&Hm.grabbed){head2Cd-=dt;if(head2Cd<=0&&!attacks.some(a=>a.src==='mid')){const o=originOf('mid');if(Math.hypot(R.x-o.x,R.y-o.y)<650)startAttack('jet','mid');head2Cd=rand(2.2,3.2)*speedK();}}
 }
 const sprOn=s=>(s.cyc%6)>=1.1&&(s.cyc%6)<3.3;
@@ -497,6 +644,7 @@ function updSprinkler(dt){for(const s of SPRS){s.cyc+=dt;if(!sprOn(s))continue;s
 
 /* ---------- BOOGA TIME: faster and wilder, but the hose still has to be beaten ---------- */
 function startBooga(){booga=1;boogaT=0;beatT=0;beatN=0;sfx.booga();if(!reduce)shake=.35;
+  if(Lass.ph!=='off')freeLass(false);Hot.ph='off';Hot.t=0;   // 5.11: BOOGA breaks a grab, with no toss damage
   if(Hm.grabbed){const h=headPos();E.x=h.x;E.y=clamp(h.y,GY0+12,GY1-4);E.vx=E.vy=0;}
   Hm.grabbed=false;Hm.mode='flee';Hm.cower=false;Hm.shock=0;const dir=Hm.x>=R.x?1:-1;Hm.cx=clamp(Hm.x+dir*420,90,WORLD-90);
   if(Math.abs(Hm.cx-R.x)<260)Hm.cx=clamp(Hm.x-dir*420,90,WORLD-90);Hm.cy=clamp(Hm.y-220,GY0+28,GY1-10);
@@ -507,6 +655,7 @@ function endBooga(){booga=0;power=0;Hm.mode='regrab';Hm.cower=false;pop(R.x,R.y-
 
 /* ---------- flow ---------- */
 function burst(){state='burst';burstT=0;hitStop=.3;flash=.7;fovKick=9;geysers=[];Hm.shock=3;sfx.boom();if(booga){booga=0;}
+  Hot.ph='off';Hot.t=0;if(Lass.ph!=='off'){Lass.ph='off';R.held=false;}   // 5.5
   for(let i=0;i<(reduce?90:200);i++){const q=rope[Math.floor(rand(3,N-4))];addPart({type:Math.random()<.2?'mist':'water',x:q.x,y:q.y,vx:rand(-240,240),vy:rand(-680,-280),life:1.5,max:1.5,size:rand(3,5.5),g:1,hue:rand(0,360)});}
   for(let i=0;i<40;i++){const q=rope[Math.floor(rand(3,N-4))];addPart({type:'bit',x:q.x,y:q.y,vx:rand(-260,260),vy:rand(-500,-200),life:1.3,max:1.3,size:rand(4,8),g:1,rot:0,vr:rand(-14,14),c:Math.random()<.5?'#3cc062':'#1d6b33'});}
   pop(R.x,R.y-200,'KABOOSH!','#7ae582',56);
@@ -515,16 +664,19 @@ function burst(){state='burst';burstT=0;hitStop=.3;flash=.7;fovKick=9;geysers=[]
 function won(){state='won';sfx.win();
   const stars=1+(dmgTaken<35?1:0)+(elapsed<70+20*level?1:0),key='rosie2-stars-'+level,prev=parseInt(store.get(key)||'0',10);if(stars>prev)store.set(key,String(stars));
   $('winLbl').textContent=`Level ${level} cleared`;$('wStars').innerHTML='★'.repeat(stars)+'<span class="off">'+'★'.repeat(3-stars)+'</span>';
-  $('wTime').textContent=fmt(elapsed);$('wDmg').textContent=Math.round(dmgTaken);$('wScore').textContent=score;
+  $('wTime').textContent=fmt(elapsed);$('wDmg').textContent=Math.round(dmgTaken);$('wScore').textContent=score;$('wBest').textContent=writeBest();
   $('wTip').textContent=stars===3?'Perfect run. Next hose is faster.':dmgTaken>=35?'Dash through attacks to take less damage for another star.':'Finish faster for another star.';
   $('nextBtn').textContent=`Hose #${level+1}`;$('winOv').hidden=false;$('nextBtn').focus({preventScroll:true});
   const cols=['#ff5d8f','#ffd23f','#00bbf9','#9b5de5','#7ae582','#ff9f1c','#ffffff'];
   for(let i=0;i<(reduce?40:160);i++)confetti.push({x:rand(0,VW),y:rand(-300,-10),vx:rand(-30,30),vy:rand(40,140),rot:rand(0,6),vr:rand(-6,6),w:rand(6,11),h:rand(8,14),c:cols[i%cols.length],ph:rand(0,6)});}
-function lose(){state='lost';booga=0;sfx.lose();$('lHose').textContent=Math.round(hoseHP)+'%';$('lTime').textContent=fmt(elapsed);
+function lose(){state='lost';booga=0;sfx.lose();Hot.ph='off';if(Lass.ph!=='off'){Lass.ph='off';R.held=false;}
+  $('lHose').textContent=Math.round(hoseHP)+'%';$('lTime').textContent=fmt(elapsed);$('lBest').textContent=writeBest();
   setTimeout(()=>{$('loseOv').hidden=false;$('retryBtn').focus({preventScroll:true});},700);}
 function resetLevel(){hoseHP=100;phase=1;power=0;booga=0;boogaT=0;combo=0;dmgTaken=0;elapsed=0;
   attacks=[];puddles=[];treats=[];punct=[];critters=[];parts=[];pops=[];confetti=[];pots=makePots();hangers=makeHangers();
-  Object.assign(R,{ang:0,biteT:0,thrash:0,safeT:0,x:260,y:620,vx:0,vy:0,hp:100,sc:1,wet:0,chomp:0,recover:0,dash:0,dashCd:0,dashT:0,iframe:0,hurt:0,f:1});
+  Object.assign(R,{ang:0,biteT:0,thrash:0,safeT:0,x:260,y:620,vx:0,vy:0,hp:100,sc:1,wet:0,chomp:0,recover:0,dash:0,dashCd:0,dashT:0,iframe:0,hurt:0,f:1,stam:DASH_MAX,stamT:0,held:false});
+  Object.assign(Hot,{ph:'off',t:0,c:45,w:6,len:3,cd:HOT_FIRST});
+  Object.assign(Lass,{ph:'off',t:0,taps:0,tick:0,cd:LASSO_FIRST,mercy:0,sinceWin:1,retreat:0});boogaBuf=0;
   Object.assign(Hm,{x:720,y:600,f:-1,mode:'roam',grabbed:true,cower:false,shock:0});Object.assign(J,{cd:0,streak:0,winded:0,lastT:9,hits:0});
   pickWaypoint();attackCd=2.2;head2Cd=3;treatCd=5;for(const o of SPRS)o.cyc=o.off;initRope();camX=0;camY=0;weak=45;levelScore=score;state='play';}
 
@@ -787,6 +939,14 @@ ink(nozHead);ink(midHead);ink(weak3);for(const g of treat3)ink(g);for(const o of
 const teleRed=()=>MB('#ff3232',.5),jetT=[...Array(4)].map(()=>{const m=flat(new THREE.PlaneGeometry(1,1),teleRed(),0,2,0);m.receiveShadow=false;return m;});
 const fanT=[...Array(3)].map(()=>{const m=flat(new THREE.CircleGeometry(1,28,-.8,1.6),MB('#ffc828',.32),0,2,0);m.receiveShadow=false;return m;});
 const ringT=[...Array(12)].map(()=>{const m=flat(new THREE.RingGeometry(.84,1,40),teleRed(),0,2.2,0);m.receiveShadow=false;return m;});
+/* fight-upgrade.md 3.1 + 6: the hose is ONE TubeGeometry with ONE material, so the band cannot be
+   tinted per segment. It is its own short tube sleeve over rope[c+-w] - two extra draw calls, and
+   only while a band or a lasso ring is live. */
+const HOT_A=new THREE.Color('#ffb300'),HOT_E=new THREE.Color('#ff2a16'),HOT_H=new THREE.Color('#ffa52e'),HOT_C=new THREE.Color('#39d98a');
+const hotM=new THREE.MeshBasicMaterial({color:'#ff2a16',transparent:true,opacity:.95});
+const hotV=[...Array(19)].map(()=>new THREE.Vector3()),hotCurve=new THREE.CatmullRomCurve3(hotV.slice(0,13));
+const hot3=new THREE.Mesh(new THREE.BufferGeometry(),hotM);hot3.frustumCulled=false;hot3.visible=false;scene.add(hot3);
+const lassRing=flat(new THREE.RingGeometry(.84,1,40),teleRed(),0,2.4,0);lassRing.receiveShadow=false;lassRing.visible=false;
 const blobT=[...Array(10)].map(()=>sph(scene,M('#4cc9f0',{roughness:.05,transparent:true,opacity:.85}),13,0,0,0));
 const beamT=[...Array(4)].map(()=>{const g=grp(scene);cyl(g,MB('#78c8ff',.45),1,1,0,0,0,false);cyl(g,MB('#ffffff',.9),.35,1,0,0,0,false);return g;});
 const _a=new THREE.Vector3(),_b=new THREE.Vector3(),_d=new THREE.Vector3(),_v=new THREE.Vector3();
@@ -889,8 +1049,9 @@ function artSync(){skyDome.position.set(cam.position.x,0,cam.position.z);stars.p
 const C=h=>new THREE.Color(h),SKY={top:[C('#1f4fd0'),C('#0b7a5a')],mid:[C('#4f9bf0'),C('#3fcf86')],bot:[C('#ffc48a'),C('#f2f58a')]},FOG_A=C('#f0a88c'),FOG_B=C('#b9e88a'),FOG_P=C('#8a4fd6'),SKY_BH=C('#ff7ad9'),HEMI_S=[C('#7f9cf0'),C('#7fe0a8'),C('#c9a0ff')],HEMI_G=[C('#5b3fa6'),C('#3f6f8f'),C('#2a8f6a')];
 let camTX=300,camTZ=300,dogRot=0,manRot=Math.PI,sfS=0,rollS=0;const lerpAng=(a,b,k)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*k;
 function render3D(dt){
-  const rz=zOf(R.y),k5=1-Math.exp(-dt*4.2);camTX=lerp(camTX,R.x+R.vx*.3,k5);camTZ=lerp(camTZ,rz+R.vy*DZ*.22,k5);fovKick*=Math.exp(-dt*8);cam.fov=baseFov-fovKick;cam.updateProjectionMatrix();
-  const wide=cam.aspect>=1.25;let ch=wide?340:420,cd=wide?740:860,hx=0,ly=95;
+  const rz=zOf(R.y),k5=1-Math.exp(-dt*4.2);camTX=lerp(camTX,R.x+R.vx*.3,k5);camTZ=lerp(camTZ,rz+R.vy*DZ*.22,k5);
+  if(R.held){const lh=headPos(),kh=Math.min(1,k5*1.4);camTX=lerp(camTX,(R.x*2+lh.x)/3,kh);camTZ=lerp(camTZ,(rz*2+zOf(lh.y))/3,kh);}  // 3.2fovKick*=Math.exp(-dt*8);cam.fov=baseFov-fovKick;cam.updateProjectionMatrix();
+  const wide=cam.aspect>=1.25;let ch=wide?340:420,cd=wide?740:860,hx=0,ly=95;if(R.held){ch*=.94;cd*=.88;}  // 3.2: push in 12%
   /* title: hero framing - closer in, aimed to Rosie's left so she sits on the right of frame
      and the docked title card has empty yard to sit on (art-direction-v2, item 10) */
   if(state==='title'){ch=wide?250:300;cd=wide?450:560;ly=wide?130:190;hx=-Math.tan(baseFov*Math.PI/360)*cam.aspect*cd*(wide?.46:.24);}
@@ -922,7 +1083,7 @@ function render3D(dt){
   mArms[0].rotation.z=lerp(mArms[0].rotation.z,cower?2.7:up?2.95:1.5,Math.min(1,dt*12));mArms[1].rotation.z=lerp(mArms[1].rotation.z,cower?2.7:up?2.95:-sw*.5,Math.min(1,dt*12));
   mArms.forEach((a,i)=>{a.rotation.x=(i?-1:1)*.6*clamp((a.rotation.z-1.7)/1.2,0,1);});{const cwr=!!cower;if(cwr&&!wasCower)hatT=.5;wasCower=cwr;hatT=Math.max(0,hatT-dt);mHat.position.y=22+(reduce?0:1.5+1.5*Math.sin(t*Math.PI*4))+(hatT>0?20*Math.sin((1-hatT/.5)*Math.PI):0);}mNoz.visible=Hm.grabbed;mMouth.scale.y=(up||cower)?6:2.5;
   /* hose */
-  const ruined=state==='burst'||state==='won',hTele=attacks.some(a=>a.t<a.tele&&a.src!=='human');
+  const ruined=state==='burst'||state==='won',hTele=attacks.some(a=>a.t<a.tele&&a.src!=='human')||Lass.ph==='tele';
   if(!ruined){for(let i=0;i<=N;i++){const p=rope[i];hv[i].set(p.x,p.z+8.5,zOf(p.y));}hose3.geometry.dispose();hose3.geometry=new THREE.TubeGeometry(hCurve,190,8.75,7,false);hose3.visible=true;shred.visible=false;shredDone=false;
     hoseM.color.copy(HOSE_G).lerp(HOSE_W,(1-hoseHP/100)*.55);if(J.winded>0)hoseM.color.lerp(HOSE_Y,.5+.4*Math.sin(t*20));else if(booga)hoseM.color.lerp(HOSE_P,.3+.25*Math.sin(t*10));
     if(!reduce){hoseTex.offset.x=(hoseTex.offset.x+(weak>N/2?-1:1)*(hTele?2:.6)*dt)%1;}
@@ -934,9 +1095,24 @@ function render3D(dt){
     weakTickG.position.set(w.x,3,zOf(w.y));weakTickG.scale.setScalar(1+pul*.25);weakTickG.rotation.y=reduce?0:t*6.2832;
     weakCore.position.copy(weak3.position).addScaledVector(weakTmp.copy(cam.position).sub(weak3.position).normalize(),15*gw+3);weakCore.quaternion.copy(cam.quaternion);weakCore.scale.setScalar(gw);
     weakBeam.position.set(w.x,124,zOf(w.y));
-    weakM.color.set(hot?'#ff5d5d':'#ffd23f');weakM.emissive.set(hot?'#aa1111':'#aa7700');weakGlow.material.color.set(hot?'#ff7070':'#ffe070');weakBeam.material.color.copy(weakGlow.material.color);}
+    /* the tired spot flashes white-gold, not red: red now means "this burns" (the hot band) and
+       "incoming" (attack rings), and the one thing the player MUST touch cannot share either. */
+    const wf=.5+.5*Math.sin(t*16);
+    weakM.color.set(hot?mix('#fff6c0','#ffffff',wf):'#ffd23f');weakM.emissive.set(hot?mix('#9a7a00','#fff4b0',wf):'#aa7700');
+    weakGlow.material.color.set(hot?mix('#fff0b8','#ffffff',wf):'#ffe070');weakBeam.material.color.copy(weakGlow.material.color);}
   nozHead.visible=!Hm.grabbed&&!ruined;if(nozHead.visible){const a=rope[N-3],b=rope[N];nozHead.position.set(b.x,b.z+14,zOf(b.y));nozHead.rotation.y=-Math.atan2(zOf(b.y)-zOf(a.y),b.x-a.x);trackEyes(nozEyes,nozHead,9);nozJaw.rotation.z=lerp(nozJaw.rotation.z,hTele?-.55:0,1-Math.exp(-dt*14));}
   midHead.visible=phase===3&&Hm.grabbed&&!ruined;if(midHead.visible){const a=rope[MID-3],b=rope[MID];midHead.position.set(b.x,b.z+22,zOf(b.y));midHead.rotation.y=-Math.atan2(zOf(R.y)-zOf(b.y),R.x-b.x);trackEyes(midEyes,midHead,9);}
+  /* the hot band and the lasso ring */
+  if(ruined||Hot.ph==='off')hot3.visible=false;
+  else{const pts=hotCurve.points;for(let j=0;j<pts.length;j++){const p=rope[clamp(Hot.c-Hot.w+j,0,N)];pts[j].set(p.x,p.z+8.5,zOf(p.y));}
+    hot3.geometry.dispose();hot3.geometry=new THREE.TubeGeometry(hotCurve,pts.length*3,10.4,6,false);hot3.visible=true;
+    const cu=clamp(Hot.t/HOT_COOL,0,1);
+    if(Hot.ph==='warn'){hotM.color.copy(HOT_A);hotM.opacity=.45+.3*(Math.floor(t*7)%2);}
+    else if(Hot.ph==='cool'){hotM.color.copy(HOT_A).lerp(HOT_C,cu);hotM.opacity=.55*(1-cu);}
+    else{hotM.color.copy(HOT_E).lerp(HOT_H,reduce?.4:.5+.5*Math.sin(t*37.7));hotM.opacity=.95;}}   // 6 Hz ember flicker
+  lassRing.visible=Lass.ph==='tele'&&!ruined;
+  if(lassRing.visible){const u=clamp(Lass.t/Lass.tele,0,1),sc=LASSO_R*R.sc*(1.55-.55*u);
+    lassRing.position.set(Lass.x,2.4,zOf(Lass.y));lassRing.scale.set(sc,1,sc*.9);lassRing.material.opacity=.45+.35*Math.sin(t*22);}
   /* pots, puddles, sprinklers, treats */
   pots.forEach((p,i)=>{const o=pot3[i];if(!o)return;o.piv.rotation.z=-p.rot;o.sp.visible=p.fallen;o.sp.position.x=p.dir*38*p.s;});
   pud3.forEach((m,i)=>{const p=puddles[i];m.visible=!!p;if(p){m.position.set(p.x,1.2,zOf(p.y));m.scale.set(p.r,1,p.r*.9);m.material.opacity=.6*Math.min(1,p.life/1.5);}});
@@ -967,6 +1143,12 @@ function drawOverlay(){ctx.setTransform(ovDpr,0,0,ovDpr,0,0);ctx.clearRect(0,0,V
   for(const p of pops){const q=proj(p.x,p.gy,p.h+(1.1-p.life)*70);if(q.z>1)continue;ctx.globalAlpha=clamp(p.life/.4,0,1);label(p.text,q.x,q.y,p.size*(1+Math.max(0,p.life-.9)*3)*us,p.color);}ctx.globalAlpha=1;
   if(state==='play'){for(const a of attacks)if(a.t<a.tele){const q=a.src==='human'?proj(Hm.x,Hm.y,215):proj(a.o.x,a.o.y,a.o.h+50);if(q.z<1)label('!',q.x,q.y+Math.sin(t*20)*3,36*us,'#ffd23f');}
     if(J.winded>0){const w=rope[weak],q=proj(w.x,w.y,w.z+60);if(q.z<1){label('BITE!',q.x,q.y+Math.sin(t*18)*4,(30+J.hits*5)*us,J.hits?'#ffd23f':'#ffffff');for(let k=0;k<3;k++){ctx.beginPath();ctx.arc(q.x+(k-1)*20*us,q.y+16*us,6*us,0,Math.PI*2);ctx.fillStyle=k<J.hits?'#ff5d8f':'rgba(255,255,255,.55)';ctx.fill();ctx.lineWidth=2.5;ctx.strokeStyle='#3b2416';ctx.stroke();}}}}
+  /* fight-upgrade.md 3.2: the mash prompt, with the tap count counting down */
+  if(state==='play'&&Lass.ph==='held'){const q=proj(R.x,R.y,170*R.sc);if(q.z<1){const left=Math.max(0,LASSO_TAPS-Lass.taps);
+    label(COARSE?'MASH BITE!':'MASH SPACE!',q.x,q.y+Math.sin(t*22)*3,30*us,'#ffd23f');
+    label(left+(left===1?' more tap!':' more taps!'),q.x,q.y+22*us,16*us,'#ffffff');
+    for(let k=0;k<LASSO_TAPS;k++){ctx.beginPath();ctx.arc(q.x+(k-(LASSO_TAPS-1)/2)*19*us,q.y+42*us,6*us,0,Math.PI*2);
+      ctx.fillStyle=k<Lass.taps?'#80ffdb':'rgba(255,255,255,.55)';ctx.fill();ctx.lineWidth=2.5;ctx.strokeStyle='#3b2416';ctx.stroke();}}}
   if(flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(.6,flash)})`;ctx.fillRect(0,0,VW,VH);}
   drawBanner();drawIndicator();drawConfetti();}
 function drawBanner(){if(!booga)return;const txt="IT'S BOOGA TIME!",intro=Math.min(1,boogaT/.6),sc=intro<1?(.3+.7*intro)*(1+Math.sin(intro*Math.PI)*.4):1+(reduce?0:Math.sin(t*6)*.05);
@@ -985,17 +1167,21 @@ function drawConfetti(){for(const c of confetti){ctx.save();ctx.translate(c.x,c.
 /* ---------- HUD ---------- */
 let lastHud='';
 function hud(){const pc=v=>(clamp(v/WORLD,0,1)*100).toFixed(2)+'%';$('mRosie').style.left=pc(R.x);$('mFoe').style.left=pc(rope[weak].x);$('mView').style.left=pc(R.x-600);$('mView').style.width=pc(1200);
-  const k=[level,score,Math.round(R.hp),Math.round(hoseHP),power,booga,combo,phase,booga?Math.ceil(BOOGA_LEN-boogaT):0].join('|');if(k===lastHud)return;lastHud=k;
+  const bk=!booga&&power>=POWER_MAX&&state==='play';   // 3.5: banked and waiting on the player
+  const k=[level,score,Math.round(R.hp),Math.round(hoseHP),power,booga,combo,phase,R.stam,bk?1:0,booga?Math.ceil(BOOGA_LEN-boogaT):0].join('|');if(k===lastHud)return;lastHud=k;
   $('lvl').textContent=level;$('score').textContent=score;$('comboChip').hidden=combo<2;$('combo').textContent='Combo x'+combo;
   const rf=$('rFill');rf.style.width=R.hp+'%';rf.style.backgroundColor=R.hp>50?'#ff8fab':R.hp>25?'#f4b400':'#e63946';
   const hf=$('hFill');hf.style.width=hoseHP+'%';hf.style.backgroundColor=phase===1?'#2fa84f':phase===2?'#f4b400':'#e63946';$('phaseLbl').textContent=phase===1?'Hose':'Hose · Phase '+phase;
-  $('pFill').style.width=(booga?Math.max(0,1-boogaT/BOOGA_LEN)*100:power/POWER_MAX*100)+'%';$('powLbl').textContent=booga?'BOOGA!':'Power';$('powLbl').classList.toggle('boog',!!booga);}
+  const pf=$('pFill');pf.style.width=(booga?Math.max(0,1-boogaT/BOOGA_LEN)*100:power/POWER_MAX*100)+'%';pf.classList.toggle('ready',bk);
+  $('powLbl').textContent=booga?'BOOGA!':bk?'BOOGA READY':'Power';$('powLbl').classList.toggle('boog',!!booga||bk);$('boogaChip').hidden=!bk;
+  const bb=$('boogaBtn');bb.disabled=!bk;bb.classList.toggle('on',bk);
+  const sp=$('stamPips');sp.classList.toggle('dim',R.stam===0);for(let i=0;i<sp.children.length;i++)sp.children[i].classList.toggle('on',i<R.stam);}
 
 /* ---------- input ---------- */
 function readInput(){let x=0,y=0;if(keys.arrowleft||keys.a)x-=1;if(keys.arrowright||keys.d)x+=1;if(keys.arrowup||keys.w)y-=1;if(keys.arrowdown||keys.s)y+=1;
   if(joy){x+=joy.x;y+=joy.y;}if(ptr){_v.set(ptr.x/VW*2-1,1-ptr.y/VH*2,.5).unproject(cam).sub(cam.position);if(_v.y<-.001){const k=-cam.position.y/_v.y,dx=cam.position.x+_v.x*k-R.x,dz=cam.position.z+_v.z*k-zOf(R.y),d=Math.hypot(dx,dz);if(d>22){x+=dx/d;y+=dz/d;}}}const m=Math.hypot(x,y);if(m>1){x/=m;y/=m;}inX=x;inY=y;}
 window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=true;
-  if(!e.repeat){if(k===' '||k==='j')biteBuf=.2;if(k==='shift'||k==='k')dashBuf=.2;}
+  if(!e.repeat){if(k===' '||k==='j')biteBuf=.2;if(k==='shift'||k==='k')dashBuf=.2;if(k==='b')boogaBuf=.2;}
   if(state==='play'&&['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();});
 window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;ptr=null;joy=null;});
@@ -1010,6 +1196,7 @@ pad.addEventListener('pointermove',e=>{if(e.pointerId===padId)moveJoy(e);});
 ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>pad.addEventListener(ev,e=>{if(e.pointerId===padId){padId=null;joy=null;knob.style.transform='';}}));
 $('biteBtn').addEventListener('pointerdown',e=>{e.preventDefault();biteBuf=.2;});
 $('dashBtn').addEventListener('pointerdown',e=>{e.preventDefault();dashBuf=.2;});
+$('boogaBtn').addEventListener('pointerdown',e=>{e.preventDefault();boogaBuf=.2;});   // 5.10: inert below full power
 $('playBtn').addEventListener('click',()=>{ensureAudio();$('startOv').hidden=true;resetLevel();sfx.bark();});
 $('nextBtn').addEventListener('click',()=>{ensureAudio();$('winOv').hidden=true;level++;resetLevel();sfx.bark();});
 $('retryBtn').addEventListener('click',()=>{ensureAudio();$('loseOv').hidden=true;score=levelScore;resetLevel();sfx.bark();});
@@ -1021,19 +1208,21 @@ fsBtn.addEventListener('click',()=>{try{if(document.fullscreenElement||document.
 document.addEventListener('fullscreenchange',()=>{fsBtn.textContent=document.fullscreenElement?'Exit full screen':'Full screen';setTimeout(resize,50);});
 
 /* ---------- loop ---------- */
-initRope();pickWaypoint();
+initRope();pickWaypoint();Object.assign(R,{stam:DASH_MAX,stamT:0,held:false});
+{const b=bestScore();$('tBest').textContent=b;$('bestLine').hidden=b<=0;}
 let last=performance.now();
 function frame(now){const raw=Math.min(.05,(now-last)/1000);last=now;dtS=lerp(dtS,raw,.2);let dt=dtS;if(hitStop>0){hitStop-=raw;dt*=.03;}t+=dt;
   if(state==='play'){elapsed+=dt;if(booga){boogaT+=dt;beatT+=dt;if(beatT>.25){beatT=0;sfx.beat(beatN++);}if(boogaT>BOOGA_LEN)endBooga();}}
   if(state==='burst'){burstT+=dt;if(burstT>1.6)won();}
-  readInput();if(biteBuf>0){biteBuf-=raw;if(tryBite())biteBuf=0;}if(dashBuf>0){dashBuf-=raw;if(tryDash())dashBuf=0;}flash=Math.max(0,flash-raw*2.4);
+  readInput();if(biteBuf>0){biteBuf-=raw;if(tryBite())biteBuf=0;}if(dashBuf>0){dashBuf-=raw;if(tryDash())dashBuf=0;}
+  if(boogaBuf>0){boogaBuf-=raw;if(!booga&&power>=POWER_MAX&&state==='play'){boogaBuf=0;startBooga();}}   // 3.5flash=Math.max(0,flash-raw*2.4);
   for(const g of geysers){g.t-=dt;const q=rope[g.i];for(let k=0;k<2;k++)if(Math.random()<dt*40)addPart({type:'water',x:q.x+rand(-5,5),y:q.y,vx:rand(-60,60),vy:rand(-620,-380)*Math.min(1,g.t+.3),life:1.1,max:1.1,size:3,g:1});}geysers=geysers.filter(g=>g.t>0&&state==='play');
   skyP+=((1-hoseHP/100)-skyP)*Math.min(1,dt*2);boogaK+=((booga?1:0)-boogaK)*Math.min(1,dt*2);
   for(const p of pots)if(p.fallen)p.rot=lerp(p.rot,p.dir*1.45,Math.min(1,dt*10));
   for(const p of puddles)p.life-=dt;puddles=puddles.filter(p=>p.life>0);
   for(const tr of treats)tr.life-=dt;
   treatCd-=dt;if(state==='play'&&treatCd<=0&&treats.length<3){for(let k=0;k<12;k++){const x=clamp(R.x+rand(-520,520),60,WORLD-60),y=clamp(R.y+rand(-260,170),GY0+20,GY1-10);if(!blocked(x,y,30)){treats.push({x,y,life:14,ph:rand(0,6)});break;}}treatCd=rand(8,12);}
-  updHuman(dt);updHead(dt);updRope(dt);hoseDodge(dt);updRosie(dt);updAttacks(dt);updSprinkler(dt);updParts(dt);updCritters(dt);
+  updHuman(dt);updHead(dt);updRope(dt);hoseDodge(dt);updRosie(dt);updLass(dt);updAttacks(dt);updHot(dt);updSprinkler(dt);updParts(dt);updCritters(dt);
   shake=Math.max(0,shake-dt);hud();render3D(dt);drawOverlay();
   requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
