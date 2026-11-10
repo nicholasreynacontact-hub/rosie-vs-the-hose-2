@@ -202,7 +202,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 .panes{flex:1 1 auto;min-width:0;width:100%}
 @media (min-width:720px){.wrap{flex-direction:row}.tabs{flex-direction:column;overflow:visible}}
 .swg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 7px}
-.sw{position:relative;font:800 10.5px var(--body);color:var(--ui-ink);background:var(--paper);border:3px solid var(--ui-ink);border-radius:50% 50% 46% 54%;box-shadow:0 3px 0 var(--ui-ink);padding:5px 2px;min-height:48px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.05}
+.sw{position:relative;font:800 10px var(--body);color:var(--ui-ink);background:var(--paper);border:3px solid var(--ui-ink);border-radius:16px 20px 14px 18px;overflow:hidden;box-shadow:0 3px 0 var(--ui-ink);padding:5px 2px;min-height:48px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;line-height:1.05}
 .sw i{display:block;width:24px;height:24px;border-radius:50%;border:3px solid var(--ui-ink);flex:0 0 auto}
 .sw[aria-checked="true"]{box-shadow:0 3px 0 var(--ui-ink),inset 0 0 0 3px var(--ui-ink)}
 .sw[aria-checked="true"] i::after{content:"\2713";display:block;font-size:13px;line-height:18px;color:var(--ui-ink);text-align:center}
@@ -342,7 +342,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
       </dl>
     </div>
     <div class="pnl" id="wardPanel" hidden>
-      <span class="eyebrow">A wardrobe, not a character creator</span>
+      <span class="eyebrow">Dress her for the fight</span>
       <h2 id="wardTitle">Rosie&#39;s wardrobe</h2>
       <p class="fall" id="wFall" hidden>One of Rosie&#39;s things didn&#39;t make it into this version &mdash; pick her something new.</p>
       <div class="wrap">
@@ -1551,7 +1551,7 @@ function render3D(dt){
   /* 1.4: pause eases (0.35 s) to the wardrobe portrait so the rope, the weak spot and every live
      attack leave the frame -- without this, pause is a free scouting tool. */
   {let px=camTX+hx+(shake>0?rand(-8,8)*shake*4:0),py=ch+(shake>0?rand(-6,6)*shake*4:0),pz=camTZ+cd,lx=camTX+hx,lyv=ly,lz=camTZ-210;
-   if(pauseK>.0005){const pk=pauseK*pauseK*(3-2*pauseK),pcd=wide?380:360,pch=wide?96:66,pa=.58,ply=wide?76:-16,
+   if(pauseK>.0005){const pk=pauseK*pauseK*(3-2*pauseK),pcd=wide?480:430,pch=wide?44:30,pa=1.083-R.ang,ply=wide?150:-45,
      off=wide?-Math.tan(baseFov*Math.PI/360)*cam.aspect*pcd*.42:0,rx=Math.cos(pa)*off,rz2=-Math.sin(pa)*off;
     px=lerp(px,R.x+Math.sin(pa)*pcd+rx,pk);py=lerp(py,pch,pk);pz=lerp(pz,rz+Math.cos(pa)*pcd+rz2,pk);
     lx=lerp(lx,R.x+rx,pk);lyv=lerp(lyv,ply,pk);lz=lerp(lz,rz+rz2,pk);}
