@@ -352,14 +352,15 @@ const SNAKE_COIL=.35,SN_HP=30,SN_N=36,SN_BITE=6,SN_JET_DMG=10,SN_MAX_ROPES=3,CRA
 const POUNCE_DMG=8,POUNCE_T=.26,POUNCE_SP=1020,SHAKE_T=.3,SHAKE_MAX=1.2,SHAKE_TICK=.5,SHAKE_EXT=.12,SHAKE_EXT_CAP=.24;
 const BARK_R=260,BARK_CONE=Math.cos(70*Math.PI/180),BARK_CD=2.5,BARK_HOLD=.3,CHAIN_W=1.6,CHAIN_STEP=.08;
 let chainT=0,snakes=[],lastAtkT=-9,crankT=CRANK_CD,crankW=0,biteS=null;
-let biteHeld=false,boogaDown=false,boogaHold=0,boogaFired=false;
+let biteHeld=false,boogaDown=false,boogaHold=0,boogaFired=false,boogaT0=0;
 /* 3.4 / 4.3: one counter on screen. It cools rather than zeroes, and never costs HP or score. */
 const chainDmg=()=>1+CHAIN_STEP*Math.min(Math.max(combo-3,0),6);
 function chain(n){for(let k=0;k<(n||1);k++){combo++;if(combo%4===0&&!booga)power=Math.min(pMax(),power+1);}chainT=CHAIN_W;}
 function chainDrop(){if(combo>=4)pop(R.x,R.y-200,'chain cooling','#cfd8dc',22);combo=Math.floor(combo/2);chainT=combo>0?CHAIN_W:0;}
 /* 3.3 BARK input: tap = bark, hold 0.30 s = BOOGA. A tap can never spend a banked BOOGA (5.10). */
 function boogaRelease(){if(!boogaDown)return;boogaDown=false;if(!boogaFired)doBark();boogaFired=false;}
-function boogaTick(raw){if(!boogaDown||boogaFired)return;boogaHold+=raw;
+function boogaDownNow(){if(boogaDown)return;boogaDown=true;boogaHold=0;boogaFired=false;boogaT0=(window.performance||Date).now();}
+function boogaTick(){if(!boogaDown||boogaFired)return;boogaHold=((window.performance||Date).now()-boogaT0)/1000;
   if(boogaHold>=BARK_HOLD){boogaFired=true;if(!booga&&power>=pMax()&&state==='play')startBooga();else doBark();}}
 const Hot={ph:'off',t:0,c:45,w:6,len:3,cd:HOT_FIRST};
 const Lass={ph:'off',t:0,x:0,y:0,tele:.9,taps:0,tick:0,cd:LASSO_FIRST,mercy:0,sinceWin:1,retreat:0};
@@ -1360,7 +1361,7 @@ function hud(){const pc=v=>(clamp(v/WORLD,0,1)*100).toFixed(2)+'%';$('mRosie').s
 function readInput(){let x=0,y=0;if(keys.arrowleft||keys.a)x-=1;if(keys.arrowright||keys.d)x+=1;if(keys.arrowup||keys.w)y-=1;if(keys.arrowdown||keys.s)y+=1;
   if(joy){x+=joy.x;y+=joy.y;}if(ptr){_v.set(ptr.x/VW*2-1,1-ptr.y/VH*2,.5).unproject(cam).sub(cam.position);if(_v.y<-.001){const k=-cam.position.y/_v.y,dx=cam.position.x+_v.x*k-R.x,dz=cam.position.z+_v.z*k-zOf(R.y),d=Math.hypot(dx,dz);if(d>22){x+=dx/d;y+=dz/d;}}}const m=Math.hypot(x,y);if(m>1){x/=m;y/=m;}inX=x;inY=y;}
 window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=true;
-  if(!e.repeat){if(k===' '||k==='j'){biteBuf=.2;biteHeld=true;}if(k==='shift'||k==='k')dashBuf=.2;if(k==='b'&&!boogaDown){boogaDown=true;boogaHold=0;boogaFired=false;}}
+  if(!e.repeat){if(k===' '||k==='j'){biteBuf=.2;biteHeld=true;}if(k==='shift'||k==='k')dashBuf=.2;if(k==='b')boogaDownNow();}
   if(state==='play'&&['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();});
 window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if(k===' '||k==='j')biteHeld=false;if(k==='b')boogaRelease();});
 window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;ptr=null;joy=null;biteHeld=false;boogaDown=false;boogaFired=false;});
@@ -1377,7 +1378,7 @@ pad.addEventListener('pointermove',e=>{if(e.pointerId===padId)moveJoy(e);});
 $('biteBtn').addEventListener('pointerdown',e=>{e.preventDefault();biteBuf=.2;biteHeld=true;try{e.target.setPointerCapture(e.pointerId)}catch(_){}});
 ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>$('biteBtn').addEventListener(ev,()=>{biteHeld=false;}));
 $('dashBtn').addEventListener('pointerdown',e=>{e.preventDefault();dashBuf=.2;});
-$('boogaBtn').addEventListener('pointerdown',e=>{e.preventDefault();if(!boogaDown){boogaDown=true;boogaHold=0;boogaFired=false;}try{e.target.setPointerCapture(e.pointerId)}catch(_){}});
+$('boogaBtn').addEventListener('pointerdown',e=>{e.preventDefault();boogaDownNow();try{e.target.setPointerCapture(e.pointerId)}catch(_){}});
 ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>$('boogaBtn').addEventListener(ev,()=>boogaRelease()));
 $('playBtn').addEventListener('click',()=>{ensureAudio();$('startOv').hidden=true;mode=pendingMode;runMinMode=mode;resetLevel();sfx.bark();});   // 5.3
 $('nextBtn').addEventListener('click',()=>{ensureAudio();$('winOv').hidden=true;level++;resetLevel();sfx.bark();});
@@ -1414,7 +1415,7 @@ function frame(now){const raw=Math.min(.05,(now-last)/1000);last=now;dtS=lerp(dt
   if(state==='play'){elapsed+=dt;if(booga){boogaT+=dt;beatT+=dt;if(beatT>.25){beatT=0;sfx.beat(beatN++);}if(boogaT>bLen())endBooga();}}
   if(state==='burst'){burstT+=dt;if(burstT>1.6)won();}
   readInput();if(biteBuf>0){biteBuf-=raw;if(tryBite())biteBuf=0;}if(dashBuf>0){dashBuf-=raw;if(tryDash())dashBuf=0;}
-  boogaTick(raw);if(chainT>0){chainT-=dt;if(chainT<=0)chainDrop();}          // 3.4: the chain cools, it never zeroes
+  boogaTick();if(chainT>0){chainT-=dt;if(chainT<=0)chainDrop();}          // 3.4: the chain cools, it never zeroes
   if(boogaBuf>0){boogaBuf-=raw;if(!booga&&power>=pMax()&&state==='play'){boogaBuf=0;startBooga();}}   // 3.5flash=Math.max(0,flash-raw*2.4);
   for(const g of geysers){g.t-=dt;const q=rope[g.i];for(let k=0;k<2;k++)if(Math.random()<dt*40)addPart({type:'water',x:q.x+rand(-5,5),y:q.y,vx:rand(-60,60),vy:rand(-620,-380)*Math.min(1,g.t+.3),life:1.1,max:1.1,size:3,g:1});}geysers=geysers.filter(g=>g.t>0&&state==='play');
   skyP+=((1-hoseHP/100)-skyP)*Math.min(1,dt*2);boogaK+=((booga?1:0)-boogaK)*Math.min(1,dt*2);
