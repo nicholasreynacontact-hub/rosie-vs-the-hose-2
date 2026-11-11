@@ -1846,7 +1846,7 @@ const boneM=M('#fffaf0',{roughness:.4,emissive:'#554422'}),treat3=[0,1,2].map(()
 const WHITE=new THREE.Color('#ffffff'),WETC=new THREE.Color('#b9dcf5');
 /* wardrobe 2.2: FURC/FURS are captured by the wet lerp in render3D, so wFur() rebuilds them -- without this Rosie snaps back to cream the moment she gets wet */
 let FURC=new THREE.Color('#fff3dd').convertSRGBToLinear(),FWET=new THREE.Color('#a9c4d2').convertSRGBToLinear(),FURS=new THREE.Color('#c7ae9c').convertSRGBToLinear();
-const furM=M('#fff3dd',{roughness:.92}),furS=M('#c7ae9c',{roughness:.92}),collarM=M('#d9859c'),peachM=M('#f3d9c6',{roughness:.8}),noseM=M('#7a4e42',{roughness:.25}),eyeM=M('#2a1a22',{roughness:.05}),irisM=M('#7a4a24'),glintM=new THREE.MeshBasicMaterial({color:'#ffffff'}),glint3M=new THREE.MeshBasicMaterial({color:'#ffd9b0',transparent:true,opacity:.35});
+const furM=M('#fff3dd',{roughness:.92}),furS=M('#c7ae9c',{roughness:.92}),collarM=M('#d9859c'),peachM=M('#f3d9c6',{roughness:.8}),noseM=M('#7a4e42',{roughness:.25}),eyeM=M('#2a1a22',{roughness:.05}),irisM=M('#6e4122'),glintM=new THREE.MeshBasicMaterial({color:'#ffffff'}),glint3M=new THREE.MeshBasicMaterial({color:'#ffd9b0',transparent:true,opacity:.35});
 /* art v2 item 4: big round head (about 60% of her), few fat curls, wide readable eyes. Curl placement is a fixed spiral, not r2(). */
 {for(let i=0;i<24;i++){r2();r2();r2();}for(let i=0;i<46;i++){const a=r2()*Math.PI*2,b=(r2()-.3)*Math.PI*.9;if(Math.cos(a)*Math.cos(b)>.42&&Math.sin(b)<.45)continue;r2();}for(let i=0;i<14;i++){r2();r2();r2();}} /* spend the draft's r2() draws so the seeded scenery built after Rosie stays where it was */
 const dog=grp(scene),dogP=grp(dog),dBody=grp(dogP);
@@ -1873,7 +1873,7 @@ sph(dHead,peachM,5,39,-16,0,1,.85,1.4,false);
 sph(dHead,noseM,6.0,41,-7,0,.8,.72,1.1,false);sph(dHead,glintM,1.8,45.2,-4.6,1.8,1,1,1,false);
 /* art v3 item 6: bigger eye, warm amber iris as a visible ring, and three glints -- sun catch,
    secondary, and a soft bounce-light crescent on the lower-inner rim. */
-const dEyes=[1,-1].map(s=>{const e=sph(dHead,irisM,13,31,7,s*17,.62,1.0,1.06,false);sph(e,eyeM,.74,.2,0,0,1,1,1,false);sph(e,glintM,.54,.95,.52,s*.30,1,1,1,false);sph(e,glintM,.21,1,-.45,-s*.30,1,1,1,false);sph(e,glint3M,.28,.92,-.55,.10,1,1,1,false);return e;});
+const dEyes=[1,-1].map(s=>{const e=sph(dHead,irisM,13,31,7,s*17,.62,1.0,1.06,false);sph(e,eyeM,.80,.2,0,0,1,1,1,false);sph(e,glintM,.22,.95,.52,s*.30,1,1,1,false);sph(e,glintM,.105,1,-.45,-s*.30,1,1,1,false);sph(e,glint3M,.15,.92,-.55,.10,1,1,1,false);return e;});
 const EYE_X=13*.62,EYE_Y=13*1.0,EYE_Z=13*1.06; /* base scale: sph() bakes radius into scale, so the expression loop rebuilds all three axes */
 const dBlush=[1,-1].map(s=>sph(dHead,MB('#f59b85',.18),6,29.5,-9,s*24,.4,.62,1.25,false)); /* MB() per side: the expression vector drives opacity */
 /* neck: distinctly smaller than the head and in the shade tone, with the collar as a band across it -- this is what separates head from body from behind */
@@ -1916,13 +1916,13 @@ let browS=0,happyT=0,rearK=0,rearU=0,rearDir=-1,rearHold=0;
    The doc's eye 'x' is applied to the eye's Z axis, which is the visible width at this camera; the
    X axis only flattens the bead into the head and reads as nothing. */
 const EXPR={
- bright:   [1.00,1.00,.74, 0.00,0.00, 0.00, 0.00,0.00,0.00,.18],
- panting:  [ .80,1.00,.74,-0.06,0.00, 0.10,-0.08,0.55,1.00,.30],
- determined:[.62,1.00,.62, 0.10,0.00,-0.55,-0.14,0.70,0.00,.14],
- startled: [1.22,1.10,.52, 0.05,0.00, 0.60, 0.55,0.35,0.00,.35],
- dizzy:    [ .42,1.00,.74, 0.00,0.18,-0.30,-0.04,0.40,1.00,.55],
- fierce:   [ .70,1.00,.58, 0.00,0.00,-0.75,-0.18,0.85,1.00,.20],
- delighted:[ .35,1.00,.74, 0.00,0.00, 0.35, 0.14,0.95,1.25,.45]};
+ bright:   [1.00,1.00,.80, 0.00,0.00, 0.00, 0.00,0.00,0.00,.18],
+ panting:  [ .80,1.00,.80,-0.06,0.00, 0.10,-0.08,0.55,1.00,.30],
+ determined:[.62,1.00,.70, 0.10,0.00,-0.55,-0.14,0.70,0.00,.14],
+ startled: [1.22,1.10,.62, 0.05,0.00, 0.60, 0.55,0.35,0.00,.35],
+ dizzy:    [ .42,1.00,.80, 0.00,0.18,-0.30,-0.04,0.40,1.00,.55],
+ fierce:   [ .70,1.00,.66, 0.00,0.00,-0.75,-0.18,0.85,1.00,.20],
+ delighted:[ .35,1.00,.80, 0.00,0.00, 0.35, 0.14,0.95,1.25,.45]};
 const exC=EXPR.bright.slice();let exName='bright',exTau=.12,exHold=0,exForce=null;
 /* test hook: /expression verification drives a face directly instead of waiting for the game to make one */
 window.__EXPR=function(n){exForce=n&&EXPR[n]?n:null;return exName;};
