@@ -238,6 +238,120 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 .sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 [inert]{pointer-events:none}
 @media (max-width:520px){.hbtn{min-height:46px;min-width:46px;padding:6px 9px}}
+
+/* ---- v5: the quiet HUD -------------------------------------------------------------
+   design/art/not-an-ad-game.md, rows UI and Type. The world pass made the frame a
+   painting; this block makes the interface belong to it. Rules, not boxes. One face
+   (--body) everywhere in play -- the display face is the title card's alone. Colour is
+   the world's muted palette; the reserved signals (gold = ready, amber/red = danger)
+   appear ONLY where they signal. Nothing loops: motion marks a change, once.
+   Touch targets are untouched -- only the painted disc inside them got smaller. */
+:root{
+  --u-bone:#e7e2d3;                      /* stepping-stone cream, desaturated */
+  --u-dim:rgba(231,226,211,.58);
+  --u-faint:rgba(231,226,211,.24);
+  --u-plate:rgba(24,30,24,.34);
+  --u-track:rgba(18,23,18,.42);
+  --u-sage:#8d9a86;
+  --sig-gold:#ffd23f; --sig-red:#c0432f; --sig-amber:#b08a3e;
+}
+/* a soft scrim is how type reads over sky -- not a stroke, not a tag */
+.hud{background:linear-gradient(rgba(16,20,16,.44),rgba(16,20,16,0) 78%);gap:7px;color:var(--u-bone)}
+.hud .row{gap:5px 13px;align-items:center}
+.hud .chip,.hud .chip:nth-child(2){background:none;border:0;box-shadow:none;transform:none;border-radius:0;
+  padding:0;font-family:var(--body);font-weight:700;font-size:13px;letter-spacing:.12em;color:var(--u-bone);
+  text-shadow:none;gap:7px;font-variant-numeric:tabular-nums}
+.hud .chip small{font-family:var(--body);font-weight:600;font-size:9px;letter-spacing:.2em;opacity:.5;color:var(--u-bone)}
+.hud .chip.combo,.hud .chip.combo.rep{background:none;color:var(--u-dim);transform:none;
+  font-size:10px;font-weight:600;letter-spacing:.17em;text-transform:uppercase}
+.hud .chip.combo.rep{color:rgba(231,226,211,.36)}
+/* DANCE READY: readiness is one of the two things gold is reserved for. It rises once. */
+.hud .chip.bready{background:none;color:var(--sig-gold);text-shadow:none;font-size:10px;font-weight:700;
+  letter-spacing:.22em;animation:u-rise .45s ease-out 1}
+@keyframes u-rise{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+/* the map is a hairline of ground, not a bordered pill */
+.map{height:3px;border:0;box-shadow:none;border-radius:0;background:var(--u-faint);flex:1 1 92px;max-width:240px}
+.map i{background:none}
+.map .view{border:0;border-radius:0;background:rgba(231,226,211,.18)}
+.map .dot{width:5px;height:5px;border:0;box-shadow:none}
+.map .rosie{background:var(--u-bone)}
+.map .foe{background:var(--sig-gold)}
+.hbtn{background:rgba(20,25,20,.28);color:var(--u-dim);border:1px solid var(--u-faint);box-shadow:none;
+  border-radius:4px;font:600 10px var(--body);letter-spacing:.14em;text-transform:uppercase;padding:5px 10px}
+/* meters: a rule each, a quiet name, no tag and no stroke */
+.meters{gap:5px 18px}
+.meter{gap:7px}
+.meter small{background:none;color:var(--u-bone);opacity:.55;padding:0;border-radius:0;transform:none;
+  font-family:var(--body);font-weight:600;font-size:9px;letter-spacing:.18em}
+.meter small.boog{color:var(--sig-gold);opacity:.95}
+.bar{height:4px;border:0;box-shadow:none;border-radius:0;background:var(--u-track)}
+.fill{border-radius:0;background-image:none;transition:width .18s linear,background-color .35s}
+.fill.pow{background:var(--u-sage)}
+.fill.pow.ready{background:var(--sig-gold);animation:none}
+.boog{background:none!important}
+.port{width:17px;height:17px;border:0;box-shadow:none;opacity:.78}
+.port.star{background:none;opacity:.5}
+.port.star::before{inset:0;background:var(--u-bone)}
+/* hearts keep their shape; the fill colour is set in hud() from the muted palette */
+.meter.hp .bar{flex:0 0 58px;width:58px;height:15px;background:rgba(18,23,18,.5)}
+.stam i{width:7px;height:7px;border:0;box-shadow:none;background:var(--u-faint)}
+.stam i.on{background:rgba(231,226,211,.6)}
+@media (max-width:520px){.meter small{font-size:8.5px;padding:0}.port{width:15px;height:15px}
+  .meter.hp .bar{flex:0 0 50px;width:50px;height:13px}.hud .chip{font-size:12px}}
+/* ---- touch controls ---------------------------------------------------------------
+   HIT AREA IS UNCHANGED: .act keeps its exact width/height and its 4 px border box
+   (the border is now transparent, so it still reserves the same pixels). The visible
+   disc is the ::before, inset inside that box. Untouched they sit near transparent and
+   come up under a thumb. */
+.pad{background:rgba(24,30,24,.18);border:1px solid rgba(231,226,211,.16);opacity:.3;transition:opacity .22s ease}
+.knob{width:44px;height:44px;margin:-22px 0 0 -22px;background:rgba(231,226,211,.42);
+  border:1px solid rgba(231,226,211,.28);box-shadow:none}
+.act{position:relative;background:none;border-color:transparent;box-shadow:none;color:var(--u-bone);
+  font-family:var(--body);font-weight:700;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  text-shadow:none;gap:3px;opacity:.42;transition:opacity .2s ease}
+.act::before{content:"";position:absolute;inset:9px;border-radius:50%;z-index:-1;
+  background:var(--u-plate);border:1px solid rgba(231,226,211,.18)}
+.act.bite::before{background:rgba(24,30,24,.44);border-color:rgba(231,226,211,.26)}
+.act .g{opacity:.88}
+.act.bite,.act.dash,.act.bark,.act.booga{background:none}
+.act:active{transform:none;box-shadow:none;opacity:.95}
+.act:active::before{background:rgba(231,226,211,.24);border-color:rgba(231,226,211,.4)}
+.pad:active{opacity:.88}
+.controls:has(:active) .act,.controls:has(:active) .pad{opacity:.8}
+@media (hover:hover) and (pointer:fine){.act:hover{opacity:.88}.pad:hover{opacity:.6}}
+/* bark's glyph was ink on amber; on a dark disc it has to be bone */
+.act.bark .g{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 26'%3E%3Cg fill='%23e7e2d3'%3E%3Cpath d='M2 4h14v11H8l-4 4V15H2z'/%3E%3Cpath d='M20 6c2 1.6 2 6 0 7.6l1.6 2c3-2.5 3-9.1 0-11.6z'/%3E%3Cpath d='M24 3.2c3.2 2.8 3.2 11.6 0 14.4l1.6 2c3.9-3.3 3.9-15.1 0-18.4z'/%3E%3C/g%3E%3C/svg%3E")}
+.act.bark{color:var(--u-bone)}
+.act.bark.cool{filter:none;opacity:.22}
+.act.bark::after{inset:9px;background:conic-gradient(rgba(14,18,14,.5) calc(var(--cd,0) * 1turn),rgba(0,0,0,0) 0)}
+/* BOOGA: dead and nearly invisible until banked, then a gold hairline -- readiness, once */
+.act.booga:disabled{filter:none;opacity:.16;box-shadow:none}
+.act.booga.on{opacity:.82;animation:u-rise .45s ease-out 1}
+.act.booga.on::before{border-color:rgba(255,210,63,.6);background:rgba(255,210,63,.1)}
+.act.booga.on .g{opacity:1}
+@media (max-width:430px){.act{font-size:9.5px}.act::before,.act.bark::after{inset:8px}}
+@media (max-width:360px){.act::before,.act.bark::after{inset:7px}}
+@media (prefers-reduced-motion:reduce){.act.booga.on,.hud .chip.bready{animation:none}}
+/* the countdown is a title, not a sticker -- and not the display face */
+.cin b{font-family:var(--body);font-weight:700;font-size:clamp(22px,5vw,38px);letter-spacing:.3em;
+  text-indent:.3em;color:var(--u-bone);background:rgba(14,18,14,.4);border:0;box-shadow:none;
+  border-radius:2px;padding:7px 20px;transform:none}
+/* no stroke on card headings either; the logo's own letters keep theirs */
+.card h1{-webkit-text-stroke:0;text-shadow:none}
+.stats,.best{font-family:var(--body);font-weight:700;letter-spacing:.04em}
+/* ---- v5 pass 2: fixes found in the play frame -------------------------------------- */
+/* the three terrain segments out-specify `.map i` and kept their ad-game tan/lime/brown */
+.map .deck,.map .lawn,.map .garden{background:none;width:33.3%}
+/* at phone width the top row wrapped into three bands. The map is 3 px tall, so giving it
+   its own line costs nothing and lets chips + buttons sit on one line at 390 px. */
+@media (max-width:520px){
+  .hbtn{font-size:9px;letter-spacing:.1em;padding:5px 7px}
+  .map{flex:1 1 100%;max-width:none;order:9;margin:1px 0 0}
+  .hud{gap:6px}
+}
+/* the joystick has to be findable by a thumb that has not arrived yet */
+.pad{opacity:.36}
+.knob{background:rgba(231,226,211,.5)}
 </style>
 
 </head>
@@ -2473,8 +2587,8 @@ function hud(){const pc=v=>(clamp(v/WORLD,0,1)*100).toFixed(2)+'%';$('mRosie').s
   const k=[level,score,Math.round(R.hp),Math.round(hoseHP),power,booga,combo,phase,R.stam,bk?1:0,mode,state,snakes.length,booga?Math.ceil(bLen()-boogaT):0,Math.ceil(R.barkCd*10),chainRep?1:0].join('|');if(k===lastHud)return;lastHud=k;
   $('lvl').textContent=level;$('score').textContent=score;$('comboChip').hidden=combo<2;$('comboChip').classList.toggle('rep',chainRep);
   $('combo').textContent='CHAIN x'+combo+(chainRep?'  same move':'  VARIED!')+(combo>=4?'  bite +'+Math.round((chainDmg()-1)*100)+'%':'');
-  const hpp=clamp(R.hp/D().hpMax*100,0,100),rf=$('rFill');rf.style.width=hpp+'%';rf.style.backgroundColor=hpp>50?'#ff8fab':hpp>25?'#f4b400':'#e63946';
-  const hf=$('hFill');hf.style.width=hoseHP+'%';hf.style.backgroundColor=phase===1?'#2fa84f':phase===2?'#f4b400':'#e63946';{const bn=innerWidth<=520?'Living Hose':'The Living Hose';$('phaseLbl').textContent=phase===1?bn:bn+' · Phase '+phase;}
+  const hpp=clamp(R.hp/D().hpMax*100,0,100),rf=$('rFill');rf.style.width=hpp+'%';rf.style.backgroundColor=hpp>50?'#d8ceb4':hpp>25?'#b08a3e':'#c0432f';   /* not-an-ad-game UI row: warm stone until health is genuinely in danger, then the reserved amber/red */
+  const hf=$('hFill');hf.style.width=hoseHP+'%';hf.style.backgroundColor=phase===1?'#7d8f6d':phase===2?'#a98a46':'#b24a38';   /* muted moss -> amber -> red: the boss bar steps without shouting */{const bn=innerWidth<=520?'Living Hose':'The Living Hose';$('phaseLbl').textContent=phase===1?bn:bn+' · Phase '+phase;}
   const pf=$('pFill');pf.style.width=(booga?Math.max(0,1-boogaT/bLen())*100:power/pMax()*100)+'%';pf.classList.toggle('ready',bk);
   $('powLbl').textContent=booga?'DANCING!':bk?'DANCE READY':'Power';$('powLbl').classList.toggle('boog',!!booga||bk);{const bc=$('boogaChip');bc.hidden=!bk&&!booga;$('bchipTxt').textContent=booga?'GIANT DANCE MODE':'DANCE READY';bc.classList.toggle('live',!!booga);}
   const bb=$('boogaBtn');bb.disabled=state!=='play'||!bk;bb.classList.toggle('on',bk);   // visibly dead until the meter is full
