@@ -1292,9 +1292,9 @@ let renderer;try{renderer=new THREE.WebGLRenderer({canvas:$('gl'),antialias:true
 renderer.outputEncoding=THREE.sRGBEncoding;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 /* ---------- 3D world (three.js) ---------- */
 const zOf=y=>(y-GY0)*DZ,DEPTH=zOf(GY1),UP=new THREE.Vector3(0,1,0);
-const scene=new THREE.Scene();scene.background=new THREE.Color('#ffb062');scene.fog=new THREE.Fog('#ff9a74',1900,6000);
+const scene=new THREE.Scene();scene.background=new THREE.Color('#ffb062');scene.fog=new THREE.Fog('#ff9a74',1500,6000);
 const cam=new THREE.PerspectiveCamera(50,1,10,12000);
-const hemi=new THREE.HemisphereLight('#e08ac0','#3a2a78',.34);scene.add(hemi);const fill=new THREE.DirectionalLight('#6f8fff',.34);scene.add(fill,fill.target);
+const hemi=new THREE.HemisphereLight('#e08ac0','#3a2a78',.40);scene.add(hemi);const fill=new THREE.DirectionalLight('#6f8fff',.34);scene.add(fill,fill.target);
 const sun=new THREE.DirectionalLight('#ff9e63',1.25);sun.castShadow=true;sun.shadow.mapSize.set(/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)?1024:2048,/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)?1024:2048);sun.shadow.bias=-.0008;sun.shadow.normalBias=1.5;
 {const s=sun.shadow.camera;s.left=-1000;s.right=1000;s.top=1000;s.bottom=-1000;s.near=100;s.far=3200;}scene.add(sun,sun.target);
 /* art v2: no point lights; lanterns, bulbs and windows are unlit glow shapes */
@@ -1322,6 +1322,140 @@ function flat(geo,mat,x,y,z){geo.rotateX(-Math.PI/2);const m=new THREE.Mesh(geo,
 function ctex(w,h,rx,ry,paint){const c=document.createElement('canvas');c.width=w;c.height=h;paint(c.getContext('2d'));const tx=new THREE.CanvasTexture(c);tx.wrapS=tx.wrapT=THREE.RepeatWrapping;tx.repeat.set(rx,ry);tx.encoding=THREE.sRGBEncoding;tx.anisotropy=4;return tx;}
 let s2=77;const r2=()=>{s2=(s2*16807)%2147483647;return (s2-1)/2147483646};
 const anim=[];
+/* ====================== painted-garden.md item 1: the foliage atlas ======================
+   One 1024x1024 runtime canvas, 4x4 cells of 256. Every cell is built from individual tapered
+   leaf/petal strokes so the silhouette is ragged at the pixel level -- that edge frequency, not
+   colour, is what separates "painted" from "moulded". Hue reservation (section 3) is enforced
+   here: no cell paints anything in #ffb062-#ffd23f (weak spot) or within 25 deg of #ff0f46
+   (warnings). Flower petals are lilac / rose / white / blue-violet only.
+   Cells 0-3 bushes, 4-6 flower clumps, 7-8 ferns, 9-11 grass tufts, 12-13 ivy, 14-15 far (blurred). */
+const FCU=i=>[(i%4)*.25,.75-Math.floor(i/4)*.25];
+const FOL_TEX=ctex(1024,1024,1,1,g=>{
+  const S=256;
+  const PAL=[['#15301f','#255436','#3f8249','#5fa85c'],['#1a3524','#2c5f3b','#4a8f51','#6fb766'],
+             ['#122b1c','#21502f','#3b7a44','#79bd6e'],['#1e3a27','#306844','#53995a','#86c67a'],
+             ['#17321e','#28583a','#44864c','#6aae62']];
+  const PET=[['#cfa9ec','#b78ae0','#9c76cf'],['#f0a2d2','#e086c2','#c96fae'],['#f7f3ea','#e7decb','#cfc4ae'],['#a9b4ea','#8d9ae0','#7480cc']];
+  const bl=(c,x0,y0,len,ang,wid,p,lift)=>{ // one tapered leaf stroke, base-dark / tip-lit
+    const tx=x0+Math.cos(ang)*len,ty=y0+Math.sin(ang)*len,mx=(x0+tx)/2,my=(y0+ty)/2,
+          nx=-Math.sin(ang)*wid,ny=Math.cos(ang)*wid;
+    const gr=c.createLinearGradient(x0,y0,tx,ty);
+    gr.addColorStop(0,p[0]);gr.addColorStop(.45,p[1]);gr.addColorStop(.82,p[2+(lift?1:0)]);gr.addColorStop(1,p[2+(lift?1:0)]);
+    c.fillStyle=gr;c.beginPath();c.moveTo(x0,y0);
+    c.quadraticCurveTo(mx+nx*1.15,my+ny*1.15,tx,ty);c.quadraticCurveTo(mx-nx,my-ny,x0,y0);c.fill();};
+  const mass=(c,n,p,cx,cy,rx,ry,lmin,lmax,wmin,wmax,core)=>{
+    if(core){c.save();c.globalAlpha=.85;c.fillStyle=p[0];c.beginPath();c.ellipse(cx,cy+ry*.35,rx*.78,ry*.62,0,0,7);c.fill();c.restore();}
+    for(let i=0;i<n;i++){const u=i/n,a=-.22+Math.PI*1.44*((i*7919%n)/n)+r2()*.3, // spread over the upper hemisphere
+        q=Math.sqrt(r2()),ox=cx+Math.cos(a)*rx*q*.55,oy=cy+ry*.25+Math.sin(a)*ry*q*.5,
+        len=lmin+r2()*(lmax-lmin),wid=wmin+r2()*(wmax-wmin),lift=u>.55&&Math.sin(a)>.1;
+      bl(c,ox,oy,len,a+(r2()-.5)*.55,wid,p,lift);}};
+  const petals=(c,n,cx,cy,rx,ry)=>{
+    for(let i=0;i<n;i++){const px=cx+(r2()-.5)*rx*2,py=cy+(r2()-.5)*ry*2,pp=PET[Math.floor(r2()*PET.length)],rr=7+r2()*7;
+      for(let k=0;k<6;k++){const a=k/6*6.283+r2()*.4;c.fillStyle=pp[k%3];c.beginPath();
+        c.ellipse(px+Math.cos(a)*rr*.72,py+Math.sin(a)*rr*.72,rr*.52,rr*.38,a,0,7);c.fill();}
+      c.fillStyle='#e9ddb4';c.beginPath();c.arc(px,py,rr*.3,0,7);c.fill();}};
+  const frond=(c,x0,y0,len,ang,p,pn)=>{
+    c.strokeStyle=p[1];c.lineWidth=2.4;c.beginPath();c.moveTo(x0,y0);
+    const tx=x0+Math.cos(ang)*len,ty=y0+Math.sin(ang)*len;c.quadraticCurveTo(x0+Math.cos(ang)*len*.5-Math.sin(ang)*18,y0+Math.sin(ang)*len*.5+Math.cos(ang)*18,tx,ty);c.stroke();
+    for(let i=1;i<pn;i++){const u=i/pn,bx=x0+Math.cos(ang)*len*u-Math.sin(ang)*18*2*u*(1-u),by=y0+Math.sin(ang)*len*u+Math.cos(ang)*18*2*u*(1-u),pl=(1-u*.72)*len*.3;
+      bl(c,bx,by,pl,ang+1.15,3.2,p,u>.4);bl(c,bx,by,pl,ang-1.15,3.2,p,u>.4);}};
+  const blades=(c,n,p,hmin,hmax,spread)=>{
+    for(let i=0;i<n;i++){const x=128+(r2()-.5)*spread,a=1.5708+(x-128)/spread*1.15+(r2()-.5)*.35;
+      bl(c,x,4+r2()*10,hmin+r2()*(hmax-hmin),a,3.4+r2()*3.4,p,r2()<.4);}};
+  const ivy=(c,n,p)=>{
+    c.strokeStyle=p[0];c.lineWidth=2.2;
+    for(let k=0;k<5;k++){const x=26+k*52;c.beginPath();c.moveTo(x,250);c.quadraticCurveTo(x+(r2()-.5)*60,128,x+(r2()-.5)*50,6);c.stroke();}
+    for(let i=0;i<n;i++){const x=r2()*256,y=r2()*250,a=-1.2+r2()*2.4,l=16+r2()*20;
+      bl(c,x,y,l,a,l*.42,p,r2()<.45);bl(c,x,y,l*.8,a+2.4,l*.34,p,false);}};
+  const cell=(i,fn)=>{const col=i%4,row=Math.floor(i/4);g.save();g.beginPath();g.rect(col*S+3,row*S+3,S-6,S-6);g.clip();
+    g.translate(col*S,(row+1)*S);g.scale(1,-1);fn(g);g.restore();};
+  /* 0-3 bushes, four densities */
+  cell(0,c=>mass(c,82,PAL[0],128,10,120,118,52,96,7,15,true));
+  cell(1,c=>mass(c,64,PAL[1],128,8,116,104,48,88,7,14,true));
+  cell(2,c=>mass(c,46,PAL[2],128,8,112,122,58,104,5,10,false));
+  cell(3,c=>mass(c,38,PAL[3],128,6,118,72,34,64,6,13,true));
+  /* 4-6 flowering clumps -- reserved palette only */
+  cell(4,c=>{mass(c,44,PAL[1],128,8,112,86,40,74,6,12,true);petals(c,9,128,96,86,44);});
+  cell(5,c=>{mass(c,40,PAL[3],128,8,106,76,36,68,6,12,true);petals(c,11,128,104,92,52);});
+  cell(6,c=>{mass(c,34,PAL[2],128,6,100,64,30,58,5,11,false);petals(c,12,128,118,96,66);});
+  /* 7-8 ferns */
+  cell(7,c=>{for(let k=0;k<7;k++)frond(c,128+(k-3)*13,6,120+r2()*78,1.5708+(k-3)*.21,PAL[0],13);});
+  cell(8,c=>{for(let k=0;k<9;k++)frond(c,128+(k-4)*15,8,86+r2()*62,1.5708+(k-4)*.26,PAL[3],11);});
+  /* 9-11 grass tufts */
+  cell(9,c=>blades(c,62,PAL[4],120,228,104));
+  cell(10,c=>blades(c,54,PAL[1],78,156,116));
+  cell(11,c=>blades(c,46,PAL[3],44,98,136));
+  /* 12-13 ivy sheets */
+  cell(12,c=>ivy(c,62,PAL[0]));
+  cell(13,c=>ivy(c,52,PAL[2]));
+  /* 14-15 far bushes: painted, then blurred through the canvas filter (item 5, fake DoF) */
+  for(const [i,pi] of [[14,0],[15,1]]){const off=document.createElement('canvas');off.width=off.height=S;const oc=off.getContext('2d');
+    oc.translate(0,S);oc.scale(1,-1);mass(oc,70,PAL[pi],128,10,118,126,54,100,9,18,true);
+    const col=i%4,row=Math.floor(i/4);g.save();g.filter='blur(6px)';g.drawImage(off,col*S,row*S);g.restore();g.filter='none';}
+});
+FOL_TEX.wrapS=FOL_TEX.wrapT=THREE.ClampToEdgeWrapping;FOL_TEX.repeat.set(1,1);
+const FANU={a:{value:new THREE.Vector4(0,0,1,0)},b:{value:new THREE.Vector4(0,0,1,0)}};
+/* Y-axis billboarding + per-instance atlas cell, patched into MeshToonMaterial so RAMP still lights
+   the leaves. alphaTest .5 / transparent false: no sorting, still writes depth, Rosie stays occluded
+   correctly. uFanA/uFanB squash any plant standing inside a live telegraph to a quarter height so a
+   warning can never lose to a flower (section 3). */
+function folMat(bb){
+  const m=new THREE.MeshToonMaterial({map:FOL_TEX,gradientMap:RAMP,alphaTest:.5,transparent:false,side:THREE.DoubleSide});
+  m.onBeforeCompile=sh=>{
+    sh.uniforms.uFanA=FANU.a;sh.uniforms.uFanB=FANU.b;
+    let v=sh.vertexShader.replace('#include <uv_vertex>','vUv = uv*0.25 + aCell;');
+    if(bb){
+      v=v.replace('#include <beginnormal_vertex>',[
+        'vec3 iO = instanceMatrix[3].xyz;',
+        'float sX = length(instanceMatrix[0].xyz);',
+        'float sY = length(instanceMatrix[1].xyz);',
+        'vec3 camR = normalize(vec3(viewMatrix[0][0],0.0,viewMatrix[2][0])+vec3(1e-5,0.0,0.0));',
+        'vec3 camF = normalize(vec3(viewMatrix[0][2],0.0,viewMatrix[2][2])+vec3(0.0,0.0,1e-5));',
+        'float fk = 1.0;',
+        'fk = min(fk, mix(1.0,0.25, uFanA.w*(1.0-smoothstep(uFanA.z*0.72,uFanA.z,distance(iO.xz,uFanA.xy)))));',
+        'fk = min(fk, mix(1.0,0.25, uFanB.w*(1.0-smoothstep(uFanB.z*0.72,uFanB.z,distance(iO.xz,uFanB.xy)))));',
+        'vec3 objectNormal = normalize(camF*0.78 + camR*position.x*1.35 + vec3(0.0,0.45,0.0));'].join('\n'))
+       .replace('#include <defaultnormal_vertex>','vec3 transformedNormal = normalMatrix * objectNormal;')
+       .replace('#include <begin_vertex>','vec3 transformed = iO + camR*(position.x*sX) + vec3(0.0,1.0,0.0)*(position.y*sY*fk);')
+       .replace('#include <worldpos_vertex>','vec4 worldPosition = vec4(transformed,1.0);')
+       .replace('#include <project_vertex>','vec4 mvPosition = modelViewMatrix * vec4(transformed,1.0);\ngl_Position = projectionMatrix * mvPosition;');
+    }
+    sh.vertexShader='attribute vec2 aCell;\nuniform vec4 uFanA;\nuniform vec4 uFanB;\n'+v;
+  };
+  m.customProgramCacheKey=()=>bb?'folBB':'folFX';
+  return m;}
+const FQ=new THREE.PlaneGeometry(1,1).translate(0,.5,0);
+/* instance banks: FOL = camera-facing yard planting, FIVY = wall-flat ivy sheets */
+const FOL=[],FIVY=[];
+const plant=(x,z,w,h,cell,tint,ry,bank,y)=>{(bank||FOL).push({x:x,z:z,w:w,h:h,c:cell,t:tint,ry:ry||0,y:y||0});return true;};
+function buildFol(list,bb){
+  if(!list.length)return null;
+  const geo=FQ.clone(),cells=new Float32Array(list.length*2),d=new THREE.Object3D(),col=new THREE.Color();
+  for(let i=0;i<list.length;i++){const u=FCU(list[i].c);cells[i*2]=u[0];cells[i*2+1]=u[1];}
+  geo.setAttribute('aCell',new THREE.InstancedBufferAttribute(cells,2));
+  const im=new THREE.InstancedMesh(geo,folMat(bb),list.length);
+  for(let i=0;i<list.length;i++){const p=list[i];
+    d.position.set(p.x,p.y||0,p.z);d.rotation.set(0,p.ry,0);d.scale.set(p.w,p.h,1);d.updateMatrix();im.setMatrixAt(i,d.matrix);
+    im.setColorAt(i,col.set(p.t).convertSRGBToLinear());}
+  im.frustumCulled=false;im.castShadow=false;im.receiveShadow=true;scene.add(im);return im;}
+/* static crossed-quad clusters for things that tip, grow or sit on a moving parent (pots, beds):
+   one merged mesh per plant instead of a rosette of spheres. */
+const CLM=new THREE.MeshToonMaterial({map:FOL_TEX,gradientMap:RAMP,alphaTest:.5,transparent:false,side:THREE.DoubleSide});
+function cluster(par,quads){
+  const n=quads.length,pos=new Float32Array(n*18),nor=new Float32Array(n*18),uv=new Float32Array(n*12);
+  const C=[[-.5,0],[.5,0],[.5,1],[-.5,1]],TRI=[0,1,2,0,2,3];
+  for(let i=0;i<n;i++){const q=quads[i],ca=Math.cos(q.ry||0),sa=Math.sin(q.ry||0),u=FCU(q.c);
+    for(let k=0;k<6;k++){const c=C[TRI[k]],lx=c[0]*q.w,ly=c[1]*q.h,o=(i*6+k)*3;
+      pos[o]=q.x+lx*ca;pos[o+1]=q.y+ly;pos[o+2]=q.z-lx*sa;
+      let nx=sa*.8+ca*c[0]*1.3,ny=.45,nz=ca*.8-sa*c[0]*1.3,l=Math.hypot(nx,ny,nz)||1;
+      nor[o]=nx/l;nor[o+1]=ny/l;nor[o+2]=nz/l;
+      const t=(i*6+k)*2;uv[t]=u[0]+(c[0]+.5)*.25;uv[t+1]=u[1]+c[1]*.25;}}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setAttribute('normal',new THREE.BufferAttribute(nor,3));
+  g.setAttribute('uv',new THREE.BufferAttribute(uv,2));
+  const m=new THREE.Mesh(g,CLM);m.castShadow=false;m.receiveShadow=true;par.add(m);return m;}
+
 /* ---------- art pass: golden-hour toy diorama (see design/art/art-bible.md) ---------- */
 /* painted sky dome v2 (design/art/art-direction-v2.md): three stops, sun disc + halo, two cloud bands, BOOGA stripes */
 const skyU={top:{value:new THREE.Color('#3b2f8f')},mid:{value:new THREE.Color('#f07a9c')},bot:{value:new THREE.Color('#ffb062')},booga:{value:0},time:{value:0},
@@ -1369,7 +1503,14 @@ flat(new THREE.PlaneGeometry(1320,GD),M('#ffffff',{map:ctex(512,512,1320/600,GD/
      g.save();g.globalAlpha=a;g.translate(x,y);g.scale(rx/rr,ry/rr);g.fillStyle=gr;g.beginPath();g.arc(0,0,rr,0,7);g.fill();g.restore();}});
  PT.wrapS=PT.wrapT=THREE.ClampToEdgeWrapping;
  const pl=flat(new THREE.PlaneGeometry(1320,GD),new THREE.MeshBasicMaterial({map:PT,transparent:true,opacity:.34,depthWrite:false,blending:THREE.AdditiveBlending}),340,.45,GZ);
- pl.receiveShadow=false;}
+ pl.receiveShadow=false;
+ /* painted-garden item 4: 340 low-contrast brush strokes over the planks so the biggest flat in the
+    play frame stops reading as a fill. Hue drifts +-8 deg around the plank red; no amber, no red-pink. */
+ const BW=ctex(256,256,5,GD/320,g=>{for(let i=0;i<340;i++){const x=r2()*256,y=r2()*256,l=8+r2()*22,a=(r2()-.5)*.5;
+   g.strokeStyle=r2()<.5?'rgba(255,214,176,.085)':'rgba(96,44,46,.085)';g.lineWidth=2+r2()*4.5;g.lineCap='round';
+   g.beginPath();g.moveTo(x,y);g.lineTo(x+Math.cos(a)*l,y+Math.sin(a)*l);g.stroke();}});
+ const bwp=flat(new THREE.PlaneGeometry(1320,GD),new THREE.MeshBasicMaterial({map:BW,transparent:true,opacity:.55,depthWrite:false}),340,.35,GZ);
+ bwp.receiveShadow=false;}
 /* lawn: one un-tiled painting. Mown stripes 260 wide, 7 clover patches, 20 soft sunlit dapples */
 flat(new THREE.PlaneGeometry(2400,GD),M('#ffffff',{map:ctex(512,512,1,1,g=>{const sx=512/2400,sz=512/GD;
   for(let i=0;i<10;i++){g.fillStyle=i%2?'#4e8f4b':'#3a7043';g.fillRect(i*260*sx,0,260*sx+1,512);}
@@ -1401,7 +1542,7 @@ for(const [x,c,fc] of [[215,'#f4a259',null],[485,'#e76f51','#ff4f79'],[760,'#90b
 box(scene,whiteM2,2040,8,6,2020,72,-26);box(scene,whiteM2,2040,8,6,2020,30,-26);
 {const im=new THREE.InstancedMesh(G_B,whiteM2,85),d=new THREE.Object3D();for(let i=0;i<85;i++){d.position.set(1014+i*24,44,-22);d.scale.set(14,88,5);d.updateMatrix();im.setMatrixAt(i,d.matrix);}im.castShadow=true;scene.add(im);}
 box(scene,whiteM2,6,8,DEPTH+80,3030,72,DEPTH/2);box(scene,whiteM2,6,8,DEPTH+80,3030,30,DEPTH/2);for(let z=0;z<=DEPTH+40;z+=120)box(scene,whiteM2,12,88,12,3030,44,z);
-for(let i=0;i<9;i++){const x=1080+i*235;sph(scene,leafD,44,x,26,-70,1,.9,1);sph(scene,leafM,34,x+38,24,-64);sph(scene,leafL,24,x+8,52,-66);}
+/* the 27 fence-line shrub spheres are now billboard instances -- see the density block below */
 for(const x of [1190,1236,1880,1924]){cyl(scene,leafM,3,130,x,65,-46);const h=grp(scene,x,134,-42);add(h,G_C,M('#ffd23f'),0,0,0,22,4,22).rotation.x=Math.PI/2;add(h,G_C,M('#6b3e1e'),0,0,2,10,5,10).rotation.x=Math.PI/2;anim.push(tt=>{h.rotation.z=Math.sin(tt+x)*.1;});}
 /* apple tree + shed */
 cyl(scene,M('#6b4423'),16,200,2350,100,-150);for(const [x,y,z,r] of [[0,250,0,95],[-70,210,10,70],[75,215,-10,72],[-20,300,-20,62],[40,290,30,58]])sph(scene,r>70?leafD:leafM,r,2350+x,y,-150+z);
@@ -1488,7 +1629,12 @@ for(const m of MUD){flat(new THREE.CircleGeometry(m.r,28),M('#6b4423',{roughness
 /* obstacles */
 const tabs=[];
 const potGeo=new THREE.CylinderGeometry(23,16,38,18),rimGeo=new THREE.CylinderGeometry(26,26,8,18);
-function flower(g,c,x,y,z,r=6){cyl(g,leafM,1.4,y,x,y/2,z,false);const m=M(c,{roughness:.5});for(let q=0;q<5;q++){const a=q/5*Math.PI*2;sph(g,m,r*.72,x+Math.cos(a)*r*.8,y,z+Math.sin(a)*r*.8,1,.6,1);}sph(g,M('#ffe066'),r*.55,x,y+1.5,z,1,.7,1);}
+/* painted-garden item 1: a flower is three crossed painted quads, not five squashed spheres. The
+   per-bed tint argument is dropped on purpose -- section 3 reserves #ff4f79 and #ffd23f for the
+   warnings and the weak spot, so bed flowers take the atlas's lilac/rose/white palette instead. */
+function flower(g,c,x,y,z,r=6){const k=4+Math.floor(r2()*3);const q=[];
+  for(let i=0;i<3;i++)q.push({x:x+(r2()-.5)*r*.5,y:0,z:z+(r2()-.5)*r*.5,w:r*4.6,h:y+r*3.4,c:k,ry:i*1.05+r2()*.3});
+  cluster(g,q);}
 for(const o of OBST){const g=grp(scene,o.x,0,zOf(o.y)),r=o.r;
   if(o.k==='table'){cyl(g,M('#f4f1de',{roughness:.4}),r,5,0,38,0);cyl(g,M('#b08968'),4,38,0,19,0);cyl(g,M('#6b4f3a'),2.5,150,0,113,0);cone(g,M('#ff6b5a',{roughness:.7}),82,40,0,196,0);cone(g,M('#f7f3ea'),30,16,0,210,0,false);
     for(const s of [-1,1]){const cm=M('#2a9d8f');box(g,cm,22,5,24,s*(r+26),24,0);box(g,cm,4,34,24,s*(r+38),40,0);for(const dz of [-9,9])box(g,cm,3,24,3,s*(r+18),12,dz);}
@@ -1496,7 +1642,7 @@ for(const o of OBST){const g=grp(scene,o.x,0,zOf(o.y)),r=o.r;
   else if(o.k==='grill'){const bm=M('#22242a',{roughness:.3,metalness:.5});sph(g,bm,25,0,52,0,1,.85,1);cyl(g,M('#aaaaaa',{metalness:.6,roughness:.3}),3,6,0,76,0);for(let k=0;k<3;k++){const a=k/3*Math.PI*2,l=cyl(g,bm,1.8,44,Math.cos(a)*15,20,Math.sin(a)*15);l.rotation.z=-Math.cos(a)*.22;l.rotation.x=Math.sin(a)*.22;}
     const sm=[0,1,2].map(k=>sph(g,MB('#dddddd',.35),8,0,90,0,1,1,1,false));anim.push(tt=>sm.forEach((s,k)=>{const u=(tt*.5+k/3)%1;s.position.set(Math.sin(u*6+k)*8,84+u*90,0);s.scale.setScalar(7+u*14);s.material.opacity=.4*(1-u);}));}
   else if(o.k==='bed'){cyl(g,M('#b5543c'),r,16,0,8,0);cyl(g,M('#4a2f1c',{roughness:1}),r-7,17,0,8.5,0);const fc=['#ff4f79','#ffd23f','#9b5de5','#ff9f1c','#ffffff','#ff4f79','#ffd23f'];
-    fc.forEach((c,k)=>{const a=k/7*Math.PI*2,d=k?r*.55:0;flower(g,c,Math.cos(a)*d,34+(k%3)*8,Math.sin(a)*d,7);});for(let k=0;k<8;k++){const a=k/8*Math.PI*2+.3;sph(g,k%2?leafM:leafL,8,Math.cos(a)*r*.72,22,Math.sin(a)*r*.72,1,.7,1);}}
+    fc.forEach((c,k)=>{const a=k/7*Math.PI*2,d=k?r*.55:0;flower(g,c,Math.cos(a)*d,34+(k%3)*8,Math.sin(a)*d,7);});/* bed skirt foliage comes from the billboard drift below */}
   else if(o.k==='bath'){const st=M('#aab3ba',{roughness:.5});cyl(g,st,17,6,0,3,0);cyl(g,st,7,50,0,28,0);add(g,new THREE.CylinderGeometry(33,14,12,20),st,0,58,0,1,1,1);cyl(g,M('#7ec8e3',{roughness:.1}),27,2,0,64,0,false);
     const b=grp(g,18,72,0);sph(b,M('#e76f51'),8,0,0,0,1.2,.9,.9);sph(b,M('#e76f51'),5,8,6,0);cone(b,M('#ffb703'),2,6,14,6,0).rotation.z=-Math.PI/2;anim.push(tt=>{b.position.y=72+Math.abs(Math.sin(tt*5))*4;b.rotation.y=Math.sin(tt*.7)*1.5;});}
   else if(o.k==='pool'){const pm=M('#39b9ea',{roughness:.3});for(let k=0;k<3;k++)add(g,new THREE.TorusGeometry(r-4,7,10,32),pm,0,7+k*9,0,1,1,1).rotation.x=Math.PI/2;cyl(g,M('#9be4f5',{roughness:.05}),r-6,2,0,22,0,false);
@@ -1508,9 +1654,11 @@ for(const o of OBST){const g=grp(scene,o.x,0,zOf(o.y)),r=o.r;
 }
 /* pots (rebuilt logic array each level, same order) */
 const pot3=makePots().map(p=>{const g=grp(scene,p.x,0,zOf(p.y)),piv=grp(g,0,0,0);piv.scale.setScalar(p.s);add(piv,potGeo,M(p.c,{roughness:.45}),0,19,0,1,1,1);add(piv,rimGeo,M(p.c,{roughness:.45}),0,40,0,1,1,1);cyl(piv,M('#4a2f1c',{roughness:1}),23,2,0,44,0,false);
-  if(p.kind==='fern'){for(let i=0;i<10;i++){const a=i/10*Math.PI*2,l=sph(piv,i%2?leafL:leafM,1,Math.cos(a)*16,62,Math.sin(a)*16,5,26,9);l.rotation.z=-Math.cos(a)*.75;l.rotation.x=Math.sin(a)*.75;}sph(piv,leafD,1,0,70,0,5,30,5);}
-  else if(p.kind==='tall'){for(let i=0;i<6;i++){const a=i/6*Math.PI*2,h=34+(i%3)*12,l=sph(piv,M('#2e7d32',{roughness:.5}),1,Math.cos(a)*7,44+h,Math.sin(a)*7,5,h,2.5);l.rotation.y=a;l.rotation.z=-Math.cos(a)*.2;l.rotation.x=Math.sin(a)*.2;}}
-  else{[[-14,74,0],[0,90,4],[14,76,-4],[-5,66,10],[8,64,-9]].forEach(([x,y,z])=>flower(piv,p.fc,x,y,z,6));for(let i=0;i<6;i++){const a=i/6*Math.PI*2;sph(piv,leafL,9,Math.cos(a)*15,50,Math.sin(a)*15,1,.5,.7);}}
+  /* painted-garden item 1: the pots keep their ceramic cylinders, the green goes billboard --
+     one merged crossed-quad cluster per pot in place of 10-40 spheres. */
+  {const q=[],K=p.kind==='fern'?[7,8]:p.kind==='tall'?[9,10]:[4,5,6];
+   for(let i=0;i<5;i++)q.push({x:(r2()-.5)*18,y:44,z:(r2()-.5)*18,w:p.kind==='tall'?52:74,h:p.kind==='tall'?120:86,c:K[Math.floor(r2()*K.length)],ry:i*.72+r2()*.4});
+   cluster(piv,q);}
   const sp=sph(g,M('#4a2f1c',{roughness:1}),1,0,2,0,34,3,26);sp.visible=false;return {g,piv,sp};});
 /* hose reel, sprinklers, puddles, treats */
 {const g=grp(scene,REEL.x,0,zOf(REEL.y));const d=cyl(g,M('#2b7a3d',{roughness:.35}),32,22,0,40,0);d.rotation.x=Math.PI/2;for(let k=0;k<3;k++){const tr=add(g,new THREE.TorusGeometry(26-k*5,4,8,24),M('#47b964',{roughness:.3}),0,40,12,1,1,1);}
@@ -1847,6 +1995,35 @@ const blobT=[...Array(10)].map(()=>sph(scene,M('#4cc9f0',{roughness:.05,transpar
 const beamT=[...Array(4)].map(()=>{const g=grp(scene);cyl(g,MB('#78c8ff',.45),1,1,0,0,0,false);cyl(g,MB('#ffffff',.9),.35,1,0,0,0,false);return g;});
 const _a=new THREE.Vector3(),_b=new THREE.Vector3(),_d=new THREE.Vector3(),_v=new THREE.Vector3();
 function beam(g,ax,ah,ay,bx,bh,by,rad){_a.set(ax,ah,zOf(ay));_b.set(bx,bh,zOf(by));_d.subVectors(_b,_a);const len=_d.length()||1;g.position.copy(_a).addScaledVector(_d,.5);g.scale.set(rad,len,rad);g.quaternion.setFromUnitVectors(UP,_d.multiplyScalar(1/len));g.visible=true;}
+
+/* ====================== painted-garden.md item 2: framing foliage ======================
+   Two blurred leaf masses parented to the camera at z=-120, overhanging the top corners so the
+   player is standing IN the garden rather than looking at one. transparent + depthTest:false puts
+   them in the transparent pass over the world; a LOW renderOrder keeps them under the telegraph
+   fan, the lasso ring and the water, and they fade to nothing whenever a warning is live. They
+   never reach past the outer third of the frame. */
+scene.add(cam);
+const frameTex=ctex(512,512,1,1,g=>{
+  const LP=['#16261b','#1d3122','#122018','#243c28'];
+  const spray=(c,n,lo,hi,wmul)=>{for(let i=0;i<n;i++){const q=Math.pow(r2(),1.35),x=-30+q*430,y=-20+Math.pow(r2(),1.5)*300,
+      a=.30+r2()*1.45,l=lo+r2()*(hi-lo),w=(13+r2()*22)*wmul,tx=x+Math.cos(a)*l,ty=y+Math.sin(a)*l,
+      mx=(x+tx)/2,my=(y+ty)/2,nx=-Math.sin(a)*w,ny=Math.cos(a)*w;
+    c.fillStyle=LP[Math.floor(r2()*4)];c.beginPath();c.moveTo(x,y);
+    c.quadraticCurveTo(mx+nx*1.25,my+ny*1.25,tx,ty);c.quadraticCurveTo(mx-nx,my-ny,x,y);c.fill();}};
+  const off=document.createElement('canvas');off.width=off.height=512;const c=off.getContext('2d');
+  spray(c,46,70,150,1.18);                       /* soft bed, blurred hard  */
+  g.filter='blur(7px)';g.drawImage(off,0,0);g.filter='none';
+  const of2=document.createElement('canvas');of2.width=of2.height=512;const c2=of2.getContext('2d');
+  spray(c2,40,56,128,.82);                       /* near leaves, only lightly softened */
+  g.globalAlpha=.88;g.filter='blur(2.5px)';g.drawImage(of2,0,0);g.filter='none';g.globalAlpha=1;});
+frameTex.wrapS=frameTex.wrapT=THREE.ClampToEdgeWrapping;
+let frameK=1;const frameQ=[-1,1].map(sx=>{
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:frameTex,transparent:true,opacity:.92,depthTest:false,depthWrite:false,fog:false}));
+  m.renderOrder=-5;m.frustumCulled=false;m.userData.sx=sx;cam.add(m);return m;});
+anim.push(tt=>{const hh=Math.tan(cam.fov*Math.PI/360)*120,hw=hh*cam.aspect,w=hw*.63,h=hh*.80;
+  for(const m of frameQ){const sx=m.userData.sx;m.position.set(sx*(hw-w/2),hh-h/2,-120);m.scale.set(w*sx,h,1);
+    m.rotation.z=reduce?0:Math.sin(tt*1.885+(sx>0?1.7:0))*.02;}});
+
 /* particles */
 const PMAX=1400,pPos=new Float32Array(PMAX*3),pCol=new Float32Array(PMAX*3),pGeo=new THREE.BufferGeometry();
 pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));pGeo.setAttribute('color',new THREE.BufferAttribute(pCol,3));
@@ -1882,16 +2059,74 @@ function updCritters(dt){
 /* yard dressing */
 {const d=new THREE.Object3D(),col=new THREE.Color();
   // grass tufts
-  const tg=new THREE.ConeGeometry(1,1,4),tu=new THREE.InstancedMesh(tg,M('#ffffff'),650),gc=['#3a7043','#2f5f40','#4e8f4b','#3a7043','#2f5f40','#cbc271'],props=OBST.filter(o=>o.x>1060);
-  /* clustered at the fence, the deck edge, prop bases and the front verge; the middle of the lawn stays open */
-  for(let i=0;i<650;i++){let x,z;const m=i%10;
-    if(m<3){x=1030+r2()*1960;z=r2()*r2()*150;}
-    else if(m<5){x=1026+r2()*r2()*130;z=r2()*DEPTH;}
-    else if(m<8){const o=props[Math.floor(r2()*props.length)],a=r2()*6.283,q=o.r+10+r2()*r2()*70;x=o.x+Math.cos(a)*q;z=zOf(o.y)+Math.sin(a)*q*.9;}
-    else{x=1030+r2()*1960;z=DEPTH-r2()*r2()*170;}
-    x=clamp(x,1026,2992);z=clamp(z,0,DEPTH);const k=.6+r2()*r2()*1.6;d.position.set(x,8*k-1,z);d.rotation.set((r2()-.5)*.5,r2()*3,(r2()-.5)*.5);d.scale.set(4*k,16*k,4*k);d.updateMatrix();tu.setMatrixAt(i,d.matrix);tu.setColorAt(i,col.set(gc[i%6]).convertSRGBToLinear());}
-  tu.frustumCulled=false;
-  tu.receiveShadow=true;scene.add(tu);d.rotation.set(0,0,0);
+  const props=OBST.filter(o=>o.x>1060);
+  /* ================= painted-garden.md item 3: plant the yard =================
+     ~1,500 camera-facing painted billboards replacing the 650 cone tufts, laid out on the doc's
+     zone shares. The combat lane stays open: anything standing in the middle of the lawn and not
+     tucked against a prop is capped at 55 units, below Rosie's shoulder. */
+  const SKP=OBST.filter(o=>o.x>1060).map(o=>({x:o.x,z:zOf(o.y),r:o.r}))
+    .concat(MUD.map(m=>({x:m.x,z:zOf(m.y),r:m.r}))).concat(SPRS.map(s=>({x:s.x,z:zOf(s.y),r:26})));
+  const inGarden=(x,z)=>x>2240&&x<2988&&z>60&&z<1336;
+  const nearProp=(x,z)=>SKP.some(p=>Math.hypot(x-p.x,z-p.z)<p.r+85);
+  const lane=(x,z,h)=>(z>200&&z<DEPTH-170&&!nearProp(x,z))?Math.min(h,55):h;
+  const TINT=['#ffffff','#f2e8d8','#dfe8ff','#fff0dd','#e6f0e2','#ffe9ef','#d8e4f2','#fdf3e0'];
+  const tint=()=>TINT[Math.floor(r2()*TINT.length)];
+  const pick1=a=>a[Math.floor(r2()*a.length)];
+  const BUSH=[0,1,2,3],FERN=[7,8],GRS=[9,10,11],FLW=[4,5,6],FAR=[14,15];
+  /* 30% fence line and back border */
+  for(let i=0;i<190;i++){const x=1000+r2()*2020,z=-42-r2()*r2()*96,h=128+r2()*96; // behind the pickets, pre-blurred
+    plant(x,z,h*(1.05+r2()*.5),h,pick1(FAR),tint());}
+  for(let i=0;i<330;i++){const x=1026+r2()*1966,z=r2()*r2()*132;
+    if(inGarden(x,z))continue;
+    const r=r2(),c=r<.46?pick1(BUSH):r<.62?pick1(FERN):r<.80?pick1(FLW):pick1(GRS),h=lane(x,z,62+r2()*r2()*118);
+    plant(x,z,h*(.9+r2()*.6),h,c,tint());}
+  /* 20% deck edge and front verge */
+  for(let i=0;i<160;i++){const x=1024+r2()*r2()*140,z=r2()*DEPTH,h=lane(x,z,58+r2()*r2()*84);
+    const r=r2(),c=r<.38?pick1(BUSH):r<.58?pick1(FLW):r<.78?pick1(FERN):pick1(GRS);
+    plant(x,z,h*(.9+r2()*.6),h,c,tint());}
+  for(let i=0;i<175;i++){const x=1026+r2()*1966,z=DEPTH-120+r2()*r2()*420;
+    if(inGarden(x,z))continue;
+    const r=r2(),c=r<.34?pick1(BUSH):r<.56?pick1(FLW):r<.74?pick1(FERN):pick1(GRS),h=(z>DEPTH+40?70+r2()*72:lane(x,z,52+r2()*r2()*86));
+    plant(x,z,h*(.95+r2()*.6),h,c,tint());}
+  /* 25% prop skirts */
+  for(let i=0;i<395;i++){const p=SKP[i%SKP.length],a=r2()*6.283,q=p.r+12+r2()*r2()*62,
+      x=clamp(p.x+Math.cos(a)*q,1026,2990),z=clamp(p.z+Math.sin(a)*q*.92,-10,DEPTH+320);
+    const r=r2(),c=r<.3?3:r<.5?pick1(FLW):r<.68?pick1(FERN):pick1(GRS),h=Math.min(inGarden(x,z)?62:90,30+r2()*62);
+    plant(x,z,h*(1+r2()*.6),h,c,tint());}
+  /* 15% lawn drifts -- clumped islands with bare lawn between, all below the shoulder line */
+  for(const [cx,cz] of [[1180,330],[1420,960],[1650,170],[1790,800],[1960,400],[2120,1040],[1290,1250],[2140,190],[1570,520]])
+    for(let i=0;i<28;i++){const a=r2()*6.283,q=Math.sqrt(r2())*104,x=clamp(cx+Math.cos(a)*q*1.35,1026,2990),z=clamp(cz+Math.sin(a)*q,0,DEPTH);
+      if(inGarden(x,z))continue;
+      const r=r2(),c=r<.44?pick1(FLW):r<.72?pick1(GRS):3,h=lane(x,z,26+r2()*32);
+      plant(x,z,h*(1.1+r2()*.7),h,c,tint());}
+  /* 10% ivy sheets, flat against walls: the shed, the lawn fence, the deck rail posts */
+  for(let i=0;i<48;i++)plant(2620+r2()*180,-112,54+r2()*40,62+r2()*58,pick1([12,13]),tint(),0,FIVY,r2()*86);
+  for(let i=0;i<72;i++)plant(1040+r2()*1950,-17,56+r2()*48,50+r2()*42,pick1([12,13]),tint(),0,FIVY,r2()*34);
+  for(let i=0;i<40;i++)plant(1013,-6+r2()*(DEPTH+320),52+r2()*44,48+r2()*46,pick1([12,13]),tint(),Math.PI/2,FIVY,r2()*40);
+  /* the deck is the other half of the frame and the doc's zone table does not reach it. Planting
+     goes BEHIND the two rails -- a deep border outside the playable deck -- never on the planks,
+     because foliage sprouting from decking reads as a bug, not a garden. */
+  /* a blurred far hedge closes the horizon behind the deck, where the bare ground plane showed */
+  for(let i=0;i<120;i++){const x=-260+r2()*1340,z=-112-r2()*r2()*130,h=150+r2()*118;
+    plant(x,z,h*(1.1+r2()*.55),h,pick1(FAR),tint());}
+  for(let i=0;i<135;i++){const x=-70+r2()*1090,z=-28-r2()*r2()*78,h=76+r2()*112;
+    const r=r2(),c=r<.44?pick1(BUSH):r<.62?pick1(FERN):r<.82?pick1(FLW):pick1(GRS);
+    plant(x,z,h*(.95+r2()*.55),h,c,tint());}
+  for(let i=0;i<70;i++){const x=-120+r2()*r2()*104,z=-40+r2()*(DEPTH+360),h=66+r2()*98;
+    const r=r2(),c=r<.4?pick1(BUSH):r<.6?pick1(FLW):r<.8?pick1(FERN):pick1(GRS);
+    plant(x,z,h*(.95+r2()*.55),h,c,tint());}
+  for(let i=0;i<54;i++){const x=-60+r2()*1070,z=-20-r2()*18,h=30+r2()*34;   /* spilling over the rail foot */
+    plant(x,z,h*(1.2+r2()*.7),h,r2()<.5?pick1(FLW):pick1(GRS),tint());}
+  const folI=buildFol(FOL,true),ivyI=buildFol(FIVY,false);
+  /* the telegraph squash uniform: up to two live fans, lerped so plants duck rather than pop */
+  const _fa=[0,0],_ft=[0,0];
+  anim.push(()=>{const live=attacks.filter(a=>a.t<a.tele&&a.o).slice(0,2);
+    for(let k=0;k<2;k++){const a=live[k],u=k?FANU.b.value:FANU.a.value;
+      if(a){u.x=a.o.x;u.y=zOf(a.o.y);u.z=Math.max(140,a.range||260);_ft[k]=1;}else _ft[k]=0;
+      _fa[k]+=(_ft[k]-_fa[k])*.22;u.w=_fa[k];}
+    const warn=_ft[0]>0||_ft[1]>0||(Lass.ph!=='off');
+    frameK+=((warn?0:1)-frameK)*.2;for(const f of frameQ)f.material.opacity=.92*frameK;});
+
   // stepping stones from the deck to the garden
   const stM=M('#cdbfae'),stD=M('#a9998a');for(let i=0;i<15;i++){const u=i/14,x=1060+u*1150,z=420+Math.sin(u*5)*170+u*260;const s=cyl(scene,i%2?stM:stD,26+r2()*8,5,x,2,z);s.scale.z*=.8;s.rotation.y=r2()*3;s.castShadow=false;}
   // low-poly rocks
