@@ -1153,7 +1153,7 @@ function poseSpecial(sp){const T=sp.t,fr=[dLegs[0].g,dLegs[1].g],bk=[dLegs[2].g,
       fr[0].rotation.z=1.0+Math.sin(t*40)*1.4;fr[1].rotation.z=1.0-Math.sin(t*40)*1.4;setL(bk,-.3,0);
       dHead.rotation.z=-.8*u;ears(.5);dTail.rotation.z=.6;}
     else if(T<.30+DIG_T){dog.visible=false;digMound.visible=true;
-      digMound.position.set(R.x,6+Math.sin(t*18)*2,zOf(R.y));digMound.rotation.y=-R.ang;}
+      digMound.position.set(R.x,2+Math.abs(Math.sin(t*16))*7,zOf(R.y));digMound.rotation.y=-R.ang;}
     else{const u=clamp((T-.30-DIG_T)/.15,0,1);
       dogP.position.y=u<.5?lerp(-70,60,u/.5):lerp(60,0,(u-.5)/.5);
       dogP.rotation.z=1.3*(1-u*.55);setL(fr,-.9,.8);setL(bk,.4,.8);
@@ -1560,7 +1560,7 @@ const softTex=ctex(64,64,1,1,g=>{const gr=g.createRadialGradient(32,32,0,32,32,3
 softTex.encoding=THREE.LinearEncoding;softTex.wrapS=softTex.wrapT=THREE.ClampToEdgeWrapping;
 const dShadow=new THREE.Mesh(new THREE.CircleGeometry(46,24),MB('#3a2a6e',.34));dShadow.material.alphaMap=softTex;dShadow.material.needsUpdate=true;dShadow.rotation.x=-Math.PI/2;dShadow.position.y=1.2;dog.add(dShadow);
 /* special-moves.md 3.2: the travelling dig mound - one flattened sphere, hidden unless R.under */
-const digMound=sph(scene,M('#6b4426'),1,0,0,0,72,26,56,false);digMound.visible=false;
+const digMound=sph(scene,M('#6b4426'),1,0,0,0,64,38,50,false);digMound.visible=false;
 let browS=0,happyT=0,rearK=0,rearU=0,rearDir=-1,rearHold=0;
 
 /* ================= pause + wardrobe (design/ux/pause-and-wardrobe.md) =================
