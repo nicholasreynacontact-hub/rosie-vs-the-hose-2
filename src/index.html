@@ -1399,11 +1399,12 @@ const FANU={a:{value:new THREE.Vector4(0,0,1,0)},b:{value:new THREE.Vector4(0,0,
    the leaves. alphaTest .5 / transparent false: no sorting, still writes depth, Rosie stays occluded
    correctly. uFanA/uFanB squash any plant standing inside a live telegraph to a quarter height so a
    warning can never lose to a flower (section 3). */
-function folMat(bb){
-  const m=new THREE.MeshToonMaterial({map:FOL_TEX,gradientMap:RAMP,alphaTest:.5,transparent:false,side:THREE.DoubleSide});
+function folMat(bb,mp,cs){
+  const CS=(cs||.25).toFixed(4);
+  const m=new THREE.MeshToonMaterial({map:mp||FOL_TEX,gradientMap:RAMP,alphaTest:.5,transparent:false,side:THREE.DoubleSide});
   m.onBeforeCompile=sh=>{
     sh.uniforms.uFanA=FANU.a;sh.uniforms.uFanB=FANU.b;
-    let v=sh.vertexShader.replace('#include <uv_vertex>','vUv = uv*0.25 + aCell;');
+    let v=sh.vertexShader.replace('#include <uv_vertex>','vUv = uv*'+CS+' + aCell;');
     if(bb){
       v=v.replace('#include <beginnormal_vertex>',[
         'vec3 iO = instanceMatrix[3].xyz;',
@@ -1422,18 +1423,45 @@ function folMat(bb){
     }
     sh.vertexShader='attribute vec2 aCell;\nuniform vec4 uFanA;\nuniform vec4 uFanB;\n'+v;
   };
-  m.customProgramCacheKey=()=>bb?'folBB':'folFX';
+  m.customProgramCacheKey=()=>(bb?'folBB':'folFX')+CS;
   return m;}
+/* ---- painted tree canopies (2x2 cells of 256): dense, airy, tall-poplar, far-blurred ----
+   Same technique as the ground foliage: a canopy is 120 individual leaf strokes with a ragged
+   outline, not three stacked balls. Distance is carried by per-instance tint plus the fog. */
+const FCU2=i=>[(i%2)*.5,.5-Math.floor(i/2)*.5];
+const TREE_TEX=ctex(512,512,1,1,g=>{
+  const S=256,TP=[['#102c1b','#1c4a2a','#2e7140','#46965a'],['#15311d','#245833','#3c8147','#66b066'],['#0e2718','#1a4428','#2b6639','#478d53']];
+  const lf=(c,x0,y0,len,ang,wid,p,lit)=>{const tx=x0+Math.cos(ang)*len,ty=y0+Math.sin(ang)*len,mx=(x0+tx)/2,my=(y0+ty)/2,
+      nx=-Math.sin(ang)*wid,ny=Math.cos(ang)*wid,gr=c.createLinearGradient(x0,y0,tx,ty);
+    gr.addColorStop(0,p[0]);gr.addColorStop(.5,p[1]);gr.addColorStop(1,p[lit?3:2]);
+    c.fillStyle=gr;c.beginPath();c.moveTo(x0,y0);c.quadraticCurveTo(mx+nx*1.2,my+ny*1.2,tx,ty);c.quadraticCurveTo(mx-nx,my-ny,x0,y0);c.fill();};
+  const canopy=(c,n,p,cx,cy,rx,ry,core)=>{
+    if(core){c.save();c.globalAlpha=.92;c.fillStyle=p[0];c.beginPath();c.ellipse(cx,cy-ry*.1,rx*.7,ry*.62,0,0,7);c.fill();c.restore();}
+    for(let i=0;i<n;i++){const a=r2()*6.283,q=Math.pow(r2(),.55),ox=cx+Math.cos(a)*rx*q*.9,oy=cy+Math.sin(a)*ry*q*.86,
+        dir=Math.atan2(oy-cy,ox-cx)+(r2()-.5)*.9;
+      lf(c,ox,oy,20+r2()*36,dir,4.5+r2()*8.5,p,oy>cy-ry*.1);}};
+  const cell=(i,fn)=>{const col=i%2,row=Math.floor(i/2);g.save();g.beginPath();g.rect(col*S+2,row*S+2,S-4,S-4);g.clip();
+    g.translate(col*S,(row+1)*S);g.scale(1,-1);fn(g);g.restore();};
+  cell(0,c=>canopy(c,132,TP[0],128,124,120,116,true));
+  cell(1,c=>canopy(c,104,TP[1],128,126,118,112,false));
+  cell(2,c=>canopy(c,116,TP[2],128,130,64,124,true));
+  {const off=document.createElement('canvas');off.width=off.height=S;const oc=off.getContext('2d');
+   oc.translate(0,S);oc.scale(1,-1);canopy(oc,110,TP[1],128,124,116,112,true);
+   g.save();g.filter='blur(5px)';g.drawImage(off,S,S);g.restore();g.filter='none';}
+});
+TREE_TEX.wrapS=TREE_TEX.wrapT=THREE.ClampToEdgeWrapping;TREE_TEX.repeat.set(1,1);
+const CAN=[];
+const canopy=(x,z,y,w,h,cell,tint)=>CAN.push({x:x,z:z,y:y,w:w,h:h,c:cell,t:tint,ry:0});
 const FQ=new THREE.PlaneGeometry(1,1).translate(0,.5,0);
 /* instance banks: FOL = camera-facing yard planting, FIVY = wall-flat ivy sheets */
 const FOL=[],FIVY=[];
 const plant=(x,z,w,h,cell,tint,ry,bank,y)=>{(bank||FOL).push({x:x,z:z,w:w,h:h,c:cell,t:tint,ry:ry||0,y:y||0});return true;};
-function buildFol(list,bb){
+function buildFol(list,bb,mp,cs,cu){
   if(!list.length)return null;
   const geo=FQ.clone(),cells=new Float32Array(list.length*2),d=new THREE.Object3D(),col=new THREE.Color();
-  for(let i=0;i<list.length;i++){const u=FCU(list[i].c);cells[i*2]=u[0];cells[i*2+1]=u[1];}
+  for(let i=0;i<list.length;i++){const u=(cu||FCU)(list[i].c);cells[i*2]=u[0];cells[i*2+1]=u[1];}
   geo.setAttribute('aCell',new THREE.InstancedBufferAttribute(cells,2));
-  const im=new THREE.InstancedMesh(geo,folMat(bb),list.length);
+  const im=new THREE.InstancedMesh(geo,folMat(bb,mp,cs),list.length);
   for(let i=0;i<list.length;i++){const p=list[i];
     d.position.set(p.x,p.y||0,p.z);d.rotation.set(0,p.ry,0);d.scale.set(p.w,p.h,1);d.updateMatrix();im.setMatrixAt(i,d.matrix);
     im.setColorAt(i,col.set(p.t).convertSRGBToLinear());}
@@ -1536,7 +1564,8 @@ const BULB_C=['#ffd98a','#ff8fb8','#8fe0ff','#b8f28a'].map(c=>new THREE.Color(c)
 anim.push(()=>{const k=lightK();bulbMs.forEach((m,i)=>m.color.copy(BULB_C[i]).multiplyScalar(.55+.45*k));bulbGlowM.opacity=.2*k;winM.color.copy(LAMP_C).multiplyScalar(.5+.5*k);});
 const leafM=M('#3fa34d',{roughness:.8}),leafD=M('#2e8b3e',{roughness:.8}),leafL=M('#56c271',{roughness:.8});
 for(const [x,c,fc] of [[215,'#f4a259',null],[485,'#e76f51','#ff4f79'],[760,'#90be6d','#ffffff']]){const g=grp(scene,x,290,-26);cyl(g,M('#e9d8a6'),1.2,100,0,55,0,false);
-  add(g,new THREE.CylinderGeometry(26,16,22,16),M(c),0,-6,0,1,1,1);for(let k=0;k<7;k++){const a=k/7*Math.PI*2;sph(g,k%2?leafM:leafL,11,Math.cos(a)*18,8,Math.sin(a)*18);sph(g,leafM,6,Math.cos(a)*24,-22-(k%3)*12,Math.sin(a)*24,1,2.2,1);if(fc)sph(g,M(fc),5,Math.cos(a)*14,18,Math.sin(a)*14);}
+  add(g,new THREE.CylinderGeometry(26,16,22,16),M(c),0,-6,0,1,1,1);{const q=[];for(let k=0;k<4;k++)q.push({x:(r2()-.5)*14,y:-56-r2()*16,z:(r2()-.5)*14,w:62+r2()*22,h:84+r2()*26,c:fc?4+Math.floor(r2()*3):7+Math.floor(r2()*2),ry:k*.8+r2()*.3});
+   cluster(g,q);}
   anim.push(tt=>{g.rotation.z=Math.sin(tt*1.2+x)*.05;});}
 /* lawn fence */
 box(scene,whiteM2,2040,8,6,2020,72,-26);box(scene,whiteM2,2040,8,6,2020,30,-26);
@@ -1545,7 +1574,8 @@ box(scene,whiteM2,6,8,DEPTH+80,3030,72,DEPTH/2);box(scene,whiteM2,6,8,DEPTH+80,3
 /* the 27 fence-line shrub spheres are now billboard instances -- see the density block below */
 for(const x of [1190,1236,1880,1924]){cyl(scene,leafM,3,130,x,65,-46);const h=grp(scene,x,134,-42);add(h,G_C,M('#ffd23f'),0,0,0,22,4,22).rotation.x=Math.PI/2;add(h,G_C,M('#6b3e1e'),0,0,2,10,5,10).rotation.x=Math.PI/2;anim.push(tt=>{h.rotation.z=Math.sin(tt+x)*.1;});}
 /* apple tree + shed */
-cyl(scene,M('#6b4423'),16,200,2350,100,-150);for(const [x,y,z,r] of [[0,250,0,95],[-70,210,10,70],[75,215,-10,72],[-20,300,-20,62],[40,290,30,58]])sph(scene,r>70?leafD:leafM,r,2350+x,y,-150+z);
+cyl(scene,M('#6b4423'),16,200,2350,100,-150);for(const [x,y,z,r] of [[0,180,0,95],[-70,150,10,70],[75,155,-10,72],[-20,215,-20,62],[40,205,30,58],[10,250,0,66]])
+  canopy(2350+x,-150+z,y,r*2.6,r*2.4,r>70?0:1,r>70?'#eef2e8':'#dfe8df');
 for(const [x,y,z] of [[-40,230,70],[30,200,78],[70,260,50],[-10,280,60],[-80,190,55]])sph(scene,M('#ff4f4f',{roughness:.3}),9,2350+x,y,-150+z);
 box(scene,M('#c0392b'),190,140,130,2710,70,-180);{const r=add(scene,G_K4,M('#5c3d2e'),2710,172,-180,150,66,110);r.rotation.y=Math.PI/4;}box(scene,whiteM2,44,92,4,2710,46,-113);box(scene,winM,34,26,4,2650,95,-113,false);
 /* backdrop v2: three baked ridge layers, a toy water tower, lollipop poplars (no ink, no shadows) */
@@ -1598,8 +1628,9 @@ box(scene,M('#c0392b'),190,140,130,2710,70,-180);{const r=add(scene,G_K4,M('#5c3
   sph(tw,M('#e9e4f5'),170,0,396,0,1,.8,1,false);cone(tw,M('#b8644a'),150,120,0,572,0,false);
   add(tw,G_B,winM,-28,400,166,44,52,10,false).rotation.y=-.17;
   /* seven poplars behind the railing and the fence: trunk plus three stacked balls, one baked mesh */
-  const pg=grp(scene),pm=M('#1f6b4f');for(const [x,z,h] of [[560,-820,470],[1090,-640,380],[1500,-900,520],[1840,-600,340],[2120,-780,450],[2560,-880,500],[2960,-660,320]]){
-    cyl(pg,pm,h*.035,h*.5,x,h*.25,z,false);sph(pg,pm,h*.2,x,h*.42,z,1,1.15,1,false);sph(pg,pm,h*.165,x+h*.02,h*.66,z,1,1.15,1,false);sph(pg,pm,h*.12,x-h*.01,h*.86,z,1,1.2,1,false);}
+  const pg=grp(scene),pm=M('#4a4535');for(const [x,z,h] of [[560,-820,470],[1090,-640,380],[1500,-900,520],[1840,-600,340],[2120,-780,450],[2560,-880,500],[2960,-660,320]]){
+    cyl(pg,pm,h*.035,h*.5,x,h*.25,z,false);
+    for(let k=0;k<3;k++)canopy(x+(r2()-.5)*h*.09,z+(r2()-.5)*40,h*(.14+k*.20),h*(.56-k*.07),h*(.50-k*.07),k?2:0,['#d4dcea','#c6d2e4','#dde4ef'][k]);}
   noSh(bake(pg,pm));}
 /* art v3 item 10: five painted bands, not eight blobs -- flatter (y .22), wider (x 1.8), each with a
    rose underside slab, and baked per material so the whole cloud layer costs 10 draw calls, not 48. */
@@ -1647,7 +1678,7 @@ for(const o of OBST){const g=grp(scene,o.x,0,zOf(o.y)),r=o.r;
     const b=grp(g,18,72,0);sph(b,M('#e76f51'),8,0,0,0,1.2,.9,.9);sph(b,M('#e76f51'),5,8,6,0);cone(b,M('#ffb703'),2,6,14,6,0).rotation.z=-Math.PI/2;anim.push(tt=>{b.position.y=72+Math.abs(Math.sin(tt*5))*4;b.rotation.y=Math.sin(tt*.7)*1.5;});}
   else if(o.k==='pool'){const pm=M('#39b9ea',{roughness:.3});for(let k=0;k<3;k++)add(g,new THREE.TorusGeometry(r-4,7,10,32),pm,0,7+k*9,0,1,1,1).rotation.x=Math.PI/2;cyl(g,M('#9be4f5',{roughness:.05}),r-6,2,0,22,0,false);
     const d=grp(g,0,27,0);sph(d,M('#ffd23f',{roughness:.3}),9,0,0,0,1.2,.8,.9);sph(d,M('#ffd23f',{roughness:.3}),6,8,7,0);cone(d,M('#ff9f1c'),2.4,6,15,6,0).rotation.z=-Math.PI/2;anim.push(tt=>{d.position.set(Math.sin(tt*.8+o.x)*r*.4,27+Math.sin(tt*3)*1.5,Math.cos(tt*.6)*r*.3);d.rotation.y=tt*.5;});}
-  else if(o.k==='cage'){sph(g,leafM,14,-3,22,0);sph(g,leafD,13,5,44,2);sph(g,leafM,11,-2,64,-2);const tm=M('#e63946',{roughness:.25});sph(g,tm,6,10,30,8);sph(g,tm,6,-10,48,7);sph(g,tm,5,6,62,6);sph(g,tm,5,-8,30,-9);
+  else if(o.k==='cage'){cluster(g,[{x:0,y:2,z:0,w:46,h:84,c:8,ry:.2},{x:0,y:0,z:0,w:40,h:72,c:7,ry:1.25}]);const tm=M('#e63946',{roughness:.25});sph(g,tm,6,10,30,8);sph(g,tm,6,-10,48,7);sph(g,tm,5,6,62,6);sph(g,tm,5,-8,30,-9);
     add(g,new THREE.CylinderGeometry(24,11,84,8,3,true),new THREE.MeshBasicMaterial({color:'#b9c1c9',wireframe:true}),0,42,0,1,1,1,false);}
   else if(o.k==='barrow'){const rm=M('#e63946',{roughness:.4});add(g,new THREE.CylinderGeometry(30,20,24,4),rm,2,38,0,1.25,1,.85).rotation.y=Math.PI/4;cyl(g,M('#4a2f1c',{roughness:1}),20,4,2,50,0).scale.set(26,4,17);
     const w=cyl(g,M('#222222'),12,8,30,12,0);w.rotation.x=Math.PI/2;for(const dz of [-12,12]){const h=cyl(g,M('#5b3a22'),2,52,-34,34,dz);h.rotation.z=Math.PI/2-.25;box(g,M('#5b3a22'),3,26,3,-20,13,dz);}}
@@ -2106,6 +2137,9 @@ function updCritters(dt){
   /* the deck is the other half of the frame and the doc's zone table does not reach it. Planting
      goes BEHIND the two rails -- a deep border outside the playable deck -- never on the planks,
      because foliage sprouting from decking reads as a bug, not a garden. */
+  /* a distant treeline above the hedge, so the bare ground plane never shows between the two */
+  for(let i=0;i<78;i++){const x=-500+r2()*1800,z=-360-r2()*420,h=210+r2()*180;
+    canopy(x,z,20+r2()*90,h*(1+r2()*.5),h,3,['#e2e8f0','#d6dfee','#eaeef4'][i%3]);}
   /* a blurred far hedge closes the horizon behind the deck, where the bare ground plane showed */
   for(let i=0;i<120;i++){const x=-260+r2()*1340,z=-112-r2()*r2()*130,h=150+r2()*118;
     plant(x,z,h*(1.1+r2()*.55),h,pick1(FAR),tint());}
@@ -2117,7 +2151,7 @@ function updCritters(dt){
     plant(x,z,h*(.95+r2()*.55),h,c,tint());}
   for(let i=0;i<54;i++){const x=-60+r2()*1070,z=-20-r2()*18,h=30+r2()*34;   /* spilling over the rail foot */
     plant(x,z,h*(1.2+r2()*.7),h,r2()<.5?pick1(FLW):pick1(GRS),tint());}
-  const folI=buildFol(FOL,true),ivyI=buildFol(FIVY,false);
+  const folI=buildFol(FOL,true),ivyI=buildFol(FIVY,false),canI=buildFol(CAN,true,TREE_TEX,.5,FCU2);
   /* the telegraph squash uniform: up to two live fans, lerped so plants duck rather than pop */
   const _fa=[0,0],_ft=[0,0];
   anim.push(()=>{const live=attacks.filter(a=>a.t<a.tele&&a.o).slice(0,2);
