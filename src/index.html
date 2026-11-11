@@ -122,7 +122,15 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 .bar{height:18px}
 .fill.pow{background:repeating-linear-gradient(115deg,var(--pow) 0 9px,#39d98a 9px 18px)}
 .boog{background:var(--pow)!important}
-@media (max-width:520px){.meter{flex:1 1 118px}.meter small{font-size:9px;padding:1px 5px}.port{width:21px;height:21px}.hbtn{padding:3px 8px}}
+/* boss-and-dance-mode.md 3: #rFill keeps its width percentage and its three colour steps -- the change is a
+   CSS mask only, so the fill drains left-to-right THROUGH heart shapes and partial health reads as a partly
+   drained heart. Browsers without mask-image fall back to today's bar, no JS branch. */
+.meter.hp{flex:0 0 auto}
+.meter.hp .bar{flex:0 0 76px;width:76px;height:19px;border:0;box-shadow:none;background:rgba(26,14,40,.72);-webkit-mask-image:var(--hearts);mask-image:var(--hearts);-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.meter.hp .bar .fill{border-radius:0}
+:root{--hearts:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 76 24" preserveAspectRatio="none"><g fill="%23000"><path d="M12 23C2 15 0 7 5 3 9 0 12 3 12 6 12 3 15 0 19 3 24 7 22 15 12 23Z"/><path d="M38 23C28 15 26 7 31 3 35 0 38 3 38 6 38 3 41 0 45 3 50 7 48 15 38 23Z"/><path d="M64 23C54 15 52 7 57 3 61 0 64 3 64 6 64 3 67 0 71 3 76 7 74 15 64 23Z"/></g></svg>')}
+.meter small{letter-spacing:.04em;white-space:nowrap}
+@media (max-width:520px){.meter{flex:1 1 118px}.meter small{font-size:9px;padding:1px 5px}.port{width:21px;height:21px}.hbtn{padding:3px 8px}.meter.hp .bar{flex:0 0 63px;width:63px;height:16px}}
 
 /* stacked-word logo: per-letter spans, so the mark still reads hand-lettered when Lilita One
    never loads and the chunky fallback (Arial Rounded MT Bold, then Trebuchet) takes over */
@@ -243,14 +251,14 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
     <div class="chip"><small>Level</small><span id="lvl">1</span></div>
     <div class="chip"><small>Score</small><span id="score">0</span></div>
     <div class="chip combo" id="comboChip" hidden><span id="combo">x2</span></div>
-    <div class="chip bready" id="boogaChip" hidden><span>BOOGA READY</span></div>
+    <div class="chip bready" id="boogaChip" hidden><span id="bchipTxt">DANCE READY</span></div>
     <div class="map" aria-hidden="true"><i class="deck"></i><i class="lawn"></i><i class="garden"></i><b class="view" id="mView"></b><b class="dot foe" id="mFoe"></b><b class="dot rosie" id="mRosie"></b></div>
     <button class="hbtn" id="pauseBtn" type="button">Pause</button>
     <button class="hbtn" id="mute" type="button">Sound on</button>
     <button class="hbtn" id="fsBtn" type="button">Full screen</button>
   </div>
   <div class="row meters">
-    <div class="meter"><span class="port rosie" aria-hidden="true"></span><small>Rosie</small><div class="bar"><div class="fill rosie" id="rFill"></div></div></div>
+    <div class="meter hp"><span class="port rosie" aria-hidden="true"></span><small>Rosie</small><div class="bar"><div class="fill rosie" id="rFill"></div></div></div>
     <div class="meter"><span class="port foe" aria-hidden="true"></span><small id="phaseLbl">Hose</small><div class="bar"><div class="fill" id="hFill"></div></div></div>
     <div class="meter"><span class="port star" aria-hidden="true"></span><small id="powLbl">Power</small><div class="bar"><div class="fill pow" id="pFill" style="width:0%"></div></div></div>
     <div class="stam" id="stamPips" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i hidden></i></div>
@@ -261,7 +269,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
   <div class="pad" id="pad"><div class="knob" id="knob"></div></div>
   <span></span>
   <div class="btns">
-    <button class="act booga" id="boogaBtn" type="button" disabled><span class="g" aria-hidden="true"></span>Booga</button>
+    <button class="act booga" id="boogaBtn" type="button" disabled><span class="g" aria-hidden="true"></span>Dance</button>
     <button class="act bark" id="barkBtn" type="button"><span class="g" aria-hidden="true"></span>Bark</button>
     <button class="act dash" id="dashBtn" type="button"><span class="g" aria-hidden="true"></span>Dash</button>
     <button class="act bite" id="biteBtn" type="button"><span class="g" aria-hidden="true"></span>Bite</button>
@@ -283,7 +291,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
       <dt>Bite</dt><dd><kbd>Space</kbd> the glowing yellow weak spot</dd>
       <dt>Dash</dt><dd><kbd>Shift</kbd> through the water to dodge</dd>
       <dt>Watch</dt><dd>Red and amber shapes mean water is coming</dd>
-      <dt>Power</dt><dd>Bites and dodges charge BOOGA TIME</dd>
+      <dt>Power</dt><dd>Bites and dodges charge GIANT DANCE MODE</dd>
       <dt>Booga</dt><dd><kbd>V</kbd> or the star button when the meter is full</dd>
       <dt>Pounce</dt><dd>Dash, then <kbd>Space</kbd> mid-dash to leap the last stretch</dd>
       <dt>Shake</dt><dd><strong>Hold</strong> <kbd>Space</kbd> after a bite to thrash for extra damage</dd>
@@ -1732,6 +1740,21 @@ const dTag=sph(dogP,M('#ffd23f',{emissive:'#7a5a00'}),5.5,38,52,0,1,1,.5,false);
 const dMouth=sph(dHead,M('#5a1f1f'),1,38,-21,0,7,5,8,false),dTongue=sph(dHead,M('#ff7b9c',{roughness:.4}),1,41,-21,0,4.5,2.5,4.5,false);
 const dLegs=[[18,13,0],[18,-13,.6],[-20,13,2.4],[-20,-13,3]].map(([x,z,ph])=>{const g=grp(dogP,x,36,z);cyl(g,furM,7.5,30,0,-16,0);sph(g,furM,9,2,-31,0,1,.72,1);return {g,ph};});
 bake(dBody,furM);bake(dBody,furS);bake(dTail,furM);bake(dHead,furM);bake(dHead,furS);for(const e of dEars)bake(e,furS);for(const l of dLegs)bake(l.g,furM);
+/* ---- boss-and-dance-mode.md 2: GIANT DANCE MODE. Visual only. danceS multiplies dogP.scale, never R.sc --
+   R.sc feeds collision and the camera, so growing it would be a gameplay change this doc does not own.
+   Halo and ribbon are renderOrder 1 (below weakCore's 2), depthWrite:false, and both dim to 35% whenever a
+   telegraph is near Rosie or a lasso is live, so neither can ever sit on top of the weak spot. ---- */
+let danceS=0,danceWarn=false;const _dq=new THREE.Quaternion();
+const haloTex=ctex(128,128,1,1,g=>{const gr=g.createRadialGradient(64,64,26,64,64,64);gr.addColorStop(0,'rgba(255,230,192,0)');gr.addColorStop(.5,'rgba(255,232,198,.95)');gr.addColorStop(.72,'rgba(255,214,150,.45)');gr.addColorStop(1,'rgba(255,230,192,0)');g.fillStyle=gr;g.fillRect(0,0,128,128);});
+haloTex.wrapS=haloTex.wrapT=THREE.ClampToEdgeWrapping;
+const dHalo=new THREE.Mesh(new THREE.CircleGeometry(74,24),new THREE.MeshBasicMaterial({map:haloTex,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+dHalo.position.y=188;dHalo.renderOrder=1;dHalo.frustumCulled=false;dHalo.visible=false;dogP.add(dHalo);
+/* The rainbow has two holes in it: no stop inside #ffb062-#ffd23f and none within 25 degrees of #ff0f46,
+   the same hue reservation painted-garden.md puts on the foliage atlas. */
+const ribTex=ctex(256,8,1,1,g=>{const gr=g.createLinearGradient(0,0,256,0);gr.addColorStop(0,'#7de8ff');gr.addColorStop(.25,'#9b8cff');gr.addColorStop(.5,'#ff8fd0');gr.addColorStop(.75,'#a8ff9b');gr.addColorStop(1,'#7de8ff');g.fillStyle=gr;g.fillRect(0,0,256,8);});
+const dRib=(()=>{const p=[];for(let i=0;i<=48;i++){const u=i/48,a=u*Math.PI*8;const r=46+22*Math.sin(u*Math.PI);p.push(new THREE.Vector3(Math.cos(a)*r,-6+u*210,Math.sin(a)*r));}
+  const m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(p),72,5.5,6,false),new THREE.MeshBasicMaterial({map:ribTex,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
+  m.renderOrder=1;m.frustumCulled=false;m.visible=false;dogP.add(m);return m;})();
 const dBrows=[1,-1].map(s=>sph(dHead,furS,1,34,23,s*17,4.5,4.5,9,false)); /* after the bake: these tilt */
 ink(dog);const INK_R=INK.clone();INK_R.uniforms.th.value=1.8;INK_R.uniforms.c=INK.uniforms.c;dog.traverse(m=>{if(m.userData.ink)m.material=INK_R;}); /* heavier line on Rosie only */
 /* art v3 item 13: soft-edged contact shadow (radial alpha ramp), and the handle the hind-legs pose narrows */
@@ -1976,13 +1999,21 @@ ink(man);let hatT=0,wasCower=false;
 /* the hose */
 /* hose skin (art v2 item 5): 64x64 multiply map -- body, a belly stripe 20% of the circumference, one dark band per 64-unit tile.
    Values are near-greyscale on purpose: hoseM.color keeps driving the whole body through the winded/BOOGA tints, and the map only shades it. */
-const hoseTex=ctex(64,64,Math.round(N*SEG/64),1,g=>{g.fillStyle='#c8c8c8';g.fillRect(0,0,64,64);g.fillStyle='#e6e6a8';g.fillRect(0,26,64,13);g.fillStyle='#86868f';g.fillRect(4,0,4,64);g.fillStyle='#4e4e58';g.fillRect(0,0,4,64);});
-const hoseM=M('#28cd6d',{roughness:.25,map:hoseTex}),HOSE_G=new THREE.Color('#28cd6d'),HOSE_Y=new THREE.Color('#e4f76a'),HOSE_P=new THREE.Color('#b5179e'),BLK=new THREE.Color('#000000');
+/* boss-and-dance-mode.md 1.2: the concept's pale coiled body arrives through the MULTIPLY map, never the
+   colour -- hoseM.color is still the four-state channel, so green reads green and the winded flash flashes. */
+const hoseTex=ctex(64,64,Math.round(N*SEG/64),1,g=>{g.fillStyle='#c8c8c8';g.fillRect(0,0,64,64);
+  g.fillStyle='#8e8e98';for(let i=0;i<7;i++){const y=i*9.6-6;g.beginPath();g.moveTo(0,y);g.lineTo(32,y+7);g.lineTo(64,y);g.lineTo(64,y+5.5);g.lineTo(32,y+12.5);g.lineTo(0,y+5.5);g.closePath();g.fill();}
+  g.fillStyle='#f2ece2';g.fillRect(0,26,64,14);
+  g.fillStyle='#6e6e78';g.fillRect(5,0,1,64);g.fillRect(46,0,1,64);});
+/* The glowing energy is an emissiveMap, not a mesh: zero draw calls, zero geometry. 3px seam + 5 blobs per tile. */
+const hoseEm=ctex(64,64,Math.round(N*SEG/64),1,g=>{g.fillStyle='#000000';g.fillRect(0,0,64,64);g.fillStyle='#ffffff';g.fillRect(0,10,64,3);for(let i=0;i<5;i++){g.beginPath();g.arc(6+i*13,11.5,4.4,0,6.283);g.fill();}g.fillStyle='#6a6a6a';g.fillRect(0,53,64,2);});
+const EMC=h=>{const c=new THREE.Color(h);c.convertSRGBToLinear();return c;},EM_G=EMC('#1d9c5c'),EM_C=EMC('#46872c'),EM_Y=EMC('#6a7a12'),EM_P=EMC('#a01383');
+const hoseM=M('#28cd6d',{roughness:.25,map:hoseTex,emissive:'#1d9c5c',emissiveMap:hoseEm}),HOSE_G=new THREE.Color('#28cd6d'),HOSE_Y=new THREE.Color('#e4f76a'),HOSE_P=new THREE.Color('#b5179e'),BLK=new THREE.Color('#000000');
 const hv=[...Array(N+1)].map(()=>new THREE.Vector3()),hCurve=new THREE.CatmullRomCurve3(hv),hose3=new THREE.Mesh(new THREE.BufferGeometry(),hoseM);hose3.castShadow=true;hose3.receiveShadow=true;hose3.frustumCulled=false;scene.add(hose3);const ink3=new THREE.Mesh(hose3.geometry,INK);ink3.frustumCulled=false;scene.add(ink3);
 /* 3.2: the extra snakes reuse the hose's rope+TubeGeometry approach at 36 nodes and a
    darker clone of hoseM, so the main hose keeps its own winded/BOOGA tint. Two meshes are
    reserved up front (2 draw calls when visible) and never exceeded. */
-const snakeM=hoseM.clone();snakeM.color.set('#1b8f4b');
+const snakeM=hoseM.clone();snakeM.color.set('#1b8f4b');snakeM.emissive.copy(EM_G).multiplyScalar(.35);/* 1.4: the snakes stay headless AND dim -- threat-count, not a second light source */
 const SN_MESH=[0,1].map(()=>{const v=[...Array(SN_N+1)].map(()=>new THREE.Vector3());
   const o={v,c:new THREE.CatmullRomCurve3(v),m:new THREE.Mesh(new THREE.BufferGeometry(),snakeM)};
   o.m.castShadow=true;o.m.receiveShadow=true;o.m.frustumCulled=false;o.m.visible=false;scene.add(o.m);return o;});
@@ -2000,9 +2031,24 @@ const angryEyes=(g,x,y,r)=>{const ps=[];for(const s of [1,-1]){const z0=s*r*1.1;
 const trackEyes=(ps,g,r)=>{const ry=g.rotation.y,dx=R.x-g.position.x,dz=zOf(R.y)-g.position.z,l=Math.hypot(dx,dz)||1,c=Math.cos(ry),sn=Math.sin(ry),lx=(dx*c-dz*sn)/l,lz=(dx*sn+dz*c)/l;for(const e of ps){e.p.position.x=e.bx+lx*r*.24;e.p.position.z=e.z0+lz*r*.26;}};
 const scar3=[...Array(16)].map(()=>sph(scene,M('#0c3318',{roughness:.9}),9,0,0,0,1,.55,1,false)),HOSE_W=new THREE.Color('#a9bf52');
 const nozHead=grp(scene);nozHead.scale.setScalar(1.6);let nozEyes,nozJaw;
-{const nozM=M('#d9793b',{metalness:.5,roughness:.3});const b=cyl(nozHead,nozM,8,26,4,0,0);b.rotation.z=Math.PI/2;const tp=cyl(nozHead,M('#b35c2a'),6.5,7,19,0,0);tp.rotation.z=Math.PI/2;nozEyes=angryEyes(nozHead,2,11,9);
+/* boss-and-dance-mode.md 1.1: the nozzle is a DRAGON head. The group, the 1.6 scale, nozEyes, nozJaw and
+   trackEyes() are untouched, so aiming, the jaw-drop telegraph and eye tracking keep working. It reads
+   menacing through SILHOUETTE -- horns, brow, jaw -- not through light: no emissive anywhere on this head,
+   because the concept's hot-magenta lamp eyes sit 20 degrees off the warning red and would be a second
+   bright point chasing weak3 across the yard. Same-material parts are bake()d, so the whole kit is 7 calls. */
+{const skullM=M('#7f9a8c',{roughness:.35}),shadeM=M('#5e7368',{roughness:.4}),hornM=M('#4a4258',{roughness:.5}),tipM=M('#b9a9c9',{roughness:.4}),fangM=M('#f4efe2',{roughness:.3}),plateM=M('#dfd6c4',{roughness:.45});
+ const b=cyl(nozHead,skullM,8,26,4,0,0);b.rotation.z=Math.PI/2;b.scale.set(6.24,26,7.36);
+ const sn=cone(nozHead,skullM,6,20,21,-1,0);sn.rotation.z=-Math.PI/2;sn.scale.set(4.6,20,7);
+ const br=box(nozHead,shadeM,16,4,18,4,14,0);br.rotation.x=-.18;
+ for(const s of [1,-1]){cone(nozHead,hornM,3.5,26,-2,16,s*8).rotation.set(0,s*.35,1.1);cone(nozHead,tipM,2,14,-8,12,s*11).rotation.set(0,s*.6,1.35);}
+ for(const s of [1,-1]){const f=cone(nozHead,fangM,2.2,9,14,-5,s*5.5);f.rotation.z=Math.PI;f.scale.y=8.1;}/* rounded, scale y .9 -- the v2 do-not list */
+ for(let i=0;i<3;i++)sph(nozHead,plateM,7-i*.9,11-i*9,-9.5,0,1.25,.5,1.05);
+ add(nozHead,G_B,new THREE.MeshBasicMaterial({color:'#5a1026',side:THREE.DoubleSide}),9,-3,0,20,7,13,false);/* mouth interior, unlit so ink() skips it */
+ bake(nozHead,skullM);bake(nozHead,hornM);bake(nozHead,tipM);bake(nozHead,fangM);bake(nozHead,plateM);
+ nozEyes=angryEyes(nozHead,2,11,9);
  /* hinged lower jaw: half cylinder, flat face up, hinged behind the barrel so it drops open during a telegraph */
- nozJaw=grp(nozHead,-7,-4,0);const jw=add(nozJaw,new THREE.CylinderGeometry(1,1,1,12,1,false,0,Math.PI),M('#d9793b',{side:THREE.DoubleSide}),12,0,0,9,24,9);jw.rotation.z=-Math.PI/2;}
+ nozJaw=grp(nozHead,-7,-4,0);const jw=add(nozJaw,new THREE.CylinderGeometry(1,1,1,12,1,false,0,Math.PI),M('#7f9a8c',{side:THREE.DoubleSide}),12,0,0,9,24,9);jw.rotation.z=-Math.PI/2;
+ for(const s of [1,-1])cone(nozJaw,fangM,2.2,9,20,3,s*5).scale.y=8.1;bake(nozJaw,fangM);}
 const midHead=grp(scene);midHead.scale.setScalar(1.5);sph(midHead,M('#2e9a4b',{roughness:.3}),16,4,0,0,1.2,.9,.95);sph(midHead,M('#123f1f'),3,22,-1,0);
 const midEyes=angryEyes(midHead,8,12,9);
 /* two-tooth grin: round teeth, no points (see the do-not list) */
@@ -2256,8 +2302,8 @@ function render3D(dt){
   dLegs.forEach((l,i)=>{const sw=Math.sin(run+l.ph)*.85*sfS+(dance&&!moving?Math.sin(t*12+l.ph)*.5:0);
     l.g.rotation.z=i<2?lerp(sw,1.25,rearK)+Math.sin(t*9+l.ph)*.35*rearK:lerp(sw,-.25,rearK);});  /* fronts paddle, backs tuck under the hips */
   dHead.position.set(30+dip*.35,116-dip+rearK*4*Math.sin(t*4.8),0);dHead.rotation.z=-dip*.035+(moving?0:Math.sin(t*1.3)*.04)-rearK*.75;dHead.rotation.x=dance?Math.sin(t*6)*.25:0;dHead.scale.setScalar(1+.22*Math.sin(Math.min(1,R.biteT/.3)*Math.PI));dHead.rotation.y=R.thrash>0?Math.sin(t*42)*.75:0;
-  dEars.forEach((e,i)=>{e.rotation.x=(i?1:-1)*(.12+Math.abs(Math.sin(t*(moving?15:2.5)))*(moving?.5:.1)*(1+.6*rearK));e.rotation.z=rearK*.10;});dTail.rotation.y=Math.sin(t*(moving?18:9))*(.7+.4*rearK);dTail.rotation.z=rearK*.50;dShadow.scale.x=1-.35*rearK;
-  const shut=R.wet>0||R.recover>0||(t%3.7)<.12;happyT=R.thrash>0?1.6:Math.max(0,happyT-dt);const happy=booga||happyT>0;dEyes.forEach(e=>{e.scale.y=13.2*(shut?.18:happy?.35:1);});{const warn=attacks.some(a=>a.t<a.tele&&(a.type==='jet'?segDist(R.x,R.y,a.o.x,a.o.y,a.o.x+a.dx*a.len,a.o.y+a.dy*a.len):a.type==='sweep'?Math.hypot(a.o.x-R.x,a.o.y-R.y)-a.range:a.type==='bomb'?Math.min(...a.spots.map(q=>Math.hypot(q.x-R.x,q.y-R.y))):Math.hypot(a.tx-R.x,a.ty-R.y))<200);browS=lerp(browS,R.chomp>0||R.biteT>0?-.55:warn?.5:0,1-Math.exp(-dt*14));dBrows.forEach((b,i)=>{b.rotation.x=(i?-1:1)*browS;b.position.y=21+Math.max(0,browS)*5;});}dMouth.visible=R.chomp>0||rearK>.5;dTongue.visible=(moving||rearK>.5)&&R.chomp<=0;
+  dEars.forEach((e,i)=>{e.rotation.x=(i?1:-1)*(.12+Math.abs(Math.sin(t*(moving?15:2.5)))*(moving?.5:.1)*(1+.6*rearK));e.rotation.z=rearK*.10;});dTail.rotation.y=Math.sin(t*(moving?18:9))*(.7+.4*rearK+.3*danceS);dTail.rotation.z=rearK*.50;dShadow.scale.x=1-.35*rearK;
+  const shut=R.wet>0||R.recover>0||(t%3.7)<.12;happyT=R.thrash>0?1.6:Math.max(0,happyT-dt);const happy=booga||happyT>0;dEyes.forEach(e=>{e.scale.y=13.2*(shut?.18:happy?.35:1);});{const warn=attacks.some(a=>a.t<a.tele&&(a.type==='jet'?segDist(R.x,R.y,a.o.x,a.o.y,a.o.x+a.dx*a.len,a.o.y+a.dy*a.len):a.type==='sweep'?Math.hypot(a.o.x-R.x,a.o.y-R.y)-a.range:a.type==='bomb'?Math.min(...a.spots.map(q=>Math.hypot(q.x-R.x,q.y-R.y))):Math.hypot(a.tx-R.x,a.ty-R.y))<200);danceWarn=warn||Lass.ph==='tele';browS=lerp(browS,R.chomp>0||R.biteT>0?-.55:warn?.5:0,1-Math.exp(-dt*14));dBrows.forEach((b,i)=>{b.rotation.x=(i?-1:1)*browS;b.position.y=21+Math.max(0,browS)*5;});}dMouth.visible=R.chomp>0||rearK>.5;dTongue.visible=(moving||rearK>.5)&&R.chomp<=0;
   /* special-moves.md 3.2: poseSpecial owns the whole rig for the length of a move; the wrench is
      the hit-reaction follow-through (user request), and the else-branch restores what the gait
      pose does not write every frame. */
@@ -2267,6 +2313,15 @@ function render3D(dt){
     for(const l of dLegs)l.g.rotation.x=0;
     if(R.wrench>0){const e=Math.sin(clamp(R.wrench/HIT_WR[R.wrenchW-1],0,1)*Math.PI)*(.45+.22*R.wrenchW);
       dogP.rotation.z+=e*.30;dHead.rotation.z-=e*.55;dHead.position.x-=e*9;dogP.scale.set(1+e*.14,1-e*.12,1+e*.06);}}
+  /* GIANT DANCE MODE: applied last so it layers on top of the gait AND poseSpecial, both of which write
+     dogP.scale every frame. reduce pins danceS to 0 -- scale is motion, not information, same rule as rearK. */
+  {danceS=reduce?0:clamp(danceS+(booga?dt/.5:-dt/.3),0,1);const dS=booga?1-(1-danceS)*(1-danceS):danceS;
+   if(dS>.002)dogP.scale.multiplyScalar(1+.30*dS);
+   dTail.scale.x=1+.55*dS;
+   const vis=dS>.01;dHalo.visible=dRib.visible=vis;
+   if(vis){const dim=danceWarn?.35:1;dHalo.material.opacity=.60*dS*dim;dRib.material.opacity=.92*dS*dim;
+     dRib.rotation.y=t*3.77;ribTex.offset.x=(-t*.5)%1;
+     dHalo.quaternion.copy(cam.quaternion);dogP.getWorldQuaternion(_dq);dHalo.quaternion.premultiply(_dq.invert());dHalo.rotateZ(t*2.51);}}
   furM.color.copy(FURC).lerp(FWET,Math.min(1,R.wet)*.8);furS.color.copy(FURS).lerp(FWET,Math.min(1,R.wet)*.8);dAura.material.opacity=(booga?1:power/POWER_MAX)*.13*(.75+.25*Math.sin(t*8));dAura.material.color.set(Math.sin(t*5)>0||!booga?'#c77dff':'#39d98a');
   /* the waterer */
   const cower=Hm.cower,up=Hm.shock>0||!Hm.grabbed,sw=Hm.moving?Math.sin(Hm.walkT*9):0,cw=Hm.moving?Math.cos(Hm.walkT*9):0;
@@ -2279,7 +2334,12 @@ function render3D(dt){
   const ruined=state==='burst'||state==='won',hTele=attacks.some(a=>a.t<a.tele&&a.src!=='human')||Lass.ph==='tele';
   if(!ruined){for(let i=0;i<=N;i++){const p=rope[i];hv[i].set(p.x,p.z+8.5,zOf(p.y));}hose3.geometry.dispose();hose3.geometry=new THREE.TubeGeometry(hCurve,190,8.75,7,false);hose3.visible=true;shred.visible=false;shredDone=false;
     hoseM.color.copy(HOSE_G).lerp(HOSE_W,(1-hoseHP/100)*.55);if(J.winded>0)hoseM.color.lerp(HOSE_Y,.5+.4*Math.sin(t*20));else if(booga)hoseM.color.lerp(HOSE_P,.3+.25*Math.sin(t*10));
-    if(!reduce){hoseTex.offset.x=(hoseTex.offset.x+(weak>N/2?-1:1)*(hTele?2:.6)*dt)%1;}
+    /* boss-and-dance-mode.md 1.2 + 1.5: magenta is a BOOGA word, not a boss word -- the seam is green-cyan in
+       normal play and only goes magenta in BOOGA or phase 3. Winded stays dim so it never competes with the
+       yellow bite flash, and the whole seam drops to 40% within 260 units of the weak spot. */
+    {const em=hoseM.emissive;if(J.winded>0)em.copy(EM_Y);else if(booga||phase===3)em.copy(EM_P);else em.copy(EM_G).lerp(EM_C,(1-hoseHP/100)*.55);
+     const wq=rope[weak];if(Math.hypot(R.x-wq.x,R.y-wq.y)<260)em.multiplyScalar(.4);}
+    if(!reduce){hoseTex.offset.x=(hoseTex.offset.x+(weak>N/2?-1:1)*(hTele?2:.6)*dt)%1;hoseEm.offset.x=hoseTex.offset.x;}
     if(state==='play')for(const i of punct)if(Math.random()<.08){const q=rope[i];addPart({type:'water',x:q.x,y:q.y,vx:rand(-70,70),vy:rand(-280,-160),life:.6,max:.6,size:3,g:1});}}
   else if(!shredDone){shredDone=true;hose3.visible=false;shred.visible=true;const d=new THREE.Object3D();for(let i=0;i<30;i++){const p=rope[3+i*Math.floor((N-6)/30)];d.position.set(p.x+rand(-30,30),7,zOf(p.y)+rand(-30,30));d.rotation.set(Math.PI/2,0,rand(0,6.28));d.scale.set(7,rand(30,60),7);d.updateMatrix();shred.setMatrixAt(i,d.matrix);}shred.instanceMatrix.needsUpdate=true;}
   SN_MESH.forEach((sm,i)=>{const s=snakes[i];
@@ -2352,7 +2412,7 @@ function drawOverlay(){ctx.setTransform(ovDpr,0,0,ovDpr,0,0);ctx.clearRect(0,0,V
     if(q.z<1){ctx.globalAlpha=clamp(Mot.hintT/.2,0,1);label(Mot.hint,q.x,q.y,26*us,'#80ffdb');ctx.globalAlpha=1;}}
   if(flash>0){ctx.fillStyle=`rgba(255,255,255,${Math.min(.6,flash)})`;ctx.fillRect(0,0,VW,VH);}
   drawBanner();drawIndicator();drawConfetti();}
-function drawBanner(){if(!booga)return;const txt="IT'S BOOGA TIME!",intro=Math.min(1,boogaT/.6),sc=intro<1?(.3+.7*intro)*(1+Math.sin(intro*Math.PI)*.4):1+(reduce?0:Math.sin(t*6)*.05);
+function drawBanner(){if(!booga)return;const txt="GIANT DANCE MODE!",intro=Math.min(1,boogaT/.6),sc=intro<1?(.3+.7*intro)*(1+Math.sin(intro*Math.PI)*.4):1+(reduce?0:Math.sin(t*6)*.05);
   ctx.save();ctx.translate(VW/2,Math.max(118,VH*.2));ctx.scale(sc,sc);ctx.font=`${Math.round(Math.min(62,VW/13))}px ${DISPLAY}`;ctx.textBaseline='middle';ctx.textAlign='left';ctx.lineJoin='round';
   const ch=[...txt],ws=ch.map(c=>ctx.measureText(c).width),tw=ws.reduce((a,b)=>a+b,0);let x=-tw/2;
   ch.forEach((c,i)=>{const y=reduce?0:Math.sin(t*8+i*.6)*7;ctx.lineWidth=9;ctx.strokeStyle='#240046';ctx.strokeText(c,x,y);ctx.fillStyle=`hsl(${(i*28+t*160)%360},100%,62%)`;ctx.fillText(c,x,y);x+=ws[i];});
@@ -2367,17 +2427,39 @@ function drawConfetti(){for(const c of confetti){ctx.save();ctx.translate(c.x,c.
 
 /* ---------- HUD ---------- */
 let lastHud='';
+/* boss-and-dance-mode.md 3: painted portraits. ctex() hands back a THREE texture, not a canvas, so the CSS
+   discs need their own painter on the same runtime-canvas path; the 3px ink border and 0 3px 0 shadow stay,
+   because the frame is what makes them read as portraits. Painted once at boot, never per frame. */
+function portrait(kind){const c=document.createElement('canvas');c.width=c.height=96;const g=c.getContext('2d');
+  const disc=h=>{g.fillStyle=h;g.beginPath();g.arc(48,48,48,0,6.283);g.fill();};
+  if(kind==='rosie'){disc('#4a3a86');
+    g.fillStyle='#c7ae9c';for(const s of [-1,1]){g.save();g.translate(48+s*32,56);g.rotate(s*.4);g.beginPath();g.ellipse(0,0,15,27,0,0,6.283);g.fill();g.restore();}
+    g.fillStyle='#fff3dd';g.beginPath();g.ellipse(48,50,37,35,0,0,6.283);g.fill();
+    g.fillStyle='#ff9f8a';for(const s of [-1,1]){g.beginPath();g.ellipse(48+s*27,62,9,6,0,0,6.283);g.fill();}
+    g.fillStyle='#2a1a22';for(const s of [-1,1]){g.beginPath();g.ellipse(48+s*15,44,8,9.5,0,0,6.283);g.fill();}
+    g.fillStyle='#fffaf0';for(const s of [-1,1]){g.beginPath();g.arc(50+s*15,40,3,0,6.283);g.fill();}
+    g.fillStyle='#7a4e42';g.beginPath();g.ellipse(48,66,10,7,0,0,6.283);g.fill();}
+  else{disc('#241538');
+    g.fillStyle='#4a4258';for(const k of [0,1]){g.save();g.translate(44-k*13,34+k*9);g.rotate(-.62-k*.3);g.beginPath();g.moveTo(0,8);g.lineTo(-4,-9);g.lineTo(40,-24);g.lineTo(38,-12);g.closePath();g.fill();g.restore();}
+    g.fillStyle='#7f9a8c';g.beginPath();g.ellipse(40,54,27,21,-.1,0,6.283);g.fill();g.beginPath();g.moveTo(52,42);g.lineTo(96,58);g.lineTo(52,70);g.closePath();g.fill();
+    g.fillStyle='#5e7368';g.save();g.translate(38,38);g.rotate(-.2);g.fillRect(-20,-6,42,11);g.restore();
+    g.fillStyle='#5a1026';g.beginPath();g.moveTo(52,62);g.lineTo(94,60);g.lineTo(52,78);g.closePath();g.fill();
+    g.fillStyle='#f4efe2';for(const x of [60,70]){g.beginPath();g.moveTo(x,61);g.lineTo(x+7,61);g.lineTo(x+3,74);g.closePath();g.fill();}
+    g.fillStyle='#e63946';g.beginPath();g.ellipse(38,49,9,8,0,0,6.283);g.fill();
+    g.fillStyle='#241538';g.beginPath();g.ellipse(40,49,3,6.5,0,0,6.283);g.fill();}
+  return c.toDataURL();}
+for(const k of ['rosie','foe']){const el=document.querySelector('.port.'+k);if(el){el.style.backgroundImage='url('+portrait(k)+')';el.style.backgroundSize='100% 100%';el.style.backgroundColor='transparent';}}
 function hud(){const pc=v=>(clamp(v/WORLD,0,1)*100).toFixed(2)+'%';$('mRosie').style.left=pc(R.x);$('mFoe').style.left=pc(rope[weak].x);$('mView').style.left=pc(R.x-600);$('mView').style.width=pc(1200);
   const bk=!booga&&power>=pMax()&&state==='play';   // 3.5: banked and waiting on the player
   const k=[level,score,Math.round(R.hp),Math.round(hoseHP),power,booga,combo,phase,R.stam,bk?1:0,mode,state,snakes.length,booga?Math.ceil(bLen()-boogaT):0,Math.ceil(R.barkCd*10),chainRep?1:0].join('|');if(k===lastHud)return;lastHud=k;
   $('lvl').textContent=level;$('score').textContent=score;$('comboChip').hidden=combo<2;$('comboChip').classList.toggle('rep',chainRep);
   $('combo').textContent='CHAIN x'+combo+(chainRep?'  same move':'  VARIED!')+(combo>=4?'  bite +'+Math.round((chainDmg()-1)*100)+'%':'');
   const hpp=clamp(R.hp/D().hpMax*100,0,100),rf=$('rFill');rf.style.width=hpp+'%';rf.style.backgroundColor=hpp>50?'#ff8fab':hpp>25?'#f4b400':'#e63946';
-  const hf=$('hFill');hf.style.width=hoseHP+'%';hf.style.backgroundColor=phase===1?'#2fa84f':phase===2?'#f4b400':'#e63946';$('phaseLbl').textContent=phase===1?'Hose':'Hose · Phase '+phase;
+  const hf=$('hFill');hf.style.width=hoseHP+'%';hf.style.backgroundColor=phase===1?'#2fa84f':phase===2?'#f4b400':'#e63946';{const bn=innerWidth<=520?'Living Hose':'The Living Hose';$('phaseLbl').textContent=phase===1?bn:bn+' · Phase '+phase;}
   const pf=$('pFill');pf.style.width=(booga?Math.max(0,1-boogaT/bLen())*100:power/pMax()*100)+'%';pf.classList.toggle('ready',bk);
-  $('powLbl').textContent=booga?'BOOGA!':bk?'BOOGA READY':'Power';$('powLbl').classList.toggle('boog',!!booga||bk);$('boogaChip').hidden=!bk;
+  $('powLbl').textContent=booga?'DANCING!':bk?'DANCE READY':'Power';$('powLbl').classList.toggle('boog',!!booga||bk);{const bc=$('boogaChip');bc.hidden=!bk&&!booga;$('bchipTxt').textContent=booga?'GIANT DANCE MODE':'DANCE READY';bc.classList.toggle('live',!!booga);}
   const bb=$('boogaBtn');bb.disabled=state!=='play'||!bk;bb.classList.toggle('on',bk);   // visibly dead until the meter is full
-  bb.title=bk?'BOOGA TIME - V or this button':'BOOGA needs a full power meter';
+  bb.title=bk?'GIANT DANCE MODE - V or this button':'Giant Dance Mode needs a full power meter';
   const kb=$('barkBtn'),bcd=Math.max(0,R.barkCd);kb.disabled=state!=='play';   // Bark shows its own cooldown
   kb.classList.toggle('cool',bcd>0);kb.style.setProperty('--cd',(bcd/BARK_CD).toFixed(2));
   kb.title=bcd>0?'Bark recharging - '+bcd.toFixed(1)+' s':'Bark - B or this button';
