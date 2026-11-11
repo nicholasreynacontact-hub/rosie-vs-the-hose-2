@@ -156,6 +156,22 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 #startOv .how{font-size:clamp(11px,2.4vw,13.5px);gap:3px 10px;align-items:center}
 #startOv .how dd{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .how kbd+kbd{margin-left:3px}
+/* title-and-expressions 4: the panel inverts the value relationship -- deep ground, warm cream type, so the
+   LETTERS are the light instead of a cream slab being the brightest object on screen. Scoped to
+   #startOv .card: HUD, pause and results cards keep --paper. Hue pulled off the doc's #2b2152 toward the
+   muted garden, so the panel sits beside sage instead of shouting violet at it. Live text throughout. */
+#startOv .card{--t-panel:#3b3450;--t-panel2:#2c2740;--t-edge:#1d1a2a;--t-cream:#ffeeda;--t-body:#e0d2bf;--t-amber:#ffb062;--t-hose:#2fd98a;
+  background:linear-gradient(180deg,var(--t-panel),var(--t-panel2));border-color:var(--t-edge);box-shadow:0 8px 0 var(--t-edge);color:var(--t-body);overflow:hidden}
+#startOv .card::before{content:'';position:absolute;left:50%;top:20%;width:260px;height:260px;transform:translate(-50%,-50%);pointer-events:none;
+  background:radial-gradient(circle,rgba(255,154,90,.22),rgba(255,154,90,0) 70%)} /* the reference's lamp glow: the panel's value anchor */
+#startOv .card>*{position:relative}
+#startOv .eyebrow,#startOv .how dt{color:var(--t-amber)}
+#startOv p,#startOv .how dd{color:var(--t-body)}
+#startOv .logo i{color:var(--t-cream);-webkit-text-stroke-width:3px;-webkit-text-stroke-color:var(--t-edge);text-shadow:0 5px 0 var(--t-edge)}
+#startOv .logo .w2 i{color:var(--t-amber)}
+#startOv .logo .w3 i{color:var(--t-hose)} /* --go-g goes muddy on a dark ground */
+#startOv .logo .w3{font-size:clamp(29px,7vw,46px)} /* hierarchy: Rosie > the Hose > vs. */
+#startOv .logo .w{max-width:100%} /* web-font failure is a hard requirement: the fallback must not overflow */
 @media (min-width:720px){#startOv{align-items:center}#startOv .card{width:46%;min-width:340px;max-width:540px}}
 
 /* touch buttons: paw and fang glyphs, inner top highlight, 4 px ink */
@@ -1846,7 +1862,7 @@ const boneM=M('#fffaf0',{roughness:.4,emissive:'#554422'}),treat3=[0,1,2].map(()
 const WHITE=new THREE.Color('#ffffff'),WETC=new THREE.Color('#b9dcf5');
 /* wardrobe 2.2: FURC/FURS are captured by the wet lerp in render3D, so wFur() rebuilds them -- without this Rosie snaps back to cream the moment she gets wet */
 let FURC=new THREE.Color('#fff3dd').convertSRGBToLinear(),FWET=new THREE.Color('#a9c4d2').convertSRGBToLinear(),FURS=new THREE.Color('#c7ae9c').convertSRGBToLinear();
-const furM=M('#fff3dd',{roughness:.92}),furS=M('#c7ae9c',{roughness:.92}),collarM=M('#d9859c'),peachM=M('#f3d9c6',{roughness:.8}),noseM=M('#7a4e42',{roughness:.25}),eyeM=M('#2a1a22',{roughness:.05}),irisM=M('#6e4122'),glintM=new THREE.MeshBasicMaterial({color:'#ffffff'}),glint3M=new THREE.MeshBasicMaterial({color:'#ffd9b0',transparent:true,opacity:.35});
+const furM=M('#fff3dd',{roughness:.92}),furS=M('#c7ae9c',{roughness:.92}),collarM=M('#d9859c'),peachM=M('#f3d9c6',{roughness:.8}),noseM=M('#7a4e42',{roughness:.25}),eyeM=M('#2a1a22',{roughness:.05}),irisM=M('#5e3519'),glintM=new THREE.MeshBasicMaterial({color:'#ffffff'}),glint3M=new THREE.MeshBasicMaterial({color:'#ffd9b0',transparent:true,opacity:.35});
 /* art v2 item 4: big round head (about 60% of her), few fat curls, wide readable eyes. Curl placement is a fixed spiral, not r2(). */
 {for(let i=0;i<24;i++){r2();r2();r2();}for(let i=0;i<46;i++){const a=r2()*Math.PI*2,b=(r2()-.3)*Math.PI*.9;if(Math.cos(a)*Math.cos(b)>.42&&Math.sin(b)<.45)continue;r2();}for(let i=0;i<14;i++){r2();r2();r2();}} /* spend the draft's r2() draws so the seeded scenery built after Rosie stays where it was */
 const dog=grp(scene),dogP=grp(dog),dBody=grp(dogP);
@@ -1873,7 +1889,7 @@ sph(dHead,peachM,5,39,-16,0,1,.85,1.4,false);
 sph(dHead,noseM,6.0,41,-7,0,.8,.72,1.1,false);sph(dHead,glintM,1.8,45.2,-4.6,1.8,1,1,1,false);
 /* art v3 item 6: bigger eye, warm amber iris as a visible ring, and three glints -- sun catch,
    secondary, and a soft bounce-light crescent on the lower-inner rim. */
-const dEyes=[1,-1].map(s=>{const e=sph(dHead,irisM,13,31,7,s*17,.62,1.0,1.06,false);sph(e,eyeM,.80,.2,0,0,1,1,1,false);sph(e,glintM,.22,.95,.52,s*.30,1,1,1,false);sph(e,glintM,.105,1,-.45,-s*.30,1,1,1,false);sph(e,glint3M,.15,.92,-.55,.10,1,1,1,false);return e;});
+const dEyes=[1,-1].map(s=>{const e=sph(dHead,irisM,13,31,7,s*17,.62,1.0,1.06,false);sph(e,eyeM,.80,.42,0,0,1,1,1,false);sph(e,glintM,.22,.95,.52,s*.30,1,1,1,false);sph(e,glintM,.105,1,-.45,-s*.30,1,1,1,false);sph(e,glint3M,.15,.92,-.55,.10,1,1,1,false);return e;});
 const EYE_X=13*.62,EYE_Y=13*1.0,EYE_Z=13*1.06; /* base scale: sph() bakes radius into scale, so the expression loop rebuilds all three axes */
 const dBlush=[1,-1].map(s=>sph(dHead,MB('#f59b85',.18),6,29.5,-9,s*24,.4,.62,1.25,false)); /* MB() per side: the expression vector drives opacity */
 /* neck: distinctly smaller than the head and in the shade tone, with the collar as a band across it -- this is what separates head from body from behind */
@@ -1919,10 +1935,10 @@ const EXPR={
  bright:   [1.00,1.00,.80, 0.00,0.00, 0.00, 0.00,0.00,0.00,.18],
  panting:  [ .80,1.00,.80,-0.06,0.00, 0.10,-0.08,0.55,1.00,.30],
  determined:[.62,1.00,.70, 0.10,0.00,-0.55,-0.14,0.70,0.00,.14],
- startled: [1.22,1.10,.62, 0.05,0.00, 0.60, 0.55,0.35,0.00,.35],
+ startled: [1.22,1.10,.68, 0.05,0.00, 0.60, 0.55,0.35,0.00,.35],
  dizzy:    [ .42,1.00,.80, 0.00,0.18,-0.30,-0.04,0.40,1.00,.55],
  fierce:   [ .70,1.00,.66, 0.00,0.00,-0.75,-0.18,0.85,1.00,.20],
- delighted:[ .35,1.00,.80, 0.00,0.00, 0.35, 0.14,0.95,1.25,.45]};
+ delighted:[ .24,1.00,.80, 0.00,0.00, 0.35, 0.14,0.95,1.25,.45]};
 const exC=EXPR.bright.slice();let exName='bright',exTau=.12,exHold=0,exForce=null;
 /* test hook: /expression verification drives a face directly instead of waiting for the game to make one */
 window.__EXPR=function(n){exForce=n&&EXPR[n]?n:null;return exName;};
@@ -2427,7 +2443,7 @@ function render3D(dt){
   const wide=cam.aspect>=1.25;let ch=wide?196:252,cd=wide?505:612,hx=0,ly=74;if(R.held){ch*=.94;cd*=.88;}  // 3.2: push in 12%
   /* title: hero framing - closer in, aimed to Rosie's left so she sits on the right of frame
      and the docked title card has empty yard to sit on (art-direction-v2, item 10) */
-  if(state==='title'){ch=wide?250:300;cd=wide?450:560;ly=wide?130:190;hx=-Math.tan(baseFov*Math.PI/360)*cam.aspect*cd*(wide?.46:.24);}
+  if(state==='title'){ch=wide?215:265;cd=wide?400:500;ly=wide?150:205;hx=-Math.tan(baseFov*Math.PI/360)*cam.aspect*cd*(wide?.52:.24);}
   /* 1.4: pause eases (0.35 s) to the wardrobe portrait so the rope, the weak spot and every live
      attack leave the frame -- without this, pause is a free scouting tool. */
   {let px=camTX+hx+(shake>0?rand(-8,8)*shake*4:0),py=ch+(shake>0?rand(-6,6)*shake*4:0),pz=camTZ+cd,lx=camTX+hx,lyv=ly,lz=camTZ-162;
@@ -2490,7 +2506,7 @@ function render3D(dt){
      blink is a MULTIPLIER on eyeY, not an eighth expression, so it composes with every face. */
   {const c=exC,bl=shut?.18:1,sp=!!R.sp,ear=c[6],eX=Math.max(0,ear)*1.5,eZ=ear<0?ear:ear*.35,fk=1-clamp(-ear*2.5,0,.7);
    dEyes.forEach((e,i)=>{const s=i?-1:1;e.scale.set(EYE_X,EYE_Y*c[0]*bl,EYE_Z*c[1]);
-     const p=e.children[0];p.scale.setScalar(c[2]);p.position.set(.2,c[3],s*c[4]);});
+     const p=e.children[0];p.scale.setScalar(c[2]);p.position.set(.42,c[3],s*c[4]);});
    dBrows.forEach((b,i)=>{b.rotation.x=(i?-1:1)*browS;b.position.y=21+Math.max(0,browS)*5;});
    /* blush doubles as the damage readout: a glance at her face tells you how she is doing */
    {const op=Math.min(.62,c[9]+.34*(R.hpMax?1-R.hp/R.hpMax:0));for(const b of dBlush)b.material.opacity=op;}
