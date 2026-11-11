@@ -1845,27 +1845,37 @@ const boneM=M('#fffaf0',{roughness:.4,emissive:'#554422'}),treat3=[0,1,2].map(()
 /* Rosie */
 const WHITE=new THREE.Color('#ffffff'),WETC=new THREE.Color('#b9dcf5');
 /* wardrobe 2.2: FURC/FURS are captured by the wet lerp in render3D, so wFur() rebuilds them -- without this Rosie snaps back to cream the moment she gets wet */
-let FURC=new THREE.Color('#fffaf0').convertSRGBToLinear(),FWET=new THREE.Color('#a9c4d2').convertSRGBToLinear(),FURS=new THREE.Color('#bbb0a5').convertSRGBToLinear();
-const furM=M('#fffaf0',{roughness:.92}),furS=M('#d6cdc4',{roughness:.92}),collarM=M('#d9859c'),peachM=M('#f6ddd0',{roughness:.8}),noseM=M('#3a2030',{roughness:.25}),eyeM=M('#2a1a22',{roughness:.05}),irisM=M('#9c6336'),glintM=new THREE.MeshBasicMaterial({color:'#ffffff'}),glint3M=new THREE.MeshBasicMaterial({color:'#ffd9b0',transparent:true,opacity:.35});
+let FURC=new THREE.Color('#fff3dd').convertSRGBToLinear(),FWET=new THREE.Color('#a9c4d2').convertSRGBToLinear(),FURS=new THREE.Color('#c7ae9c').convertSRGBToLinear();
+const furM=M('#fff3dd',{roughness:.92}),furS=M('#c7ae9c',{roughness:.92}),collarM=M('#d9859c'),peachM=M('#f3d9c6',{roughness:.8}),noseM=M('#7a4e42',{roughness:.25}),eyeM=M('#2a1a22',{roughness:.05}),irisM=M('#7a4a24'),glintM=new THREE.MeshBasicMaterial({color:'#ffffff'}),glint3M=new THREE.MeshBasicMaterial({color:'#ffd9b0',transparent:true,opacity:.35});
 /* art v2 item 4: big round head (about 60% of her), few fat curls, wide readable eyes. Curl placement is a fixed spiral, not r2(). */
 {for(let i=0;i<24;i++){r2();r2();r2();}for(let i=0;i<46;i++){const a=r2()*Math.PI*2,b=(r2()-.3)*Math.PI*.9;if(Math.cos(a)*Math.cos(b)>.42&&Math.sin(b)<.45)continue;r2();}for(let i=0;i<14;i++){r2();r2();r2();}} /* spend the draft's r2() draws so the seeded scenery built after Rosie stays where it was */
 const dog=grp(scene),dogP=grp(dog),dBody=grp(dogP);
 sph(dBody,furM,1,-6,40,0,34,23,26);
 /* 13 fat body curls, r19-24 (the head's are 11-14) so curl size alone tells head from body; the under and rear ones take the shade tone instead of one flat white */
-for(const [r,x,y,z,sd] of [[21,-32,50,0,0],[19,-28,45,16,0],[19,-28,45,-16,0],[19,-16,52,11,0],[19,-16,52,-11,0],[22,-6,42,23,0],[22,-6,42,-23,0],[19,12,38,19,0],[19,12,38,-19,0],[20,-30,30,16,1],[20,-30,30,-16,1],[20,-41,42,0,0],[19,20,31,0,1]])sph(dBody,sd?furS:furM,r,x,y,z,1,1,1,false);
+for(const [r,x,y,z,sd] of [[23,-32,51,0,0],[18,-28,45,16,0],[20.5,-28,44,-16,0],[17,-16,53,11,0],[20,-16,51,-11,0],[23,-6,42,23,0],[19,-6,43,-23,0],[21,12,38,19,0],[17.5,12,39,-19,0],[20,-30,30,16,1],[16.5,-31,31,-16,1],[22,-41,42,0,0],[19,20,31,0,1],[9,-20,64,6,0],[8,4,55,-14,0],[10,-44,56,-9,0],[8.5,16,47,13,0]])sph(dBody,sd?furS:furM,r,x,y,z,1,1,1,false);
 const dTail=grp(dBody,-38,50,0);sph(dTail,furM,12,-4,8,0);sph(dTail,furM,10,-12,18,0);sph(dTail,furM,10,-2,22,0);sph(dTail,furS,9,-10,2,0,1,1,1,false);
 const dHead=grp(dogP,30,116,0);sph(dHead,furM,38,0,0,0);
-{let n=0;for(let i=0;i<28&&n<16;i++){const cy=1-2*(i+.5)/28,rd=Math.sqrt(1-cy*cy),cx=Math.cos(i*2.399)*rd,cz=Math.sin(i*2.399)*rd;if(cx>.1&&cy<.8)continue;sph(dHead,cy<-.15?furS:furM,11+(i*3%4),cx*33,cy*33,cz*33,1,1,1,false);n++;}}
+/* title-and-expressions 1: the reference's fluff is CLUSTERS of 3-5 curls of differing size, not an even
+   scatter. Fixed radii 9-14 in groups of three (no r2(), the seeded scenery downstream depends on the draw
+   count) and the bigger ones ride further out, so the outline steps instead of reading as one smooth ball. */
+{const CR=[13.5,10,12.5,9.5,14,11,13,9,12,10.5,14,9.5,11.5,13.5,10,12];let n=0;
+ for(let i=0;i<28&&n<16;i++){const cy=1-2*(i+.5)/28,rd=Math.sqrt(1-cy*cy),cx=Math.cos(i*2.399)*rd,cz=Math.sin(i*2.399)*rd;if(cx>.1&&cy<.8)continue;
+  const r=CR[n],d=31+(r-11.5)*1.15;sph(dHead,cy<-.15?furS:furM,r,cx*d,cy*d,cz*d,1,1,1,false);n++;}
+ /* stray tufts: small, off-lattice, poking past the curl shell. The garden's foliage is ragged; she was the
+    one smooth silhouette in frame. 8 spheres, same two materials, baked -- 0 draw calls. */
+ for(const [r,ax,ay,az,sd] of [[6,-.60,.70,.38,0],[5,.06,.93,-.40,0],[6.5,-.84,.30,-.48,0],[4.8,-.32,.84,.64,0],[5.6,-.68,-.22,.70,1],[5,-.52,.54,-.80,0],[6,-.92,.60,-.10,0],[4.6,.26,.72,.62,0]])
+  sph(dHead,sd?furS:furM,r,ax*40,ay*40,az*40,1,1,1,false);}
 [[16,2,40],[13,-6,49],[12,-12,56],[10,-17,61],[9,-21,64]].forEach(([r,x,y])=>sph(dHead,furM,r,x,y,0,1,1,1,false)); /* topknot, leaning back */
 const dTie=add(dHead,new THREE.TorusGeometry(15,3.6,8,18),collarM,2,38,0,1,1,1);dTie.rotation.set(Math.PI/2,0,.3);/* wardrobe: the Topknot slot owns this */ /* tie: the topknot has to read from the rear camera too */
 for(const s of [1,-1])sph(dHead,furM,11,31,-13,s*8,1,1,1,false); /* muzzle puffs */
-const dEars=[1,-1].map(s=>{const g=grp(dHead,-2,10,s*31);sph(g,furS,1,0,-20,s*7,12,26,10);sph(g,furS,12,0,-44,s*12);return g;});
-sph(dHead,peachM,5,39,-16,0,1,.9,1.2,false);
-sph(dHead,noseM,6.5,41,-7,0,.85,.8,1.15,false);sph(dHead,glintM,1.5,45.6,-4.6,1.8,1,1,1,false);
+const dEars=[1,-1].map(s=>{const g=grp(dHead,-2,10,s*31);sph(g,furS,1,0,-20,s*7,12,26,10);sph(g,furS,14,0,-44,s*12);sph(g,furS,10,0,-62,s*13);sph(g,furS,6.5,3,-54,s*3);return g;}); /* 1: third ball drops the ear below the muzzle line, the small one breaks its edge */
+sph(dHead,peachM,5,39,-16,0,1,.85,1.4,false);
+sph(dHead,noseM,6.0,41,-7,0,.8,.72,1.1,false);sph(dHead,glintM,1.8,45.2,-4.6,1.8,1,1,1,false);
 /* art v3 item 6: bigger eye, warm amber iris as a visible ring, and three glints -- sun catch,
    secondary, and a soft bounce-light crescent on the lower-inner rim. */
-const dEyes=[1,-1].map(s=>{const e=sph(dHead,irisM,12,31,7,s*17,.6,1.1,1,false);sph(e,eyeM,.60,.2,0,0,1,1,1,false);sph(e,glintM,.50,.95,.50,.25,1,1,1,false);sph(e,glintM,.21,1,-.45,-.30,1,1,1,false);sph(e,glint3M,.28,.92,-.55,.10,1,1,1,false);return e;});
-for(const s of [1,-1])sph(dHead,MB('#ff8fa3',.5),6,29.5,-6,s*24,.4,.7,1,false);
+const dEyes=[1,-1].map(s=>{const e=sph(dHead,irisM,13,31,7,s*17,.62,1.0,1.06,false);sph(e,eyeM,.74,.2,0,0,1,1,1,false);sph(e,glintM,.54,.95,.52,s*.30,1,1,1,false);sph(e,glintM,.21,1,-.45,-s*.30,1,1,1,false);sph(e,glint3M,.28,.92,-.55,.10,1,1,1,false);return e;});
+const EYE_X=13*.62,EYE_Y=13*1.0,EYE_Z=13*1.06; /* base scale: sph() bakes radius into scale, so the expression loop rebuilds all three axes */
+const dBlush=[1,-1].map(s=>sph(dHead,MB('#f59b85',.18),6,29.5,-9,s*24,.4,.62,1.25,false)); /* MB() per side: the expression vector drives opacity */
 /* neck: distinctly smaller than the head and in the shade tone, with the collar as a band across it -- this is what separates head from body from behind */
 const dNeck=add(dogP,new THREE.CylinderGeometry(14,17,30,14),furS,23,66,0,1,1,1);dNeck.rotation.z=-.547;
 const dCol=add(dogP,new THREE.TorusGeometry(20,6,8,20),collarM,21,62,0,1,1,1);dCol.rotation.set(Math.PI/2,0,-.547);
@@ -1888,7 +1898,7 @@ const ribTex=ctex(256,8,1,1,g=>{const gr=g.createLinearGradient(0,0,256,0);gr.ad
 const dRib=(()=>{const p=[];for(let i=0;i<=48;i++){const u=i/48,a=u*Math.PI*8;const r=46+22*Math.sin(u*Math.PI);p.push(new THREE.Vector3(Math.cos(a)*r,-6+u*210,Math.sin(a)*r));}
   const m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(p),72,5.5,6,false),new THREE.MeshBasicMaterial({map:ribTex,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending}));
   m.renderOrder=1;m.frustumCulled=false;m.visible=false;dogP.add(m);return m;})();
-const dBrows=[1,-1].map(s=>sph(dHead,furS,1,34,23,s*17,4.5,4.5,9,false)); /* after the bake: these tilt */
+const dBrows=[1,-1].map(s=>sph(dHead,furS,1,34,23,s*17,4,3.6,8.5,false)); /* after the bake: these tilt */
 ink(dog);const INK_R=INK.clone();INK_R.uniforms.th.value=1.8;INK_R.uniforms.c=INK.uniforms.c;dog.traverse(m=>{if(m.userData.ink)m.material=INK_R;}); /* heavier line on Rosie only */
 /* art v3 item 13: soft-edged contact shadow (radial alpha ramp), and the handle the hind-legs pose narrows */
 const softTex=ctex(64,64,1,1,g=>{const gr=g.createRadialGradient(32,32,0,32,32,32);gr.addColorStop(0,'#ffffff');gr.addColorStop(.5,'#c8c8c8');gr.addColorStop(1,'#000000');g.fillStyle=gr;g.fillRect(0,0,64,64);});
@@ -1896,7 +1906,26 @@ softTex.encoding=THREE.LinearEncoding;softTex.wrapS=softTex.wrapT=THREE.ClampToE
 const dShadow=new THREE.Mesh(new THREE.CircleGeometry(46,24),MB('#3a2a6e',.34));dShadow.material.alphaMap=softTex;dShadow.material.needsUpdate=true;dShadow.rotation.x=-Math.PI/2;dShadow.position.y=1.2;dog.add(dShadow);
 /* special-moves.md 3.2: the travelling dig mound - one flattened sphere, hidden unless R.under */
 const digMound=sph(scene,M('#6b4426'),1,0,0,0,64,38,50,false);digMound.visible=false;
+const rimL=new THREE.DirectionalLight('#ffd0a8',.45);rimL.castShadow=false;rimL.position.set(900,420,520);scene.add(rimL);
 let browS=0,happyT=0,rearK=0,rearU=0,rearDir=-1,rearHold=0;
+/* ===== title-and-expressions 3: ONE VECTOR, never a crossfade =====
+   Ten floats: eyeY, eyeW, pupS, pupY, pupOut, brow, ear, mouth(0 shut..1 wide), tongue, blush.
+   The face is a single exC[10] eased toward EXPR[name], so ANY interpolation between two entries is
+   itself a valid face -- she can never be caught half in one pose, which a two-pose crossfade cannot
+   promise. Nothing new is modelled: dEyes, dBrows, dEars, dMouth, dTongue and dBlush already cover it.
+   The doc's eye 'x' is applied to the eye's Z axis, which is the visible width at this camera; the
+   X axis only flattens the bead into the head and reads as nothing. */
+const EXPR={
+ bright:   [1.00,1.00,.74, 0.00,0.00, 0.00, 0.00,0.00,0.00,.18],
+ panting:  [ .80,1.00,.74,-0.06,0.00, 0.10,-0.08,0.55,1.00,.30],
+ determined:[.62,1.00,.62, 0.10,0.00,-0.55,-0.14,0.70,0.00,.14],
+ startled: [1.22,1.10,.52, 0.05,0.00, 0.60, 0.55,0.35,0.00,.35],
+ dizzy:    [ .42,1.00,.74, 0.00,0.18,-0.30,-0.04,0.40,1.00,.55],
+ fierce:   [ .70,1.00,.58, 0.00,0.00,-0.75,-0.18,0.85,1.00,.20],
+ delighted:[ .35,1.00,.74, 0.00,0.00, 0.35, 0.14,0.95,1.25,.45]};
+const exC=EXPR.bright.slice();let exName='bright',exTau=.12,exHold=0,exForce=null;
+/* test hook: /expression verification drives a face directly instead of waiting for the game to make one */
+window.__EXPR=function(n){exForce=n&&EXPR[n]?n:null;return exName;};
 
 /* ================= pause + wardrobe (design/ux/pause-and-wardrobe.md) =================
    Pause: state==='paused' freezes every update; the camera eases to the wardrobe portrait
@@ -1970,7 +1999,7 @@ const wPal=s=>s.small?ACCW:ACCW.filter(a=>!a.small);
 const Wdef=()=>{const o={v:1,fur:'marshmallow'};WSLOTS.forEach(s=>{if(!s.fur)o[s.k]={id:s.def,c:s.dc};});return o;};
 let look=Wdef(),wFellBack=false,wTab='fur',wT=null;
 const wGroups={};
-function wFur(hex){const sh=mix(hex,'#6b5a4e',.46); /* art v4: the shade side is warm earth, not violet -- the lilac read as plastic against a sage garden */
+function wFur(hex){const sh=mix(hex,'#8a6456',.48); /* art v4: the shade side is warm earth, not violet -- the lilac read as plastic against a sage garden */
   FURC=new THREE.Color(hex).convertSRGBToLinear();FURS=new THREE.Color(sh).convertSRGBToLinear();
   furM.color.copy(FURC);furS.color.copy(FURS);}
 function wLoad(){const raw=store.get(WKEY);if(!raw)return;let o=null;
@@ -2436,7 +2465,17 @@ function render3D(dt){
     l.g.rotation.z=i<2?lerp(sw,1.25,rearK)+Math.sin(t*9+l.ph)*.35*rearK:lerp(sw,-.25,rearK);});  /* fronts paddle, backs tuck under the hips */
   dHead.position.set(30+dip*.35,116-dip+rearK*4*Math.sin(t*4.8),0);dHead.rotation.z=-dip*.035+(moving?0:Math.sin(t*1.3)*.04)-rearK*.75;dHead.rotation.x=dance?Math.sin(t*6)*.25:0;dHead.scale.setScalar(1+.22*Math.sin(Math.min(1,R.biteT/.3)*Math.PI));dHead.rotation.y=R.thrash>0?Math.sin(t*42)*.75:0;
   dEars.forEach((e,i)=>{e.rotation.x=(i?1:-1)*(.12+Math.abs(Math.sin(t*(moving?15:2.5)))*(moving?.5:.1)*(1+.6*rearK));e.rotation.z=rearK*.10;});dTail.rotation.y=Math.sin(t*(moving?18:9))*(.7+.4*rearK+.3*danceS);dTail.rotation.z=rearK*.50;dShadow.scale.x=1-.35*rearK;
-  const shut=R.wet>0||R.recover>0||(t%3.7)<.12;happyT=R.thrash>0?1.6:Math.max(0,happyT-dt);const happy=booga||happyT>0;dEyes.forEach(e=>{e.scale.y=13.2*(shut?.18:happy?.35:1);});{const warn=attacks.some(a=>a.t<a.tele&&(a.type==='jet'?segDist(R.x,R.y,a.o.x,a.o.y,a.o.x+a.dx*a.len,a.o.y+a.dy*a.len):a.type==='sweep'?Math.hypot(a.o.x-R.x,a.o.y-R.y)-a.range:a.type==='bomb'?Math.min(...a.spots.map(q=>Math.hypot(q.x-R.x,q.y-R.y))):Math.hypot(a.tx-R.x,a.ty-R.y))<200);danceWarn=warn||Lass.ph==='tele';browS=lerp(browS,R.chomp>0||R.biteT>0?-.55:warn?.5:0,1-Math.exp(-dt*14));dBrows.forEach((b,i)=>{b.rotation.x=(i?-1:1)*browS;b.position.y=21+Math.max(0,browS)*5;});}dMouth.visible=R.chomp>0||rearK>.5;dTongue.visible=(moving||rearK>.5)&&R.chomp<=0;
+  const shut=R.wet>0||R.recover>0||(t%3.7)<.12;happyT=Math.max(0,happyT-dt);{const warn=attacks.some(a=>a.t<a.tele&&(a.type==='jet'?segDist(R.x,R.y,a.o.x,a.o.y,a.o.x+a.dx*a.len,a.o.y+a.dy*a.len):a.type==='sweep'?Math.hypot(a.o.x-R.x,a.o.y-R.y)-a.range:a.type==='bomb'?Math.min(...a.spots.map(q=>Math.hypot(q.x-R.x,q.y-R.y))):Math.hypot(a.tx-R.x,a.ty-R.y))<200);danceWarn=warn||Lass.ph==='tele';
+   /* title-and-expressions 3: one priority ladder per frame, highest wins. tau 0.04 s ENTERING the three
+      reaction faces (a lagging reaction reads as a bug), 0.18 s leaving delighted, 0.12 s otherwise and
+      flat 0.12 s under reduce. A 0.25 s minimum hold stops a flickering state strobing her face; dizzy
+      ignores the hold because damage must always pre-empt. */
+   const want=exForce||((state==='lost'||R.hurt>0||R.wet>.3)?'dizzy':(R.held||Lass.ph==='tele'||Lass.ph==='held'||warn)?'startled':(R.chomp>0||R.biteT>0||R.thrash>0||R.shk>0)?'determined':(state==='won'||happyT>0)?'delighted':booga?'fierce':moving?'panting':'bright');
+   exHold-=dt;
+   if(want!==exName&&(exHold<=0||want==='dizzy')){const pv=exName;exName=want;exHold=.25;
+     exTau=reduce?.12:(want==='dizzy'||want==='startled'||want==='determined')?.04:(pv==='delighted'?.18:.12);}
+   {const T=EXPR[exName],k=1-Math.exp(-dt/exTau);for(let q=0;q<10;q++)exC[q]+=(T[q]-exC[q])*k;}
+   browS=lerp(browS,exC[5],1-Math.exp(-dt*14));}
   /* special-moves.md 3.2: poseSpecial owns the whole rig for the length of a move; the wrench is
      the hit-reaction follow-through (user request), and the else-branch restores what the gait
      pose does not write every frame. */
@@ -2446,6 +2485,21 @@ function render3D(dt){
     for(const l of dLegs)l.g.rotation.x=0;
     if(R.wrench>0){const e=Math.sin(clamp(R.wrench/HIT_WR[R.wrenchW-1],0,1)*Math.PI)*(.45+.22*R.wrenchW);
       dogP.rotation.z+=e*.30;dHead.rotation.z-=e*.55;dHead.position.x-=e*9;dogP.scale.set(1+e*.14,1-e*.12,1+e*.06);}}
+  /* title-and-expressions 3: the face, applied after poseSpecial so the two never fight -- a special owns
+     the body (and its own mouth/ears), the expression vector owns eyes, brows and blush always. The 3.7 s
+     blink is a MULTIPLIER on eyeY, not an eighth expression, so it composes with every face. */
+  {const c=exC,bl=shut?.18:1,sp=!!R.sp,ear=c[6],eX=Math.max(0,ear)*1.5,eZ=ear<0?ear:ear*.35,fk=1-clamp(-ear*2.5,0,.7);
+   dEyes.forEach((e,i)=>{const s=i?-1:1;e.scale.set(EYE_X,EYE_Y*c[0]*bl,EYE_Z*c[1]);
+     const p=e.children[0];p.scale.setScalar(c[2]);p.position.set(.2,c[3],s*c[4]);});
+   dBrows.forEach((b,i)=>{b.rotation.x=(i?-1:1)*browS;b.position.y=21+Math.max(0,browS)*5;});
+   /* blush doubles as the damage readout: a glance at her face tells you how she is doing */
+   {const op=Math.min(.62,c[9]+.34*(R.hpMax?1-R.hp/R.hpMax:0));for(const b of dBlush)b.material.opacity=op;}
+   if(sp)dMouth.scale.set(7,5,8);
+   else{dEars.forEach((e,i)=>{const s=i?1:-1;e.rotation.x=e.rotation.x*fk+s*eX;e.rotation.z+=eZ;});
+    const m=c[7];dMouth.visible=m>.06||R.chomp>0||rearK>.5;dMouth.scale.set(7*(.5+.62*m),5*(.25+1.05*m),8*(.62+.5*m));
+    dTongue.visible=c[8]>.08&&R.chomp<=0;
+    if(dTongue.visible){const g=.55+.62*c[8];dTongue.scale.set(4.5*g,2.5*g,4.5*g);
+      dTongue.position.set(41,-21-1.3*c[8]+(reduce?0:Math.sin(t*37.7)*1.5*c[8]*m),0);}}}
   /* GIANT DANCE MODE: applied last so it layers on top of the gait AND poseSpecial, both of which write
      dogP.scale every frame. reduce pins danceS to 0 -- scale is motion, not information, same rule as rearK. */
   {danceS=reduce?0:clamp(danceS+(booga?dt/.5:-dt/.3),0,1);const dS=booga?1-(1-danceS)*(1-danceS):danceS;
