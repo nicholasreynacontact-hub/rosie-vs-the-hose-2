@@ -1238,27 +1238,27 @@ function poseSpecial(sp){const T=sp.t,fr=[dLegs[0].g,dLegs[1].g],bk=[dLegs[2].g,
   digMound.visible=false;dog.visible=true;
   if(sp.id==='slam'){
     if(T<.25){const u=ez(T/.25);                                            // rear back, both paws overhead
-      hip(.95*u,4*u);setL(fr,2.2*u,.1*u);setL(bk,.25*u,0);
+      hip(.95*u-.26*Math.sin(Math.PI*Math.min(1,u*2.4))*(1-u),4*u);setL(fr,2.2*u,.1*u);setL(bk,.25*u,0);ssY(dogP,1-.13*Math.sin(Math.PI*u));  /* anticipation: a counter-rotation and a crouch inside the existing 0.25 s wind-up */
       dHead.rotation.z=-.5*u;ears(.12+.55*u);dTail.rotation.z=.7*u;}
     else if(T<.60){const u=clamp((T-.25)/.35,0,1),a=.95+6.4*ez(u),lift=150*Math.sin(Math.PI*u);
-      dogP.rotation.z=a;dogP.position.y=lift+70-70*Math.cos(a);dogP.position.x=70*Math.sin(a);
+      dogP.rotation.z=a;dogP.position.y=lift+70-70*Math.cos(a);dogP.position.x=70*Math.sin(a);ss(dogP,1+.24*Math.sin(Math.PI*u));  /* elongation through the fall */
       setL(fr,-1.4,.2);setL(bk,1.1,.2);dHead.rotation.z=-.3;ears(.12+1.2*Math.sin(Math.PI*u));dTail.rotation.z=-.7;
       dShadow.scale.setScalar(Math.max(.45,1-lift/300));
       if(Math.random()<.55)addPart({type:'sparkle',x:R.x+rand(-34,34),by:R.y,y:R.y-lift*.55-rand(20,80),vx:rand(-40,40),vy:-28,life:.5,max:.5,size:rand(4,8),g:0,hue:rand(150,200)});}
     else if(T<.70){const u=(T-.60)/.10;                                     // belly-first slam, legs splayed
-      dogP.rotation.z=-.30+.12*u;dogP.scale.set(1.35-.18*u,.65+.14*u,1.1);dogP.position.y=0;
+      dogP.rotation.z=-.30+.12*u;ssY(dogP,.64+.16*u);dogP.position.y=0;   /* the pancake, volume preserving */
       setL(fr,.5,.9);setL(bk,-.5,.9);dHead.rotation.z=-.25;ears(.9);}
     else{const u=(T-.70)/.15;
-      dogP.scale.set(lerp(1.17,1,u),lerp(.79,1,u),1);dogP.rotation.z=-.18*(1-u);
+      ssY(dogP,lerp(.78,1,u));dogP.rotation.z=-.18*(1-u);
       setL(fr,.3*(1-u),.6*(1-u));setL(bk,-.3*(1-u),.6*(1-u));
       dHead.rotation.y=Math.sin(t*113)*.4*(1-u);dHead.rotation.z=-.2*(1-u);ears(.5);}
     return;}
   if(sp.id==='bonk'){
     if(T<.25){const u=ez(T/.25);                                            // up on the hind legs, paws clasped overhead
-      hip(1.25*u,8*u);setL(fr,2.0*u,-.22*u);setL(bk,-.3*u,0);
+      hip(1.25*u-.30*Math.sin(Math.PI*Math.min(1,u*2.4))*(1-u),8*u);setL(fr,2.0*u,-.22*u);setL(bk,-.3*u,0);ssY(dogP,1-.15*Math.sin(Math.PI*u));  /* anticipation inside the existing 0.25 s wind-up */
       dHead.rotation.z=-.6*u;ears(.12+.6*u);dTail.rotation.z=.9*u;}
     else if(T<.40){const u=ez((T-.25)/.15);                                 // the hammer
-      hip(1.25-1.75*u,8*(1-u));dogP.scale.set(1+.3*u,1-.3*u,1+.15*u);
+      hip(1.25-1.75*u,8*(1-u));ss(dogP,1+.32*u);
       setL(fr,lerp(2.0,.6,u),-.1);setL(bk,-.3,0);dHead.rotation.z=-.6+.5*u;ears(.7);dTail.rotation.z=.9-1.4*u;}
     else if(T<1.25){const u=(T-.40)/.85,eo=1-Math.pow(1-u,2.4);             // teeth in: the helicopter
       dogP.rotation.y=10*Math.PI*eo;dogP.rotation.z=-.25;
@@ -1268,12 +1268,12 @@ function poseSpecial(sp){const T=sp.t,fr=[dLegs[0].g,dLegs[1].g],bk=[dLegs[2].g,
       dShadow.scale.setScalar(Math.max(.45,1-dogP.position.y/260));
       if(Math.random()<.5)addPart({type:'star',x:R.x+Math.cos(dogP.rotation.y)*54,by:R.y,y:R.y-dogP.position.y-rand(0,40),vx:rand(-30,30),vy:-40,life:.6,max:.6,size:rand(5,9),g:0,hue:rand(260,330)});}
     else{const u=(T-1.25)/.15;
-      dogP.position.y=0;dogP.rotation.z=-.18*(1-u);dogP.scale.set(1.2-.18*u,.8+.18*u,1.1-.1*u);
+      dogP.position.y=0;dogP.rotation.z=-.18*(1-u);ssY(dogP,.78+.22*u);   /* the landing compression, volume preserving */
       setL(fr,.4,.95);setL(bk,-.4,.95);ears(.6);dHead.rotation.y=Math.sin(t*100)*.3;}
     return;}
   if(sp.id==='spin'){
     if(T<.10){const u=T/.10;
-      dogP.rotation.y=-.9*u;dogP.scale.set(1.15,.85,1.15);dTail.rotation.z=.8;
+      dogP.rotation.y=-.9*u;ssY(dogP,.85-.06*Math.sin(Math.PI*u));dogP.rotation.z=.10*Math.sin(Math.PI*u);dTail.rotation.z=.8;  /* anticipation: the counter-rotation and crouch live in the existing 0.10 s window */
       setL(fr,.6*u,0);setL(bk,-.6*u,0);ears(.3);}
     else if(T<.45){const u=(T-.10)/.35,eo=1-Math.pow(1-u,2.2);
       dogP.rotation.y=-.9+(4*Math.PI+.9)*eo;dogP.rotation.z=.35;
@@ -1287,7 +1287,7 @@ function poseSpecial(sp){const T=sp.t,fr=[dLegs[0].g,dLegs[1].g],bk=[dLegs[2].g,
     return;}
   if(sp.id==='dig'){
     if(T<.30){const u=T/.30;
-      hip(-.5*u,-70*u*u);
+      hip(-.5*u-.22*Math.sin(Math.PI*Math.min(1,u*2.6))*(1-u),-70*u*u);ssY(dogP,1-.12*Math.sin(Math.PI*u));  /* anticipation inside the existing 0.30 s dig-in */
       fr[0].rotation.z=1.0+Math.sin(t*40)*1.4;fr[1].rotation.z=1.0-Math.sin(t*40)*1.4;setL(bk,-.3,0);
       dHead.rotation.z=-.8*u;ears(.5);dTail.rotation.z=.6;}
     else if(T<.30+DIG_T){dog.visible=false;digMound.visible=true;
@@ -2437,7 +2437,57 @@ function artSync(){skyDome.position.set(cam.position.x,0,cam.position.z);stars.p
 /* per-frame sync of the 3D scene with the game state */
 const C=h=>new THREE.Color(h),SKY={top:[C('#3f4a54'),C('#2c3a38')],mid:[C('#8b958f'),C('#6e7f72')],bot:[C('#cfc0a4'),C('#b9b893')]},FOG_A=C('#9ea396'),FOG_B=C('#8d978a'),FOG_P=C('#6a5f74'),SKY_BH=C('#b06a86'),HEMI_S=[C('#aab4b2'),C('#93a89c'),C('#a894b4')],HEMI_G=[C('#242a1e'),C('#20281f'),C('#2a3330')];
 let camTX=300,camTZ=300,dogRot=0,manRot=Math.PI,sfS=0,rollS=0;const lerpAng=(a,b,k)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*k;
+/* ===== stepped-animation: ONE quantised clock for the CHARACTERS =====
+   The note this exists to answer: everything moved on smooth, constant-velocity 60 fps
+   interpolation, which is the house style of the games this is not trying to look like.
+   Characters now pose on 2s and 3s off a 24 fps base -- held drawings, ~9.6 of them a
+   second -- while the camera, the rope simulation, the water, the particles, the sky and
+   the whole yard stay on the real frame dt.
+   STEP_FPS is the ONE switch: 0 disables stepping entirely, and prefers-reduced-motion
+   disables it too. Raise it for more drawings per second, lower it for fewer.
+   WHY IT IS A LOCK AND NOT A CLAMPED dt: the pose code still runs every frame, so every
+   smoothing term in it keeps integrating with the true dt and nothing can drift out of
+   step with gameplay. stepLockAll() then puts the character nodes back to the transforms
+   captured at the last tick. Nothing here can move a hitbox: hit detection, input, the
+   bite window and every timer read the R and Hm state, never a node transform. */
+const STEP_FPS=12,STEP_PAT=[2,3];              /* base-frames held per drawing: on 2s, then on 3s */
+let stepT=0,stepNew=true,_stepA=0,_stepI=0;
+function stepClock(dt){
+  if(!STEP_FPS||reduce){stepNew=true;stepT=t;return;}
+  if(hitStop>0){stepNew=false;return;}         /* holds on impact: the pose freezes dead for the
+                                                  whole hit-stop, then the follow-through snaps in */
+  const base=1/(STEP_FPS*2);let need=STEP_PAT[_stepI%STEP_PAT.length]*base;
+  _stepA+=dt;stepNew=false;
+  while(_stepA>=need){_stepA-=need;_stepI++;stepT+=need;stepNew=true;need=STEP_PAT[_stepI%STEP_PAT.length]*base;}
+}
+function stepLock(o,noPos){const d=o.userData,k=d.__st||(d.__st={p:new THREE.Vector3(),q:new THREE.Quaternion(),s:new THREE.Vector3(1,1,1),on:false});
+  if(stepNew||!k.on){k.p.copy(o.position);k.q.copy(o.quaternion);k.s.copy(o.scale);k.on=true;}
+  else{if(!noPos)o.position.copy(k.p);o.quaternion.copy(k.q);o.scale.copy(k.s);}}
+/* visibility is deliberately NOT locked -- the hurt flicker and the Diggy-Down disappear are
+   readouts, not poses, and holding them would read as a bug. */
+function stepLockAll(a,noPos){if(!STEP_FPS||reduce)return;for(let i=0;i<a.length;i++)stepLock(a[i],noPos);}
+const STEP_DOG=[dogP,dHead,dTail,dMouth,dTongue,dShadow,digMound,dTie].concat(dEars,dEyes,dEyes.map(e=>e.children[0]),dBrows,dLegs.map(l=>l.g)),
+      STEP_MAN=[manP,mHead,mHat,mMouth].concat(mArms,mLegs.map(l=>l.hip),mLegs.map(l=>l.knee)),
+      STEP_ROOT=[dog,man];                     /* roots: rotation and scale step, translation does not --
+                                                  a held world position would teleport her on a dash */
+/* overshoot and settle -- ONE helper for every pose that used to ease in. A spring with
+   zeta<1 arrives PAST its target and springs back, which is what a keyed pose does and what
+   lerp(x,t,1-exp(-dt*k)) can never do. st={v} carries the velocity; w is rad/s, z the damping. */
+function ovr(cur,tgt,st,dt,w,z){const n=Math.max(1,Math.ceil(dt*120)),h=dt/n;let c=cur;
+  for(let i=0;i<n;i++){st.v+=((tgt-c)*w*w-2*z*w*st.v)*h;c+=st.v*h;}
+  return (c===c)?c:tgt;}
+function ovrAng(cur,tgt,st,dt,w,z){return ovr(cur,cur+Math.atan2(Math.sin(tgt-cur),Math.cos(tgt-cur)),st,dt,w,z);}
+/* squash and stretch, volume preserving: ss() stretches X and thins Y and Z by 1/sqrt(s),
+   ssY() squashes Y and spreads X and Z the same way. Either one leaves x*y*z at 1. */
+function ss(o,v){const q=Math.max(.05,v),i=1/Math.sqrt(q);o.scale.set(q,i,i);}
+function ssY(o,v){const q=Math.max(.05,v),i=1/Math.sqrt(q);o.scale.set(i,q,i);}
+/* animation-only state. Nothing in here is read by physics, hit detection or any timer. */
+const A={rot:{v:0},av:0,head:{v:0},headY:0,rear:{v:0},dance:{v:0},
+  earL:[{v:0},{v:0}],earA:[0,0],tailL:{v:0},tailA:0,
+  mArm:[{v:0},{v:0}],mY:1,mYs:{v:0},mRot:{v:0}};
+let rearV=0,danceO=0;
 function render3D(dt){
+  stepClock(dt);
   const rz=zOf(R.y),k5=1-Math.exp(-dt*4.2);camTX=lerp(camTX,R.x+R.vx*.3,k5);camTZ=lerp(camTZ,rz+R.vy*DZ*.22,k5);
   if(R.held){const lh=headPos(),kh=Math.min(1,k5*1.4);camTX=lerp(camTX,(R.x*2+lh.x)/3,kh);camTZ=lerp(camTZ,(rz*2+zOf(lh.y))/3,kh);}  // 3.2fovKick*=Math.exp(-dt*8);cam.fov=baseFov-fovKick;cam.updateProjectionMatrix();
   const wide=cam.aspect>=1.25;let ch=wide?196:252,cd=wide?505:612,hx=0,ly=74;if(R.held){ch*=.94;cd*=.88;}  // 3.2: push in 12%
@@ -2462,6 +2512,7 @@ function render3D(dt){
   for(const c of cloud3){c.position.x+=c.userData.v*dt;if(c.position.x>5200)c.position.x=-2400;}for(const f of anim)f(t);
   for(const tb of tabs){tb.a=lerp(tb.a,(tb.z>rz+30&&Math.abs(tb.x-camTX)<320)?.2:1,Math.min(1,dt*8));for(const m of tb.ms)m.opacity=tb.a;}
   bulbs.forEach((b,i)=>{b.scale.setScalar(7*(.9+.15*Math.sin(t*3+i)));});
+  if(STEP_FPS&&!reduce)for(let i=0;i<crit3.length;i++)stepLock(crit3[i].g);   /* the sky creatures step too */
   /* Rosie */
   const moving=R.speed>25,sf=Math.min(1,R.speed/260),run=R.gait,bob=Math.abs(Math.sin(run))*7*sfS+Math.sin(t*2.5)*1.2*(1-sfS),dip=R.chomp>0?16*Math.sin(R.chomp/.16*Math.PI):0,dance=booga&&!reduce;
   /* art v3 section 4: BOOGA hind-legs pose. rearK only ever multiplies ADDITIVE offsets below, so run,
@@ -2474,13 +2525,41 @@ function render3D(dt){
    if(want!==rearDir){rearDir=want;rearU=want>0?1-Math.cbrt(1-rearK):.5-Math.sin(Math.asin(clamp(1-2*rearK,-1,1))/3);}
    const rDur=want>0?.45:(rBlock?.12:(rearHold>0?.18:.30));
    rearU=clamp(rearU+want*dt/rDur,0,1);
-   rearK=reduce?0:(want>0?1-Math.pow(1-rearU,3):rearU*rearU*(3-2*rearU));}
-  dog.position.set(R.x,0,rz);{const d0=dogRot;dogRot=lerpAng(dogRot,-R.ang,1-Math.exp(-dt*11));rollS=lerp(rollS,clamp(Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1)*.045,-.3,.3)*sf,1-Math.exp(-dt*8));sfS=lerp(sfS,moving?sf:0,1-Math.exp(-dt*9));}dog.rotation.y=dogRot+(dance?lerp(Math.sin(t*6)*.6,Math.sin(t*3)*.45,rearK):0)+(R.thrash>0?Math.sin(t*42)*.18:0);dog.scale.setScalar(R.sc);dog.visible=!(R.hurt>0&&Math.floor(t*18)%2);
-  dogP.position.y=bob+(dance?lerp(Math.abs(Math.sin(t*12))*16,Math.abs(Math.sin(t*4.8))*10,rearK):0)+rearK*26;dogP.rotation.z=-.07*sfS-Math.sin(run)*.04*sfS+rearK*.90;dogP.rotation.x=dance?Math.sin(t*12)*.22:rollS;dogP.scale.set(R.dash>0?1.28:1,R.dash>0?.84:1,1);
+   rearK=reduce?0:(want>0?1-Math.pow(1-rearU,3):rearU*rearU*(3-2*rearU));
+   /* overshoot: the rear-up arrives past vertical and springs back. rearK itself is left alone --
+      the mouth-visibility test at rearK>.5 and every other read keep the un-sprung value. */
+   rearV=reduce?rearK:clamp(ovr(rearV,rearK,A.rear,dt,21,.42),0,1.12);}
+  dog.position.set(R.x,0,rz);{const d0=dogRot;dogRot=ovrAng(dogRot,-R.ang,A.rot,dt,13,.42);A.av=Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1);rollS=lerp(rollS,clamp(Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1)*.045,-.3,.3)*sf,1-Math.exp(-dt*8));sfS=lerp(sfS,moving?sf:0,1-Math.exp(-dt*9));}dog.rotation.y=dogRot+(dance?lerp(Math.sin(t*6)*.6,Math.sin(t*3)*.45,rearV):0)+(R.thrash>0?Math.sin(t*42)*.18:0);dog.scale.setScalar(R.sc);dog.visible=!(R.hurt>0&&Math.floor(t*18)%2);
+  /* ANTICIPATION. Bite, Pounce and Dash all fire on the frame of the input -- there is no
+     start-up to borrow from without adding input latency -- so the wind-up is carved out of the
+     first ~30% of the chomp / dash timer that already existed. The hit is resolved before the
+     crouch is ever drawn, so it costs zero frames of lag; Bark and the lasso tap use a shorter
+     chomp and get a token one off the same curve. The four specials wind up inside their own
+     existing start-up windows, in poseSpecial. */
+  const ant=Math.max(R.chomp>0?clamp((R.chomp-.112)/.048,0,1):0,(R.dash>0&&!R.pounce)?clamp((R.dash-.119)/.051,0,1):0);
+  dogP.position.y=bob+(dance?lerp(Math.abs(Math.sin(t*12))*16,Math.abs(Math.sin(t*4.8))*10,rearV):0)+rearV*26-11*ant;
+  dogP.rotation.z=-.07*sfS-Math.sin(run)*.04*sfS+rearV*.90+.26*ant;          /* nose UP, against the strike */
+  dogP.rotation.x=dance?Math.sin(t*12)*.22:rollS;
+  ss(dogP,(R.dash>0?lerp(1,1.30,clamp(R.dash/.17*1.7,0,1)):1)*(1-.17*ant));  /* elongate on the dash, compress on the crouch */
   dLegs.forEach((l,i)=>{const sw=Math.sin(run+l.ph)*.85*sfS+(dance&&!moving?Math.sin(t*12+l.ph)*.5:0);
-    l.g.rotation.z=i<2?lerp(sw,1.25,rearK)+Math.sin(t*9+l.ph)*.35*rearK:lerp(sw,-.25,rearK);});  /* fronts paddle, backs tuck under the hips */
-  dHead.position.set(30+dip*.35,116-dip+rearK*4*Math.sin(t*4.8),0);dHead.rotation.z=-dip*.035+(moving?0:Math.sin(t*1.3)*.04)-rearK*.75;dHead.rotation.x=dance?Math.sin(t*6)*.25:0;dHead.scale.setScalar(1+.22*Math.sin(Math.min(1,R.biteT/.3)*Math.PI));dHead.rotation.y=R.thrash>0?Math.sin(t*42)*.75:0;
-  dEars.forEach((e,i)=>{e.rotation.x=(i?1:-1)*(.12+Math.abs(Math.sin(t*(moving?15:2.5)))*(moving?.5:.1)*(1+.6*rearK));e.rotation.z=rearK*.10;});dTail.rotation.y=Math.sin(t*(moving?18:9))*(.7+.4*rearK+.3*danceS);dTail.rotation.z=rearK*.50;dShadow.scale.x=1-.35*rearK;
+    l.g.rotation.z=(i<2?lerp(sw,1.25,rearV)+Math.sin(t*9+l.ph)*.35*rearV:lerp(sw,-.25,rearV))+(i<2?-.34:.20)*ant;});  /* fronts paddle, backs tuck under the hips */
+  dHead.position.set(30+dip*.35-8*ant,116-dip+rearV*4*Math.sin(t*4.8)-4*ant,0);
+  dHead.rotation.z=-dip*.035+(moving?0:Math.sin(t*1.3)*.04)-rearV*.75+.34*ant;
+  dHead.rotation.x=dance?Math.sin(t*6)*.25:0;dHead.scale.setScalar(1+.22*Math.sin(Math.min(1,R.biteT/.3)*Math.PI));
+  /* the head turn leads the body, overshoots it and settles -- A.av is the body's own angular velocity */
+  A.headY=ovr(A.headY,clamp(-A.av*.016,-.55,.55),A.head,dt,16,.34);
+  dHead.rotation.y=(R.thrash>0?Math.sin(t*42)*.75:0)+A.headY;
+  /* SECONDARY MOTION. The ears and the tail are driven, not keyed: their target is the body's
+     own forward speed and angular velocity, and ovr() with zeta<1 makes them lag behind the turn
+     and then catch up past it. The expression block further down composes the per-expression ear
+     set on top of this, and poseSpecial overwrites both while a special owns the rig. */
+  {const fw=clamp((R.vx*Math.cos(R.ang)+R.vy*DZ*Math.sin(R.ang))/320,-1.2,1.2),av=clamp(A.av*.055,-1,1);
+   for(let i=0;i<2;i++)A.earA[i]=ovr(A.earA[i],clamp(-fw*.42+(i?1:-1)*av*.40,-.7,.7),A.earL[i],dt,17,.36);
+   A.tailA=ovr(A.tailA,clamp(-av*.85-fw*.22,-1,1),A.tailL,dt,12,.32);}
+  dEars.forEach((e,i)=>{e.rotation.x=(i?1:-1)*(.12+Math.abs(Math.sin(t*(moving?15:2.5)))*(moving?.5:.1)*(1+.6*rearV))+A.earA[i]*.45;e.rotation.z=rearV*.10+A.earA[i]*.50;});
+  dTie.rotation.z=.3+A.tailA*.30;   /* the bow is the only separable fur cluster -- the topknot and the
+                                       muzzle puffs are baked into dHead for the draw-call budget */
+  dTail.rotation.y=Math.sin(t*(moving?18:9))*(.7+.4*rearV+.3*danceS)+A.tailA;dTail.rotation.z=rearV*.50+A.tailA*.28;dShadow.scale.x=1-.35*rearV;
   const shut=R.wet>0||R.recover>0||(t%3.7)<.12;happyT=Math.max(0,happyT-dt);{const warn=attacks.some(a=>a.t<a.tele&&(a.type==='jet'?segDist(R.x,R.y,a.o.x,a.o.y,a.o.x+a.dx*a.len,a.o.y+a.dy*a.len):a.type==='sweep'?Math.hypot(a.o.x-R.x,a.o.y-R.y)-a.range:a.type==='bomb'?Math.min(...a.spots.map(q=>Math.hypot(q.x-R.x,q.y-R.y))):Math.hypot(a.tx-R.x,a.ty-R.y))<200);danceWarn=warn||Lass.ph==='tele';
    /* title-and-expressions 3: one priority ladder per frame, highest wins. tau 0.04 s ENTERING the three
       reaction faces (a lagging reaction reads as a bug), 0.18 s leaving delighted, 0.12 s otherwise and
@@ -2500,7 +2579,9 @@ function render3D(dt){
     if(dTongue.scale.x!==4.5)dTongue.scale.set(4.5,2.5,4.5);
     for(const l of dLegs)l.g.rotation.x=0;
     if(R.wrench>0){const e=Math.sin(clamp(R.wrench/HIT_WR[R.wrenchW-1],0,1)*Math.PI)*(.45+.22*R.wrenchW);
-      dogP.rotation.z+=e*.30;dHead.rotation.z-=e*.55;dHead.position.x-=e*9;dogP.scale.set(1+e*.14,1-e*.12,1+e*.06);}}
+      /* the impact compresses her, volume preserving, and stepClock() freezes this pose dead for
+         the whole of hitStop before the follow-through plays -- the beat of stillness on the hit. */
+      dogP.rotation.z+=e*.30;dHead.rotation.z-=e*.55;dHead.position.x-=e*9;ssY(dogP,1-.17*e);}}
   /* title-and-expressions 3: the face, applied after poseSpecial so the two never fight -- a special owns
      the body (and its own mouth/ears), the expression vector owns eyes, brows and blush always. The 3.7 s
      blink is a MULTIPLIER on eyeY, not an eighth expression, so it composes with every face. */
@@ -2515,12 +2596,17 @@ function render3D(dt){
     const m=c[7];dMouth.visible=m>.06||R.chomp>0||rearK>.5;dMouth.scale.set(7*(.5+.62*m),5*(.25+1.05*m),8*(.62+.5*m));
     dTongue.visible=c[8]>.08&&R.chomp<=0;
     if(dTongue.visible){const g=.55+.62*c[8];dTongue.scale.set(4.5*g,2.5*g,4.5*g);
-      dTongue.position.set(41,-21-1.3*c[8]+(reduce?0:Math.sin(t*37.7)*1.5*c[8]*m),0);}}}
+      dTongue.position.set(41,-21-1.3*c[8]+(reduce?0:Math.sin(t*37.7)*1.5*c[8]*m),-A.tailA*5);  /* the tongue lags the body too */}}}
+  /* the step: every character transform above is replaced by the one captured at the last tick.
+     Placed before the dance layer so dogP's world quaternion is already the stepped one when the
+     halo billboard reads it, and before the materials so colour and opacity stay smooth. */
+  stepLockAll(STEP_DOG);stepLockAll(STEP_ROOT,true);
   /* GIANT DANCE MODE: applied last so it layers on top of the gait AND poseSpecial, both of which write
      dogP.scale every frame. reduce pins danceS to 0 -- scale is motion, not information, same rule as rearK. */
   {danceS=reduce?0:clamp(danceS+(booga?dt/.5:-dt/.3),0,1);const dS=booga?1-(1-danceS)*(1-danceS):danceS;
-   if(dS>.002)dogP.scale.multiplyScalar(1+.30*dS);
-   dTail.scale.x=1+.55*dS;
+   danceO=clamp(ovr(danceO,dS,A.dance,dt,17,.40),0,1.2);    /* the growth overshoots and settles */
+   if(dS>.002)dogP.scale.multiplyScalar(1+.30*danceO);
+   dTail.scale.x=1+.55*danceO;
    const vis=dS>.01;dHalo.visible=dRib.visible=vis;
    if(vis){const dim=danceWarn?.35:1;dHalo.material.opacity=.60*dS*dim;dRib.material.opacity=.92*dS*dim;
      dRib.rotation.y=t*3.77;ribTex.offset.x=(-t*.5)%1;
@@ -2529,10 +2615,11 @@ function render3D(dt){
   /* the waterer */
   const cower=Hm.cower,up=Hm.shock>0||!Hm.grabbed,sw=Hm.moving?Math.sin(Hm.walkT*9):0,cw=Hm.moving?Math.cos(Hm.walkT*9):0;
   man.position.set(Hm.x+(cower&&!reduce?Math.sin(t*40)*1.6:0),0,zOf(Hm.y));manRot=lerpAng(manRot,Hm.f>0?0:Math.PI,Math.min(1,dt*12));man.rotation.y=manRot;
-  manP.position.y=Math.abs(cw)*2.5;manP.scale.y=lerp(manP.scale.y,cower?.62:1,Math.min(1,dt*10));manP.rotation.z=lerp(manP.rotation.z,cower?-.4:0,Math.min(1,dt*10));
+  manP.position.y=Math.abs(cw)*2.5;A.mY=ovr(A.mY,cower?.62:1,A.mYs,dt,15,.38);ssY(manP,clamp(A.mY,.45,1.15));manP.rotation.z=ovr(manP.rotation.z,cower?-.4:0,A.mRot,dt,14,.40);
   mLegs.forEach((l,i)=>{const s=i?-1:1;l.hip.rotation.z=cower?1.1:s*sw*.55;l.knee.rotation.z=cower?-1.9:-Math.max(0,s*cw)*.8;});
-  mArms[0].rotation.z=lerp(mArms[0].rotation.z,cower?2.7:up?2.95:1.5,Math.min(1,dt*12));mArms[1].rotation.z=lerp(mArms[1].rotation.z,cower?2.7:up?2.95:-sw*.5,Math.min(1,dt*12));
+  mArms[0].rotation.z=ovr(mArms[0].rotation.z,cower?2.7:up?2.95:1.5,A.mArm[0],dt,16,.38);mArms[1].rotation.z=ovr(mArms[1].rotation.z,cower?2.7:up?2.95:-sw*.5,A.mArm[1],dt,16,.38);
   mArms.forEach((a,i)=>{a.rotation.x=(i?-1:1)*.6*clamp((a.rotation.z-1.7)/1.2,0,1);});{const cwr=!!cower;if(cwr&&!wasCower)hatT=.5;wasCower=cwr;hatT=Math.max(0,hatT-dt);mHat.position.y=22+(reduce?0:1.5+1.5*Math.sin(t*Math.PI*4))+(hatT>0?20*Math.sin((1-hatT/.5)*Math.PI):0);}mNoz.visible=Hm.grabbed;mMouth.scale.y=(up||cower)?6:2.5;
+  stepLockAll(STEP_MAN);stepLockAll(STEP_ROOT,true);   /* the waterer steps on the same clock */
   /* hose */
   const ruined=state==='burst'||state==='won',hTele=attacks.some(a=>a.t<a.tele&&a.src!=='human')||Lass.ph==='tele';
   if(!ruined){for(let i=0;i<=N;i++){const p=rope[i];hv[i].set(p.x,p.z+8.5,zOf(p.y));}hose3.geometry.dispose();hose3.geometry=new THREE.TubeGeometry(hCurve,190,8.75,7,false);hose3.visible=true;shred.visible=false;shredDone=false;
