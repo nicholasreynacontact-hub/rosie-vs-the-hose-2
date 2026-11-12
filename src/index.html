@@ -2484,7 +2484,7 @@ function ssY(o,v){const q=Math.max(.05,v),i=1/Math.sqrt(q);o.scale.set(i,q,i);}
 /* animation-only state. Nothing in here is read by physics, hit detection or any timer. */
 const A={rot:{v:0},av:0,head:{v:0},headY:0,rear:{v:0},dance:{v:0},
   earL:[{v:0},{v:0}],earA:[0,0],tailL:{v:0},tailA:0,
-  mArm:[{v:0},{v:0}],mY:1,mYs:{v:0},mRot:{v:0}};
+  mArm:[{v:0},{v:0}],mY:1,mYs:{v:0},mRot:{v:0},ant:0,pc:0,pd:0};
 let rearV=0,danceO=0;
 function render3D(dt){
   stepClock(dt);
@@ -2532,11 +2532,15 @@ function render3D(dt){
   dog.position.set(R.x,0,rz);{const d0=dogRot;dogRot=ovrAng(dogRot,-R.ang,A.rot,dt,13,.42);A.av=Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1);rollS=lerp(rollS,clamp(Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1)*.045,-.3,.3)*sf,1-Math.exp(-dt*8));sfS=lerp(sfS,moving?sf:0,1-Math.exp(-dt*9));}dog.rotation.y=dogRot+(dance?lerp(Math.sin(t*6)*.6,Math.sin(t*3)*.45,rearV):0)+(R.thrash>0?Math.sin(t*42)*.18:0);dog.scale.setScalar(R.sc);dog.visible=!(R.hurt>0&&Math.floor(t*18)%2);
   /* ANTICIPATION. Bite, Pounce and Dash all fire on the frame of the input -- there is no
      start-up to borrow from without adding input latency -- so the wind-up is carved out of the
-     first ~30% of the chomp / dash timer that already existed. The hit is resolved before the
-     crouch is ever drawn, so it costs zero frames of lag; Bark and the lasso tap use a shorter
-     chomp and get a token one off the same curve. The four specials wind up inside their own
-     existing start-up windows, in poseSpecial. */
-  const ant=Math.max(R.chomp>0?clamp((R.chomp-.112)/.048,0,1):0,(R.dash>0&&!R.pounce)?clamp((R.dash-.119)/.051,0,1):0);
+     front of the chomp / dash timer that already existed: the hit is resolved before the crouch
+     is ever drawn, so it costs zero frames of lag. It lasts exactly ONE drawing (1/STEP_FPS),
+     and the rising edge forces a tick so that drawing is guaranteed to be shown and held rather
+     than falling between two steps. Bark and the lasso tap get the same wind-up off their own
+     shorter chomp; the four specials wind up inside their existing start-up windows, in
+     poseSpecial, where there was already room to take it from. */
+  if(R.chomp>A.pc+1e-4||R.dash>A.pd+1e-4){A.ant=1;stepNew=true;}   /* the rising edge of a committed action */
+  A.pc=R.chomp;A.pd=R.dash;A.ant=Math.max(0,A.ant-dt*STEP_FPS);
+  const ant=A.ant*A.ant;
   dogP.position.y=bob+(dance?lerp(Math.abs(Math.sin(t*12))*16,Math.abs(Math.sin(t*4.8))*10,rearV):0)+rearV*26-11*ant;
   dogP.rotation.z=-.07*sfS-Math.sin(run)*.04*sfS+rearV*.90+.26*ant;          /* nose UP, against the strike */
   dogP.rotation.x=dance?Math.sin(t*12)*.22:rollS;
