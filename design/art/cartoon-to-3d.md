@@ -29,11 +29,29 @@ without making it realistic. Six concrete properties:
 4. **Shading is cel-like and soft.** One lit side, one shadow side, a soft
    terminator, and shadow that stays in the object's own hue rather than going grey.
    The light does not sculpt every curve — it separates big forms.
-5. **Hair and fur are sculpted chunks.** Shaggy becomes a set of big solid curl
-   shapes with real silhouette notches. Never smooth spheres, never strand fuzz,
-   never alpha fur cards.
+5. **Hair and fur are shaped into one continuous surface.** Shaggy becomes curl
+   forms cut into a single smooth coat, not a pile of separate balls with visible
+   seams between them. Never strand fuzz, never alpha fur cards.
 6. **The silhouette is bold and readable at thumbnail size,** with deliberate
-   irregularity — notches, tufts, asymmetry — rather than a stack of arcs.
+   irregularity — notches, tufts, asymmetry — rather than a stack of arcs. The
+   silhouette is irregular; the surface inside it is smooth.
+
+## Why the user likes this style, in their words
+
+> *"I love that style and think it looks seamless and smooth and like a drawing
+> but 3d without looking corny."*
+
+Three constraints fall out of that sentence, and they are the tie-breakers when
+any instruction above is ambiguous:
+
+- **Seamless and smooth.** Clean continuous surfaces. Visible intersections
+  between lumps of geometry are the failure mode, not the technique.
+- **Like a drawing but 3D.** Crisp flat features on a smooth surface. This is why
+  the drawn-on face matters more than any other single change.
+- **Not corny.** Corny means toy-like, bobbleheaded, goofy-bright, shiny vinyl.
+  Fidelity to the character sheet is the defence: the sheet is not corny, so
+  copying its proportions accurately rather than exaggerating them keeps the
+  result out of that territory.
 
 ## Where the build was guilty
 
