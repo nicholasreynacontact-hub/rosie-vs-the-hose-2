@@ -2535,6 +2535,51 @@ const angryEyes=(g,x,y,r)=>{const ps=[];for(const s of [1,-1]){const z0=s*r*1.1;
 const trackEyes=(ps,g,r)=>{const ry=g.rotation.y,dx=R.x-g.position.x,dz=zOf(R.y)-g.position.z,l=Math.hypot(dx,dz)||1,c=Math.cos(ry),sn=Math.sin(ry),lx=(dx*c-dz*sn)/l,lz=(dx*sn+dz*c)/l;for(const e of ps){e.p.position.x=e.bx+lx*r*.24;e.p.position.z=e.z0+lz*r*.26;}};
 const scar3=[...Array(16)].map(()=>sph(scene,M('#0c3318',{roughness:.9}),9,0,0,0,1,.55,1,false)),HOSE_W=new THREE.Color('#a9bf52');
 const nozHead=grp(scene);nozHead.scale.setScalar(1.6);let nozEyes,nozJaw;
+/* ---- PAINTED MR. HOSE / THE LIVING HOSE ----------------------------------------------------
+   The hose BODY stays 3D -- it writhes, coils and is bitten along its length, and no stack of
+   drawings can do that. Its HEAD becomes the user's painted character, standing at the nozzle
+   end with the rope trailing behind it as its own hose, which is exactly how the character is
+   drawn. Five painted angles, chosen from the direction the head is travelling, mirrored for
+   the other side; the dragon set takes over for the boss. Same hysteresis and turn-squeeze as
+   Rosie, so switching drawings reads as turning rather than popping. */
+const PH={on:true,ready:0,tex:{},h:190,view:'f',flip:false,turn:0,bob:0};
+(function(){
+ const L=new THREE.TextureLoader(),V=['f','fq','s','rq','b'],S=['hose','drag'];let want=V.length*S.length;
+ S.forEach(s=>V.forEach(v=>L.load('art/'+s+'_'+v+'.png',tx=>{
+   tx.encoding=THREE.sRGBEncoding;tx.minFilter=THREE.LinearFilter;tx.magFilter=THREE.LinearFilter;
+   tx.generateMipmaps=false;tx.anisotropy=4;PH.tex[s+'_'+v]=tx;if(++PH.ready===want)PH.go=true;},
+   undefined,()=>{PH.on=false;})));
+ PH.mat=new THREE.MeshBasicMaterial({transparent:true,alphaTest:.34,depthWrite:true,toneMapped:false,side:THREE.DoubleSide});
+ PH.spr=new THREE.Mesh(new THREE.PlaneGeometry(1,1),PH.mat);PH.spr.visible=false;PH.spr.renderOrder=3;scene.add(PH.spr);
+})();
+function phUpdate(dt,t,boss){
+  if(!PH.on||!PH.go||!nozHead.visible){if(PH.spr)PH.spr.visible=false;return false;}
+  nozHead.visible=false;                       /* the built dragon head steps aside */
+  const set=boss?'drag':'hose';
+  const camY=Math.atan2(cam.position.x-nozHead.position.x,cam.position.z-nozHead.position.z);
+  let rel=(-nozHead.rotation.y)-camY;rel=Math.atan2(Math.sin(rel),Math.cos(rel));
+  const ar=Math.abs(rel),M=0.14;
+  let v;
+  if(ar<Math.PI*0.22+(PH.view==='b'?M:-M))      v='b';
+  else if(ar<Math.PI*0.46+(PH.view==='rq'?M:-M))v='rq';
+  else if(ar<Math.PI*0.70+(PH.view==='s'?M:-M)) v='s';
+  else if(ar<Math.PI*0.88+(PH.view==='fq'?M:-M))v='fq';
+  else                                           v='f';
+  let flip=PH.flip;
+  if(rel>M)flip=false;else if(rel<-M)flip=true;
+  if(v!==PH.view||flip!==PH.flip){PH.turn=1;PH.view=v;PH.flip=flip;}
+  PH.turn=Math.max(0,PH.turn-dt*6.5);
+  const tx=PH.tex[set+'_'+v];if(!tx)return false;
+  if(PH.mat.map!==tx){PH.mat.map=tx;PH.mat.needsUpdate=true;}
+  PH.bob=lerp(PH.bob,Math.sin(t*4.4)*4,1-Math.exp(-dt*9));
+  const asp=tx.image?tx.image.width/tx.image.height:.7;
+  const h=PH.h*(boss?1.5:1),w=h*asp*(1-0.46*PH.turn*PH.turn);
+  PH.spr.scale.set(flip?-w:w,h,1);
+  PH.spr.position.set(nozHead.position.x,h*.5+PH.bob,nozHead.position.z);
+  PH.spr.rotation.set(0,camY,0);
+  PH.spr.visible=true;
+  return true;
+}
 /* boss-and-dance-mode.md 1.1: the nozzle is a DRAGON head. The group, the 1.6 scale, nozEyes, nozJaw and
    trackEyes() are untouched, so aiming, the jaw-drop telegraph and eye tracking keep working. It reads
    menacing through SILHOUETTE -- horns, brow, jaw -- not through light: no emissive anywhere on this head,
@@ -3069,7 +3114,7 @@ function render3D(dt){
     const wf=.5+.5*Math.sin(t*16);
     weakM.color.set(hot?mix('#fff6c0','#ffffff',wf):'#ffd23f');weakM.emissive.set(hot?mix('#9a7a00','#fff4b0',wf):'#aa7700');
     weakGlow.material.color.set(hot?mix('#fff0b8','#ffffff',wf):'#ffe070');weakBeam.material.color.copy(weakGlow.material.color);}
-  nozHead.visible=!Hm.grabbed&&!ruined;if(nozHead.visible){const a=rope[N-3],b=rope[N];nozHead.position.set(b.x,b.z+14,zOf(b.y));nozHead.rotation.y=-Math.atan2(zOf(b.y)-zOf(a.y),b.x-a.x);trackEyes(nozEyes,nozHead,9);nozJaw.rotation.z=lerp(nozJaw.rotation.z,hTele?-.55:0,1-Math.exp(-dt*14));}
+  nozHead.visible=!Hm.grabbed&&!ruined;if(nozHead.visible){const a=rope[N-3],b=rope[N];nozHead.position.set(b.x,b.z+14,zOf(b.y));nozHead.rotation.y=-Math.atan2(zOf(b.y)-zOf(a.y),b.x-a.x);trackEyes(nozEyes,nozHead,9);nozJaw.rotation.z=lerp(nozJaw.rotation.z,hTele?-.55:0,1-Math.exp(-dt*14));}phUpdate(dt,t,booga||dance);
   midHead.visible=phase===3&&Hm.grabbed&&!ruined;if(midHead.visible){const a=rope[MID-3],b=rope[MID];midHead.position.set(b.x,b.z+22,zOf(b.y));midHead.rotation.y=-Math.atan2(zOf(R.y)-zOf(b.y),R.x-b.x);trackEyes(midEyes,midHead,9);}
   /* the hot band and the lasso ring */
   if(ruined||Hot.ph==='off')hot3.visible=false;
