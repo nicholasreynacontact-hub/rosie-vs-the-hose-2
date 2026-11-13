@@ -1233,7 +1233,7 @@ function poseSpecial(sp){const T=sp.t,fr=[dLegs[0].g,dLegs[1].g],bk=[dLegs[2].g,
   hip=function(a,lift){const c=Math.cos(a),s=Math.sin(a),hx=-20,hy=40;   // pitch about the hips, not the toes
     dogP.rotation.z=a;dogP.position.x=hx-(hx*c-hy*s);dogP.position.y=Math.max(-8,hy-(hx*s+hy*c))+(lift||0);};
   dogP.position.set(0,0,0);dogP.rotation.set(0,0,0);dogP.scale.set(1,1,1);
-  dHead.position.set(30,116,0);dHead.rotation.set(0,0,0);dTail.rotation.set(0,0,0);
+  dHead.position.set(34,110,0);dHead.rotation.set(0,0,0);dTail.rotation.set(0,0,0);
   dTongue.scale.set(4.5,2.5,4.5);dShadow.scale.set(1,1,1);dMouth.visible=true;dTongue.visible=true;
   digMound.visible=false;dog.visible=true;
   if(sp.id==='slam'){
@@ -1874,42 +1874,85 @@ const furM=M('#fff3dd',{roughness:.92}),furS=M('#c7ae9c',{roughness:.92}),collar
    ball stuck on. The silhouette steps and notches because the seating depth varies, 5..11; the lit
    surface stays one unbroken smooth form with no seam between lumps. */
 {for(let i=0;i<24;i++){r2();r2();r2();}for(let i=0;i<46;i++){const a=r2()*Math.PI*2,b=(r2()-.3)*Math.PI*.9;if(Math.cos(a)*Math.cos(b)>.42&&Math.sin(b)<.45)continue;r2();}for(let i=0;i<14;i++){r2();r2();r2();}} /* spend the draft's r2() draws so the seeded scenery built after Rosie stays where it was */
-const G_S2=new THREE.SphereGeometry(1,20,14); /* smoother than G_S: these lumps are read as one surface, so their own tessellation must not show */
-/* seat a curl into a core ellipsoid C (half-extents) centred at O: only `out` units of it clear the
-   core surface along that direction, so what shows is a scallop, not a sphere. */
-function seat(par,mat,C,O,u,r,out,sc,rot){const l=Math.hypot(u[0],u[1],u[2]);
- const p=[C[0]*u[0]/l,C[1]*u[1]/l,C[2]*u[2]/l],d=Math.hypot(p[0],p[1],p[2]),k=(d+out-r)/d;
- const m=new THREE.Mesh(G_S2,mat);m.position.set(O[0]+p[0]*k,O[1]+p[1]*k,O[2]+p[2]*k);
- m.scale.set(r*sc[0],r*sc[1],r*sc[2]);m.rotation.set(rot[0],rot[1],rot[2]);
- m.castShadow=false;m.receiveShadow=false;par.add(m);return m;}
-const coat=(par,C,O,T)=>T.forEach((e,i)=>seat(par,e[6]?furS:furM,C,O,[e[0],e[1],e[2]],e[3],e[4],
- [1+.10*Math.sin(i*2.1),1-.08*Math.sin(i*1.3),1+.07*Math.cos(i*1.7)],[i*.41,i*.73,i*.57]));
+const G_S2=new THREE.SphereGeometry(1,20,14);
+/* ===== cartoon-to-3d.md 1/5/6 + the "seamless and smooth" ruling: ONE DISPLACED SURFACE PER REGION.
+   Stacked lumps can never be seamless -- every intersection between two spheres is a crease, and a
+   field of creases is exactly the "pile of balls" read we are trying to kill. So each region of her
+   is a single SphereGeometry whose vertices are pushed along their own normals by a sum of low-
+   frequency lobes. The result is one continuous smooth surface whose OUTLINE is notched, lumpy and
+   asymmetric: irregular silhouette, no seam anywhere on it.
+   - every phi term has an INTEGER frequency and is damped by sin(theta), so the UV seam and both
+     poles stay continuous; normals are then welded by position so the seam cannot light as a line.
+   - the lobes are pure functions of position with fixed phases -- no Math.random(), nothing that can
+     shimmer between the stepped frames.
+   - `keep` holds an angular cap flat (amplitude 0) so the drawn face cannot warp. ===== */
+/* a deterministic spread of curl lobes: Fibonacci directions, then a fixed-LCG nudge so the field
+   does not read as a lattice, then per-lobe width and height variation -- that variation is what
+   notches the outline. `skip` clears a cap (the face) so no clump can land on the drawn features. */
+function lobes(cnt,seed,w0,w1,a0,a1,skip){let sd=seed|0;
+ const rnd=()=>{sd=(sd*1103515245+12345)&0x7fffffff;return sd/0x7fffffff;};
+ const L=[],G=Math.PI*(3-Math.sqrt(5));
+ for(let i=0;i<cnt;i++){const y=1-2*(i+.5)/cnt,r=Math.sqrt(Math.max(0,1-y*y)),a=i*G;
+  let d=[Math.cos(a)*r+(rnd()-.5)*.24,y+(rnd()-.5)*.24,Math.sin(a)*r+(rnd()-.5)*.24];
+  const l=Math.hypot(d[0],d[1],d[2]);d=[d[0]/l,d[1]/l,d[2]/l];
+  const w=w0+(w1-w0)*rnd(),am=a0+(a1-a0)*rnd();
+  if(skip&&Math.acos(Math.min(1,d[0]*skip[0]+d[1]*skip[1]+d[2]*skip[2]))<skip[3])continue;
+  L.push([d[0],d[1],d[2],w,am,Math.cos(w)]);}
+ return L;}
+function fluff(par,mat,R,sc,o){o=o||{};
+ const sg=o.seg||[88,60],B=o.base||3,TU=o.tuft||0,ph0=o.ph||0,LB=o.lb||[],KP=o.keep;
+ /* the displacement field, as a pure function of direction */
+ const D=(ux,uy,uz)=>{let d=0;
+  for(let q=0;q<LB.length;q++){const b=LB[q],dp=ux*b[0]+uy*b[1]+uz*b[2];
+   if(dp<b[5])continue;const z=1-Math.acos(Math.min(1,dp))/b[3];d+=b[4]*z*z*(3-2*z);}
+  const th=Math.acos(Math.max(-1,Math.min(1,uy))),ph=Math.atan2(uz,-ux);
+  d+=B*Math.sin(2*th+.7+ph0)*Math.cos(2*ph+1.1)*Math.sin(th);
+  if(TU)d+=TU*Math.max(0,Math.cos(th*2.3))*(.62+.38*Math.cos(3*ph+.4));
+  if(KP){const a=Math.acos(Math.max(-1,Math.min(1,ux*KP[0]+uy*KP[1]+uz*KP[2])));
+   let w=a<KP[3]?0:a>KP[4]?1:(a-KP[3])/(KP[4]-KP[3]);d*=w*w*(3-2*w);}
+  return d;};
+ const g=new THREE.SphereGeometry(R,sg[0],sg[1]),p=g.attributes.position,na=g.attributes.normal,N=p.count,v=new THREE.Vector3();
+ /* Normals are ANALYTIC, not recomputed from the displaced triangles. For a radial surface
+    f(u)*u the normal is f*u - df/ds1*t1 - df/ds2*t2, so two extra field samples per vertex give a
+    perfectly continuous normal across the UV seam and both poles. Re-deriving them from faces and
+    welding by position instead produced fine vertical striping: the two-step cel ramp turns a
+    fraction of a degree of normal wobble into a visible band, so the normals have to be exact. */
+ const EP=.004;
+ for(let i=0;i<N;i++){v.set(p.getX(i),p.getY(i),p.getZ(i));const r=v.length();
+  const ux=v.x/r,uy=v.y/r,uz=v.z/r;
+  let ax=0,ay=0,az=0;if(Math.abs(uy)<.92){ax=0;ay=1;az=0;}else{ax=1;ay=0;az=0;}
+  let t1x=ay*uz-az*uy,t1y=az*ux-ax*uz,t1z=ax*uy-ay*ux;
+  let tl=Math.hypot(t1x,t1y,t1z)||1;t1x/=tl;t1y/=tl;t1z/=tl;
+  const t2x=uy*t1z-uz*t1y,t2y=uz*t1x-ux*t1z,t2z=ux*t1y-uy*t1x; /* (t1,t2,u) right-handed */
+  const f0=D(ux,uy,uz);
+  const n1=1/Math.hypot(ux+EP*t1x,uy+EP*t1y,uz+EP*t1z);
+  const f1=(D((ux+EP*t1x)*n1,(uy+EP*t1y)*n1,(uz+EP*t1z)*n1)-f0)/EP;
+  const n2=1/Math.hypot(ux+EP*t2x,uy+EP*t2y,uz+EP*t2z);
+  const f2=(D((ux+EP*t2x)*n2,(uy+EP*t2y)*n2,(uz+EP*t2z)*n2)-f0)/EP;
+  const F=R+f0;
+  let nx=F*ux-f1*t1x-f2*t2x,ny=F*uy-f1*t1y-f2*t2y,nz=F*uz-f1*t1z-f2*t2z;
+  const nl=Math.hypot(nx,ny,nz)||1;
+  p.setXYZ(i,ux*F,uy*F,uz*F);na.setXYZ(i,nx/nl,ny/nl,nz/nl);}
+ p.needsUpdate=true;na.needsUpdate=true;
+ const me=new THREE.Mesh(g,mat);if(o.pos)me.position.set(o.pos[0],o.pos[1],o.pos[2]);
+ if(sc)me.scale.set(sc[0],sc[1],sc[2]);me.castShadow=true;me.receiveShadow=true;par.add(me);return me;}
 const dog=grp(scene),dogP=grp(dog),dBody=grp(dogP);
-/* BODY: one smooth ellipsoid core, 30 x 21 x 25 at (-8,46). Shorter and narrower than the old
-   34 x 23 x 26 so the head out-masses it the way the sheet does. */
-const BC=[30,21,25],BO=[-8,46,0];sph(dBody,furM,1,BO[0],BO[1],BO[2],BC[0],BC[1],BC[2]);
-coat(dBody,BC,BO,[[-.50,.80,.15,20,4],[.10,.90,.40,19,3],[.05,.88,-.45,20,5],[.60,.70,.10,17,4],
- [-.88,.40,.20,20,5],[-.85,.35,-.25,19,3],[-.25,.30,.92,21,4],[-.30,.25,-.93,20,5],
- [.55,.20,.80,18,3],[.58,.15,-.82,17,4],[-.98,-.05,.10,19,5],[.88,.25,.05,16,3],
- [-.55,-.60,.45,18,4,1],[-.50,-.65,-.48,17,3,1],[.30,-.70,.55,16,4,1],[.32,-.72,-.58,15,3,1],
- [-.50,.82,-.10,10,8],[-.95,.25,.28,11,9],[.20,.88,.35,9,8],[.70,-.55,.15,9,7,1]]);
-/* TAIL: a rising plume, wider at the tip, swept back -- the sheet's flag, not a stack of balls */
-const dTail=grp(dBody,-40,54,0),TC=[10,26,9],TO=[-5,20,0];sph(dTail,furM,1,TO[0],TO[1],TO[2],TC[0],TC[1],TC[2]);
-coat(dTail,TC,TO,[[.15,.95,.10,12,4],[-.90,.40,.15,11,3],[.85,.30,-.10,10,4],[-.25,.70,.65,11,5],
- [-.20,.68,-.68,10.5,3],[.40,-.60,.25,9,3],[-.10,.98,-.15,8,7],[-.55,-.55,-.30,8,2,1]]);
-/* The face map. Sphere UVs: canvas x = 512 - 163*delta (delta = angle off the muzzle axis),
-   canvas y = 163*theta (theta from the crown). So these pixel numbers ARE the sheet's proportions on
-   a 41-radius head: eyes 13 across (0.16 of the head) centred 25 apart at head-centre height, nose
-   12 below the eye line, mouth 8 below that. Nothing is a bead, a socket or a highlight on geometry. */
+/* BODY: one surface, 30 x 21.6 x 25.2 before displacement. Shorter and narrower than the old
+   34 x 23 x 26 so the head out-masses it the way the sheet does: ~78 long against a ~100 head. */
+const dBodyM=fluff(dBody,furM,30,[1,.72,.84],{pos:[-8,46,0],seg:[112,76],base:4.6,ph:.0,
+  lb:lobes(32,7717,.20,.33,3.2,6.4)});
+/* TAIL: a rising plume, flared at the tip -- the sheet's flag */
+const dTail=grp(dBody,-40,54,0);fluff(dTail,furM,22,[.54,1.28,.48],{pos:[-5,22,0],seg:[72,52],base:2.0,ph:1.7,
+  lb:lobes(13,4231,.26,.40,3.0,5.6)});
 const FACE_C=document.createElement('canvas');FACE_C.width=1024;FACE_C.height=512;const FACE_G=FACE_C.getContext('2d');
 FACE_G.fillStyle='#ffffff';FACE_G.fillRect(0,0,1024,512);
 const FACE_T=new THREE.CanvasTexture(FACE_C);FACE_T.wrapS=FACE_T.wrapT=THREE.ClampToEdgeWrapping;FACE_T.encoding=THREE.sRGBEncoding;FACE_T.anisotropy=4;
 const faceM=M('#ffffff',{map:FACE_T});
-const FACE_PX={cx:512,eyeY:264,eyeX:50,eyeR:26,browY:228,noseY:313,mouthY:350,bluX:100,bluY:296};
+const FACE_PX={cx:512,eyeY:270,eyeX:51,eyeR:27,browY:234,noseY:318,mouthY:356,bluX:101,bluY:301};
 function drawFace(c,bl){const g=FACE_G,P=FACE_PX,CX=P.cx;
  const eo=Math.max(.05,c[0]*bl),ew=c[1],ps=c[2],py=c[3],po=c[4],br=c[5],mo=Math.max(0,c[7]),tg=Math.max(0,c[8]),bu=c[9];
  g.globalAlpha=1;g.fillStyle='#ffffff';g.fillRect(360,170,304,230);
- g.fillStyle='#f8ecdd';g.beginPath();g.ellipse(CX,322,66,52,0,0,6.283);g.fill(); /* muzzle: a flat drawn shape, no dome */
+ g.fillStyle='#f8ecdd';g.beginPath();g.ellipse(CX,328,71,55,0,0,6.283);g.fill(); /* muzzle: a flat drawn shape, no dome */
  if(bu>.02){g.globalAlpha=Math.min(.50,bu*.66);g.fillStyle='#ef9c86';
   for(const s of [-1,1]){g.beginPath();g.ellipse(CX+s*P.bluX,P.bluY,22,13,0,0,6.283);g.fill();}g.globalAlpha=1;}
  if(Math.abs(br)>.04){g.globalAlpha=Math.min(1,Math.abs(br)*1.6);g.fillStyle='#d9c2aa';
@@ -1925,7 +1968,7 @@ function drawFace(c,bl){const g=FACE_G,P=FACE_PX,CX=P.cx;
  g.quadraticCurveTo(CX+18,P.noseY+15,CX,P.noseY+19);g.quadraticCurveTo(CX-18,P.noseY+15,CX-26,P.noseY-8);g.closePath();g.fill();
  g.strokeStyle='#cbae95';g.lineWidth=4;g.lineCap='round';
  g.beginPath();g.moveTo(CX,P.noseY+19);g.lineTo(CX,P.mouthY-5);g.stroke();
- const mw=42+26*mo,mh=4+32*mo;
+ const mw=52+28*mo,mh=4+32*mo;
  g.strokeStyle='#8a5e4c';g.lineWidth=5;g.beginPath();
  g.moveTo(CX-mw*.66,P.mouthY-4);g.quadraticCurveTo(CX-mw*.30,P.mouthY+8,CX,P.mouthY-2);
  g.quadraticCurveTo(CX+mw*.30,P.mouthY+8,CX+mw*.66,P.mouthY-4);g.stroke();
@@ -1938,28 +1981,19 @@ drawFace([1.00,1.00,.80,0.00,0.00,0.00,0.00,0.00,0.00,.18],1); /* EXPR is declar
 let faceK='';
 function faceTick(c,bl){const k=[c[0]*bl,c[1],c[2],c[3],c[4],c[5],c[7],c[8],c[9]].map(v=>Math.round(v*14)).join(',');
  if(k===faceK)return;faceK=k;drawFace(c,bl);}
-/* HEAD: core 41 (was 38) and sat at (34,114) -- forward and low, the sheet's near-neckless set */
-const dHead=grp(dogP,34,114,0),HC=[41,41,41],HO=[0,0,0];
-add(dHead,new THREE.SphereGeometry(41,48,32),faceM,0,0,0,1,1,1); /* the head core IS the drawn face: one smooth sphere, no decal edge anywhere */
-/* the front-lower cone is left bare: that is where the drawn face goes, and nothing may scallop over it */
-coat(dHead,HC,HO,[[.10,.95,.20,21,4],[-.45,.86,-.25,20,3],[.30,.80,-.50,18,5],[-.30,.80,.45,19,4],
- [-.92,.35,.15,21,5],[-.85,.10,-.45,19,3],[.15,.30,.95,20,5],[.18,.28,-.96,19,4],
- [-.60,-.35,.55,18,4,1],[-.55,-.45,-.60,17,3,1],[.25,-.35,.92,17,3,1],[.22,-.40,-.93,18,5,1],
- [-.20,-.85,.25,16,3,1],[-.15,-.88,-.30,15,4,1],
- [-.62,.72,.30,11,9],[.05,.90,-.45,9,8],[-.95,.28,-.18,10,9]]);
-/* topknot: the sheet's is a modest tuft, not a spire -- three lumps, leaning back */
-[[15,2,38,1],[10,-7,50,-2]].forEach(([r,x,y,z],i)=>{const m=new THREE.Mesh(G_S2,furM);
- m.position.set(x,y,z);m.scale.set(r*1.08,r*.94,r);m.rotation.set(i*.5,i*.8,i*.35);m.castShadow=m.receiveShadow=false;dHead.add(m);});
-const dTie=add(dHead,new THREE.TorusGeometry(13,3.2,8,18),collarM,0,42,0,1,1,1);dTie.rotation.set(Math.PI/2,0,.3);/* wardrobe: the Topknot slot owns this */
-/* EARS: the heaviest mass in her silhouette. Hinged high on the skull, hanging 78 past the hinge --
-   past the jaw, as the sheet has them. Outer face is the coat tone, the inner/back zone is shade:
-   one contiguous zone each, never alternating lump to lump (that is what reads as a pile of balls). */
-const dEars=[1,-1].map(s=>{const g=grp(dHead,-4,14,s*30),EC=[12,30,10],EO=[0,-30,s*5];
- sph(g,furM,1,EO[0],EO[1],EO[2],EC[0],EC[1],EC[2],false);
- coat(g,EC,EO,[[.30,.75,s*.55,14,4],[-.40,.70,-s*.45,12,3,1],[.35,0,s*.92,13,4],
-  [-.45,-.05,-s*.88,12,3,1],[.20,-.75,s*.50,13,4],[-.35,-.70,-s*.45,11,3,1],
-  [.92,-.25,s*.18,11,4],[-.95,-.15,-s*.12,10,3,1],[.05,-.98,s*.08,10,7],[.45,.45,-s*.75,8,6,1]]);
- return g;});
+/* HEAD: one surface, radius 41 (was 38), sat at (34,110) -- forward and low, the sheet's
+   near-neckless set. It wears the face map itself, so there is no decal and no boundary. The
+   crown tuft is a lobe of the SAME surface, not a ball stuck on top. */
+const dHead=grp(dogP,34,110,0);
+const dHeadM=fluff(dHead,faceM,41,null,{seg:[128,88],base:3.0,tuft:4.5,ph:.9,
+  lb:lobes(36,2609,.17,.29,3.4,6.6,[.989,-.149,0,1.00]),
+  keep:[.989,-.149,0,.72,1.14]}); /* the cap around the muzzle axis stays undisplaced: the drawn face cannot warp */
+const dTie=add(dHead,new THREE.TorusGeometry(13,3.2,8,18),collarM,0,43,0,1,1,1);dTie.rotation.set(Math.PI/2,0,.3);/* wardrobe: the Topknot slot owns this */
+/* EARS: the heaviest mass in her silhouette, hinged high and hanging 23 past the jaw as the sheet
+   has them. One displaced surface each -- lumpy outline, no seam. */
+const dEars=[1,-1].map(s=>{const g=grp(dHead,-2,14,s*30);
+ fluff(g,furM,24,[.62,1.30,.52],{pos:[0,-26,s*4],seg:[64,48],base:1.8,ph:s>0?.4:2.6,
+  lb:lobes(12,s>0?881:1733,.26,.40,3.0,5.4)});return g;});
 /* ---- property 2: the face is DRAWN, not built. The map goes straight onto the head sphere --
    a separate decal shell left a visible mask edge, which is the opposite of "seamless". One 1024x512
    canvas, white everywhere but the face, so there is no boundary anywhere on her. Crisp flat shapes
@@ -1981,7 +2015,7 @@ const dLegs=[[20,15,0],[20,-15,.6],[-22,15,2.4],[-22,-15,3]].map(([x,z,ph])=>{co
  const p=new THREE.Mesh(G_S2,furM);p.position.set(2,-24,0);p.scale.set(11,7.9,11);p.castShadow=p.receiveShadow=false;g.add(p);
  const f=new THREE.Mesh(G_S2,furM);f.position.set(0,-2,0);f.scale.set(14,12,14);f.castShadow=f.receiveShadow=false;g.add(f); /* the coat hangs over the top of the leg: no bare tube */
  return {g,ph};});
-bake(dBody,furM);bake(dBody,furS);bake(dTail,furM);bake(dTail,furS);bake(dHead,furM);bake(dHead,furS);for(const e of dEars){bake(e,furM);bake(e,furS);}for(const l of dLegs)bake(l.g,furM);
+for(const l of dLegs)bake(l.g,furM); /* body/head/tail/ears are each already ONE mesh -- nothing to merge, and baking would only copy them */
 /* ---- boss-and-dance-mode.md 2: GIANT DANCE MODE. Visual only. danceS multiplies dogP.scale, never R.sc --
    R.sc feeds collision and the camera, so growing it would be a gameplay change this doc does not own.
    Halo and ribbon are renderOrder 1 (below weakCore's 2), depthWrite:false, and both dim to 35% whenever a
@@ -2630,7 +2664,7 @@ function render3D(dt){
   ss(dogP,(R.dash>0?lerp(1,1.30,clamp(R.dash/.17*1.7,0,1)):1)*(1-.17*ant));  /* elongate on the dash, compress on the crouch */
   dLegs.forEach((l,i)=>{const sw=Math.sin(run+l.ph)*.85*sfS+(dance&&!moving?Math.sin(t*12+l.ph)*.5:0);
     l.g.rotation.z=(i<2?lerp(sw,1.25,rearV)+Math.sin(t*9+l.ph)*.35*rearV:lerp(sw,-.25,rearV))+(i<2?-.34:.20)*ant;});  /* fronts paddle, backs tuck under the hips */
-  dHead.position.set(30+dip*.35-8*ant,116-dip+rearV*4*Math.sin(t*4.8)-4*ant,0);
+  dHead.position.set(34+dip*.35-8*ant,110-dip+rearV*4*Math.sin(t*4.8)-4*ant,0);
   dHead.rotation.z=-dip*.035+(moving?0:Math.sin(t*1.3)*.04)-rearV*.75+.34*ant;
   dHead.rotation.x=dance?Math.sin(t*6)*.25:0;dHead.scale.setScalar(1+.22*Math.sin(Math.min(1,R.biteT/.3)*Math.PI));
   /* the head turn leads the body, overshoots it and settles -- A.av is the body's own angular velocity */
