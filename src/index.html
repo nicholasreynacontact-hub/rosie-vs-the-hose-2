@@ -150,7 +150,7 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 
 /* title: no dim over the scene; card docked left on wide screens, top on a phone, so the
    camera's hero framing of Rosie (render3D) stays uncovered */
-#startOv{background:none;align-items:flex-start;justify-content:flex-start}
+#startOv{align-items:center;justify-content:flex-start}
 #startOv .card{box-sizing:border-box;margin:0;width:100%;max-width:none;gap:9px}
 #startOv p{font-size:clamp(12px,2.3vw,14px);max-width:42ch}
 #startOv .how{font-size:clamp(11px,2.4vw,13.5px);gap:3px 10px;align-items:center}
@@ -368,6 +368,44 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 /* the joystick has to be findable by a thumb that has not arrived yet */
 .pad{opacity:.36}
 .knob{background:rgba(231,226,211,.5)}
+/* ---- TITLE SCREEN --------------------------------------------------------------------------
+   The user's painted menu art, full bleed, with the title and controls set as LIVE TEXT over it
+   rather than baked into the image: it stays sharp at any size, reflows on a phone, and the
+   buttons stay real buttons. Deliberately last in the sheet -- the earlier #startOv .card rules
+   paint a purple panel and a bright green button, which are exactly the "ad game" chrome this
+   artwork is replacing, so these have to win on source order rather than on !important. */
+#startOv{background:#15201c url('art/title.jpg') center/cover no-repeat}
+#startOv::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(100deg,rgba(13,18,16,.9) 0%,rgba(13,18,16,.66) 34%,rgba(13,18,16,.1) 60%,rgba(13,18,16,0) 76%)}
+#startOv .card{position:relative;z-index:1;background:none;border:none;box-shadow:none;transform:none;
+  width:min(560px,64vw);padding:0 0 0 clamp(20px,5vw,64px);align-items:flex-start;text-align:left;gap:7px}
+#startOv .card::before{display:none}                   /* the old panel's glow blob */
+#startOv .mrh{margin:0;font:700 clamp(36px,6.6vw,74px)/1 Georgia,'Iowan Old Style','Times New Roman',serif;
+  letter-spacing:.055em;text-transform:uppercase;color:#f4ead3;text-shadow:0 2px 20px rgba(0,0,0,.6)}
+#startOv .mrh-rule{display:block;width:clamp(70px,11vw,128px);height:1px;background:rgba(244,234,211,.46);margin:15px 0 5px}
+#startOv p,#startOv .how dd{color:#cfc3ac}
+#startOv .how dt{color:#d7a86a}
+#startOv p{max-width:36ch}
+#startOv kbd{background:rgba(244,234,211,.1);border:1px solid rgba(244,234,211,.3);color:#e8dcc5;box-shadow:none}
+#startOv .dlbl{color:#cfc3ac;font-weight:600}
+#startOv .seg button{background:rgba(20,26,22,.5);border:1px solid rgba(244,234,211,.3);color:#e8dcc5;box-shadow:none;border-radius:7px}
+#startOv .seg button[aria-checked="true"]{background:rgba(215,168,106,.22);border-color:#d7a86a;color:#ffe9c6}
+#startOv .dnote{color:#9d937f}
+/* the menu item, not a bubble: the painting carries the screen, the control just sits in it */
+#startOv .go{background:none;border:1px solid rgba(244,234,211,.5);box-shadow:none;border-radius:8px;
+  color:#f4ead3;letter-spacing:.14em;text-transform:uppercase;font-size:clamp(13px,1.6vw,15px);
+  padding:11px 26px;margin-top:9px;transition:background .15s,border-color .15s}
+#startOv .go:hover{background:rgba(244,234,211,.12);border-color:#f4ead3}
+/* the full control list buried the painting, so it folds away until asked for */
+#startOv .how{max-height:0;overflow:hidden;opacity:0;transition:max-height .3s,opacity .25s;margin:0}
+#startOv.showHow .how{max-height:46vh;overflow-y:auto;opacity:1;margin-top:4px}
+#howTog{align-self:flex-start;background:none;border:none;color:#d7a86a;font:inherit;font-size:13px;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer;padding:5px 0;opacity:.9}
+#howTog:hover{opacity:1;text-decoration:underline}
+@media (max-width:760px){
+  #startOv .card{width:min(100%,94vw);padding-right:16px}
+  #startOv::after{background:linear-gradient(180deg,rgba(13,18,16,.92) 0%,rgba(13,18,16,.8) 50%,rgba(13,18,16,.62) 100%)}
+  #startOv.showHow .how{max-height:34vh}}
 </style>
 
 </head>
@@ -408,15 +446,12 @@ button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
 
 <div class="ov" id="startOv">
   <div class="card">
-    <span class="eyebrow">A backyard boss fight</span>
-    <h1 class="logo" aria-label="Rosie vs. the Hose">
-      <span class="w w1" aria-hidden="true"><i>R</i><i>o</i><i>s</i><i>i</i><i>e</i></span>
-      <span class="w w2" aria-hidden="true"><i>v</i><i>s</i><i>.</i></span>
-      <span class="w w3" aria-hidden="true"><i>t</i><i>h</i><i>e</i>&nbsp;<i>H</i><i>o</i><i>s</i><i>e</i></span>
-    </h1>
+    <h1 class="mrh">Mr. Hose</h1>
+    <span class="mrh-rule" aria-hidden="true"></span>
     <p>The hose has taken over the yard. Hunt its weak spot across the deck, lawn and garden before Rosie gets soaked.</p>
     <p class="best" id="bestLine" hidden>Best score <b id="tBest">0</b></p>
-    <dl class="how">
+    <button id="howTog" type="button" aria-expanded="false" aria-controls="howList">Controls</button>
+    <dl class="how" id="howList">
       <dt>Move</dt><dd><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or the joystick</dd>
       <dt>Bite</dt><dd><kbd>Space</kbd> the glowing yellow weak spot</dd>
       <dt>Dash</dt><dd><kbd>Shift</kbd> through the water to dodge</dd>
@@ -2016,7 +2051,7 @@ const dog=grp(scene),dogP=grp(dog),dBody=grp(dogP);
    The sprite is parented to the SCENE, not to `dog`, on purpose: as a child it would inherit
    dog.rotation.y and spin edge-on as she turned. Her yaw instead chooses WHICH painting to
    show. Set PR.on=false to get the old 3D dog back. */
-const PR={on:true,ready:false,tex:{},h:150,yaw:0,lean:0,bob:0,sq:1};
+const PR={on:true,ready:false,tex:{},h:150,yaw:0,lean:0,bob:0,sq:1,view:'q34',flip:false,turn:0};
 (function(){
  const L=new THREE.TextureLoader(),V=['q34','side','back','dance_a','dance_b'];let got=0;
  V.forEach(v=>L.load('art/rosie_'+v+'.png',tx=>{
@@ -2039,11 +2074,28 @@ function prUpdate(dt,t,dance,moving,spd){
   dShadow.visible=false;
   const camY=Math.atan2(cam.position.x-dog.position.x,cam.position.z-dog.position.z);
   let rel=dogRot-camY;rel=Math.atan2(Math.sin(rel),Math.cos(rel));
-  const ar=Math.abs(rel);let v,flip=false;
-  if(ar<Math.PI*0.38)      v='back';               /* her back is to us */
-  else if(ar>Math.PI*0.62) v='q34';                /* she faces us */
-  else {v='side';flip=rel<0;}
-  if(dance)v=(Math.floor(t*5)%2)?'dance_a':'dance_b';
+  const ar=Math.abs(rel);
+  /* VIEW CHOICE WITH HYSTERESIS. There are only three painted angles, so a bare threshold made
+     her flicker between two views whenever she ran near a boundary -- the user's "extremely
+     choppy" turn. Each band is widened by MARG while she is already in it, so crossing back
+     costs real angle and a wobbling heading cannot strobe. The left/right mirror gets the same
+     treatment: it is a 180-degree flip, the most violent pop of all. */
+  const MARG=0.12;
+  let v;
+  const b1=Math.PI*0.38+(PR.view==='back'?MARG:-MARG);
+  const b2=Math.PI*0.62+(PR.view==='q34'?-MARG:MARG);
+  if(ar<b1)      v='back';
+  else if(ar>b2) v='q34';
+  else           v='side';
+  let flip=PR.flip;
+  if(v==='side'){ if(rel>MARG)flip=false; else if(rel<-MARG)flip=true; }
+  if(dance){v=(Math.floor(t*3.2)%2)?'dance_a':'dance_b';flip=false;}
+  /* A swap still has to be COVERED, not just rationed: squeezing her width down and springing
+     it back reads as the card turning edge-on and round again, which is what the eye expects a
+     turn to look like. Cheap, and it hides the fact that two drawings are being swapped. */
+  if(v!==PR.view||flip!==PR.flip){PR.turn=1;PR.view=v;PR.flip=flip;}
+  PR.turn=Math.max(0,PR.turn-dt*6.5);
+  const turnSq=1-0.46*PR.turn*PR.turn;
   const tx=PR.tex[v]||PR.tex.q34;
   if(PR.mat.map!==tx){PR.mat.map=tx;PR.mat.needsUpdate=true;}
   /* Procedural life, so she is animated art and not a sticker: a bob on the run cycle, squash
@@ -2053,7 +2105,7 @@ function prUpdate(dt,t,dance,moving,spd){
   PR.sq =lerp(PR.sq ,1-gait*.05,1-Math.exp(-dt*14));
   PR.lean=lerp(PR.lean,clamp(A.av*.06,-.26,.26),1-Math.exp(-dt*9));
   const asp=(tx&&tx.image)?tx.image.width/tx.image.height:1;
-  const h=PR.h*R.sc*PR.sq,w=h*asp/PR.sq;
+  const h=PR.h*R.sc*PR.sq,w=h*asp/PR.sq*turnSq;
   PR.spr.scale.set(flip?-w:w,h,1);
   PR.spr.position.set(dog.position.x,h*.5+PR.bob,dog.position.z);
   PR.spr.rotation.set(0,camY,PR.lean*(flip?-1:1));
@@ -2775,6 +2827,10 @@ function pmUpdate(dt,t,cower){
  addEventListener('resize',check);addEventListener('orientationchange',()=>setTimeout(check,120));
  check();
 })();
+/* the control list folds away so the painting is the title screen, not a wall of text */
+(function(){const b=document.getElementById('howTog'),o=document.getElementById('startOv');
+ if(!b||!o)return;b.onclick=()=>{const on=o.classList.toggle('showHow');
+ b.setAttribute('aria-expanded',on?'true':'false');b.textContent=on?'Hide controls':'Controls';};})();
 let camTX=300,camTZ=300,dogRot=0,manRot=Math.PI,sfS=0,rollS=0;const lerpAng=(a,b,k)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*k;
 /* ===== stepped-animation: ONE quantised clock for the CHARACTERS =====
    The note this exists to answer: everything moved on smooth, constant-velocity 60 fps
