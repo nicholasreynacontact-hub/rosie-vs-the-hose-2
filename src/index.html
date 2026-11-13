@@ -1078,7 +1078,7 @@ function updRosie(dt){
   else if(R.dash>0){const dsp=R.pounce?POUNCE_SP:760;R.vx=R.dx*dsp;R.vy=R.dy*dsp/DZ;if(Math.random()<dt*50)addPart({type:'dust',x:R.x-R.dx*20,y:R.y,vx:-R.dx*40,vy:-10,life:.4,max:.4,size:rand(6,11),g:0});}
   else{const k=1-Math.exp(-dt*(slip?1.6:(ix||iy)?9:12));R.vx=lerp(R.vx,ix*sp,k);R.vy=lerp(R.vy,iy*sp/DZ,k);}
   R.x=clamp(R.x+R.vx*dt,40,WORLD-40);R.y=clamp(R.y+R.vy*dt,GY0+10,GY1);if(!R.under)pushOut(R,24*R.sc);if(R.pounce)pounceHit();
-  R.speed=Math.hypot(R.vx,R.vy*DZ);if(R.speed>30&&R.chomp<=0)R.ang=Math.atan2(R.vy*DZ,R.vx);R.f=Math.cos(R.ang)>=0?1:-1;
+  R.speed=Math.hypot(R.vx,R.vy*DZ);if(R.speed>12&&R.chomp<=0)R.ang=Math.atan2(R.vy*DZ,R.vx);R.f=Math.cos(R.ang)>=0?1:-1;
   {const g0=Math.floor(R.gait/Math.PI);R.gait+=R.speed*dt*.05;if(R.speed>170&&R.dash<=0&&Math.floor(R.gait/Math.PI)!==g0)addPart({type:'dust',x:R.x-R.f*18*R.sc,y:R.y+2,vx:-R.vx*.12,vy:-14,life:.35,max:.35,size:rand(3,5.5),g:0});}
   if(R.wet>0&&Math.random()<dt*14)addPart({type:'water',x:R.x+rand(-30,30)*R.sc,by:R.y,y:R.y-rand(20,70)*R.sc,vx:rand(-20,20),vy:40,life:.5,max:.5,size:rand(1.5,3),g:1});
   if(slip&&R.speed>60&&Math.random()<dt*12)addPart({type:'water',x:R.x,y:R.y,vx:rand(-60,60),vy:rand(-120,-40),life:.4,max:.4,size:2,g:1});
@@ -2685,8 +2685,15 @@ function stepLock(o,noPos){const d=o.userData,k=d.__st||(d.__st={p:new THREE.Vec
 function stepLockAll(a,noPos){if(!STEP_FPS||reduce)return;for(let i=0;i<a.length;i++)stepLock(a[i],noPos);}
 const STEP_DOG=[dogP,dHead,dTail,dMouth,dTongue,dShadow,digMound,dTie].concat(dEars,dEyes,dEyes.map(e=>e.children[0]),dBrows,dLegs.map(l=>l.g)),
       STEP_MAN=[manP,mHead,mHat,mMouth].concat(mArms,mLegs.map(l=>l.hip),mLegs.map(l=>l.knee)),
-      STEP_ROOT=[dog,man];                     /* roots: rotation and scale step, translation does not --
-                                                  a held world position would teleport her on a dash */
+      STEP_ROOT=[man];                         /* roots: rotation and scale step, translation does not --
+                                                  a held world position would teleport her on a dash.
+                                                  THE DOG'S ROOT IS DELIBERATELY NOT IN HERE. Heading is
+                                                  locomotion, not pose: holding her yaw at 12 fps while she
+                                                  slides at the real frame rate made every diagonal turn
+                                                  read as a snap to one side and back. Her POSE still steps
+                                                  -- STEP_DOG holds dogP, the head, ears, legs and tail --
+                                                  so the hand-animated look survives while turning is
+                                                  continuous. Add `dog` back here and the wobble returns. */
 /* overshoot and settle -- ONE helper for every pose that used to ease in. A spring with
    zeta<1 arrives PAST its target and springs back, which is what a keyed pose does and what
    lerp(x,t,1-exp(-dt*k)) can never do. st={v} carries the velocity; w is rad/s, z the damping. */
@@ -2746,7 +2753,7 @@ function render3D(dt){
    /* overshoot: the rear-up arrives past vertical and springs back. rearK itself is left alone --
       the mouth-visibility test at rearK>.5 and every other read keep the un-sprung value. */
    rearV=reduce?rearK:clamp(ovr(rearV,rearK,A.rear,dt,21,.42),0,1.12);}
-  dog.position.set(R.x,0,rz);{const d0=dogRot;dogRot=ovrAng(dogRot,-R.ang,A.rot,dt,13,.42);A.av=Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1);rollS=lerp(rollS,clamp(Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1)*.045,-.3,.3)*sf,1-Math.exp(-dt*8));sfS=lerp(sfS,moving?sf:0,1-Math.exp(-dt*9));}dog.rotation.y=dogRot+(dance?lerp(Math.sin(t*6)*.6,Math.sin(t*3)*.45,rearV):0)+(R.thrash>0?Math.sin(t*42)*.18:0);dog.scale.setScalar(R.sc);dog.visible=!(R.hurt>0&&Math.floor(t*18)%2);
+  dog.position.set(R.x,0,rz);{const d0=dogRot;dogRot=ovrAng(dogRot,-R.ang,A.rot,dt,13,.85);A.av=Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1);rollS=lerp(rollS,clamp(Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1)*.045,-.3,.3)*sf,1-Math.exp(-dt*8));sfS=lerp(sfS,moving?sf:0,1-Math.exp(-dt*9));}dog.rotation.y=dogRot+(dance?lerp(Math.sin(t*6)*.6,Math.sin(t*3)*.45,rearV):0)+(R.thrash>0?Math.sin(t*42)*.18:0);dog.scale.setScalar(R.sc);dog.visible=!(R.hurt>0&&Math.floor(t*18)%2);
   /* ANTICIPATION. Bite, Pounce and Dash all fire on the frame of the input -- there is no
      start-up to borrow from without adding input latency -- so the wind-up is carved out of the
      front of the chomp / dash timer that already existed: the hit is resolved before the crouch
