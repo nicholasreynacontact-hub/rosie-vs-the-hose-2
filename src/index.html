@@ -2710,6 +2710,45 @@ function artSync(){skyDome.position.set(cam.position.x,0,cam.position.z);stars.p
 
 /* per-frame sync of the 3D scene with the game state */
 const C=h=>new THREE.Color(h),SKY={top:[C('#3f4a54'),C('#2c3a38')],mid:[C('#8b958f'),C('#6e7f72')],bot:[C('#cfc0a4'),C('#b9b893')]},FOG_A=C('#9ea396'),FOG_B=C('#8d978a'),FOG_P=C('#6a5f74'),SKY_BH=C('#b06a86'),HEMI_S=[C('#aab4b2'),C('#93a89c'),C('#a894b4')],HEMI_G=[C('#242a1e'),C('#20281f'),C('#2a3330')];
+/* ---- PAINTED GARDENER ---------------------------------------------------------------------
+   Same approach as PR (painted Rosie): `man` stays the anchor every system reads, `manP` (the
+   built geometry) is hidden, and a camera-facing quad shows the painted view. He is simpler
+   than Rosie because manRot only ever settles to 0 or PI -- he faces left or right, never
+   toward camera -- so the view is chosen by what he is DOING, not by angle. */
+const PM={on:true,ready:false,tex:{},h:188,lx:0,walk:0,bob:0};
+(function(){
+ const L=new THREE.TextureLoader(),V=['side','walk','kneel','back','q34'];let got=0;
+ V.forEach(v=>L.load('art/man_'+v+'.png',tx=>{
+   tx.encoding=THREE.sRGBEncoding;tx.minFilter=THREE.LinearFilter;tx.magFilter=THREE.LinearFilter;
+   tx.generateMipmaps=false;tx.anisotropy=4;PM.tex[v]=tx;if(++got===V.length)PM.ready=true;},
+   undefined,()=>{PM.on=false;}));
+ PM.mat=new THREE.MeshBasicMaterial({transparent:true,alphaTest:.34,depthWrite:true,toneMapped:false,side:THREE.DoubleSide});
+ PM.spr=new THREE.Mesh(new THREE.PlaneGeometry(1,1),PM.mat);PM.spr.visible=false;PM.spr.renderOrder=2;scene.add(PM.spr);
+ PM.sh=new THREE.Mesh(new THREE.CircleGeometry(1,20),new THREE.MeshBasicMaterial({color:0x2a2118,transparent:true,opacity:.24,depthWrite:false}));
+ PM.sh.rotation.x=-Math.PI/2;PM.sh.visible=false;PM.sh.renderOrder=1;scene.add(PM.sh);
+})();
+function pmUpdate(dt,t,cower){
+  if(!PM.on||!PM.ready)return false;
+  manP.visible=false;
+  const dx=man.position.x-PM.lx;PM.lx=man.position.x;
+  PM.walk=lerp(PM.walk,Math.min(1,Math.abs(dx)/(dt||1)/90),1-Math.exp(-dt*8));
+  const v=cower?'kneel':(PM.walk>.25?'walk':'side');
+  const tx=PM.tex[v]||PM.tex.side;
+  if(PM.mat.map!==tx){PM.mat.map=tx;PM.mat.needsUpdate=true;}
+  PM.bob=lerp(PM.bob,PM.walk*5,1-Math.exp(-dt*12));
+  const camY=Math.atan2(cam.position.x-man.position.x,cam.position.z-man.position.z);
+  const asp=(tx&&tx.image)?tx.image.width/tx.image.height:.6;
+  const h=PM.h*(cower?.72:1),w=h*asp;
+  /* the art faces RIGHT, so mirror whenever he has turned to face the other way */
+  const flip=Math.cos(manRot)<0;
+  PM.spr.scale.set(flip?-w:w,h,1);
+  PM.spr.position.set(man.position.x,h*.5+PM.bob,man.position.z);
+  PM.spr.rotation.set(0,camY,0);
+  PM.spr.visible=man.visible;
+  PM.sh.position.set(man.position.x,1.2,man.position.z);
+  PM.sh.scale.setScalar(w*.3);PM.sh.visible=man.visible;
+  return true;
+}
 let camTX=300,camTZ=300,dogRot=0,manRot=Math.PI,sfS=0,rollS=0;const lerpAng=(a,b,k)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*k;
 /* ===== stepped-animation: ONE quantised clock for the CHARACTERS =====
    The note this exists to answer: everything moved on smooth, constant-velocity 60 fps
@@ -2915,7 +2954,7 @@ function render3D(dt){
   furM.color.copy(FURC).lerp(FWET,Math.min(1,R.wet)*.8);furS.color.copy(FURS).lerp(FWET,Math.min(1,R.wet)*.8);faceM.color.copy(furM.color);for(let q=0;q<COATM.length;q++)COATM[q].color.copy(furM.color); /* the face map multiplies the coat colour, so wFur() and the wet tint reach the drawn face too */dAura.material.opacity=(booga?1:power/POWER_MAX)*.13*(.75+.25*Math.sin(t*8));dAura.material.color.set(Math.sin(t*5)>0||!booga?'#c77dff':'#39d98a');
   /* the waterer */
   const cower=Hm.cower,up=Hm.shock>0||!Hm.grabbed,sw=Hm.moving?Math.sin(Hm.walkT*9):0,cw=Hm.moving?Math.cos(Hm.walkT*9):0;
-  man.position.set(Hm.x+(cower&&!reduce?Math.sin(t*40)*1.6:0),0,zOf(Hm.y));manRot=lerpAng(manRot,Hm.f>0?0:Math.PI,Math.min(1,dt*12));man.rotation.y=manRot;
+  man.position.set(Hm.x+(cower&&!reduce?Math.sin(t*40)*1.6:0),0,zOf(Hm.y));manRot=lerpAng(manRot,Hm.f>0?0:Math.PI,Math.min(1,dt*12));man.rotation.y=manRot;pmUpdate(dt,t,cower);
   manP.position.y=Math.abs(cw)*2.5;A.mY=ovr(A.mY,cower?.62:1,A.mYs,dt,15,.38);ssY(manP,clamp(A.mY,.45,1.15));manP.rotation.z=ovr(manP.rotation.z,cower?-.4:0,A.mRot,dt,14,.40);
   mLegs.forEach((l,i)=>{const s=i?-1:1;l.hip.rotation.z=cower?1.1:s*sw*.55;l.knee.rotation.z=cower?-1.9:-Math.max(0,s*cw)*.8;});
   mArms[0].rotation.z=ovr(mArms[0].rotation.z,cower?2.7:up?2.95:1.5,A.mArm[0],dt,16,.38);mArms[1].rotation.z=ovr(mArms[1].rotation.z,cower?2.7:up?2.95:-sw*.5,A.mArm[1],dt,16,.38);
