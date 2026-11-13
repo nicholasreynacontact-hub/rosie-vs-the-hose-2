@@ -1771,6 +1771,11 @@ cyl(scene,M('#6b4423'),16,200,2350,100,-150);for(const [x,y,z,r] of [[0,180,0,95
 for(const [x,y,z] of [[-40,230,70],[30,200,78],[70,260,50],[-10,280,60],[-80,190,55]])sph(scene,M('#97504a',{roughness:.3}),9,2350+x,y,-150+z);
 box(scene,M('#77584a'),190,140,130,2710,70,-180);{const r=add(scene,G_K4,M('#473429'),2710,172,-180,150,66,110);r.rotation.y=Math.PI/4;}box(scene,whiteM2,44,92,4,2710,46,-113);box(scene,winM,34,26,4,2650,95,-113,false);
 /* backdrop v2: three baked ridge layers, a toy water tower, lollipop poplars (no ink, no shadows) */
+/* Everything this block adds to the scene gets tagged 'bd3d' so the painted backdrop can switch
+   it all off in one pass. The user's panorama contains its own mountains, trees and water tower,
+   so leaving these standing in front of it would show two sets of hills at once. Tagged by
+   diffing scene.children rather than by naming each object, which would miss the next one added. */
+const _bd0=scene.children.length;
 {const noSh=m=>{m.castShadow=false;m.receiveShadow=false;return m;};
   /* art v3: forested hillsides. Each layer keeps its seven baked humps and then gets three
      InstancedMeshes of trees -- conifer, broadleaf, and a warm sun-rimmed conifer for the crests --
@@ -1824,6 +1829,32 @@ box(scene,M('#77584a'),190,140,130,2710,70,-180);{const r=add(scene,G_K4,M('#473
     cyl(pg,pm,h*.035,h*.5,x,h*.25,z,false);
     for(let k=0;k<3;k++)canopy(x+(r2()-.5)*h*.09,z+(r2()-.5)*40,h*(.14+k*.20),h*(.56-k*.07),h*(.50-k*.07),k?2:0,['#d4dcea','#c6d2e4','#dde4ef'][k]);}
   noSh(bake(pg,pm));}
+for(let i=_bd0;i<scene.children.length;i++)scene.children[i].userData.bd3d=true;
+/* ---- PAINTED BACKDROP ----------------------------------------------------------------------
+   The user's wide panorama, hung as a single far plane behind everything. Nothing walks there, so
+   it never needs to be geometry. It sits beyond the farthest 3D ridge (z -4000) and spans a wide
+   x range so the camera can pan without running off the edge of the painting. Sized from the
+   image's own aspect, with the centre chosen to put the painted horizon near the arena's, and
+   the lower half deliberately below ground where the deck and hedge cover it. */
+(function(){
+ new THREE.TextureLoader().load('art/backdrop.jpg',tx=>{
+  tx.encoding=THREE.sRGBEncoding;tx.minFilter=THREE.LinearFilter;tx.magFilter=THREE.LinearFilter;
+  tx.generateMipmaps=false;tx.anisotropy=4;tx.wrapS=tx.wrapT=THREE.ClampToEdgeWrapping;
+  const asp=(tx.image&&tx.image.width)?tx.image.width/tx.image.height:3,W=15000,H=W/asp;
+  const bd=new THREE.Mesh(new THREE.PlaneGeometry(W,H),
+    new THREE.MeshBasicMaterial({map:tx,depthWrite:false,fog:false,toneMapped:false}));
+  /* renderOrder 1, NOT -1. The sky dome draws with depthWrite:false, so anything drawn before it
+     gets painted over regardless of distance -- the first attempt put the panorama behind the
+     sky and it vanished. Drawn after the dome it shows, and because it still depth-TESTS at its
+     real distance, the deck, hedge and characters (renderOrder 0, drawn earlier with depth)
+     correctly occlude it. */
+  bd.position.set(1600,H*0.06,-5600);bd.renderOrder=1;bd.frustumCulled=false;scene.add(bd);
+  /* the 3D hills, tower and poplars step aside now that the painting is carrying the distance */
+  scene.children.forEach(o=>{if(o.userData&&o.userData.bd3d)o.visible=false;});
+  /* fog would grey out a painting that is meant to BE the haze, so push it past the backdrop */
+  if(scene.fog){scene.fog.far=Math.max(scene.fog.far,5200);}
+ },undefined,()=>{});   /* no painting -> the 3D ridges simply stay, exactly as before */
+})();
 /* art v3 item 10: five painted bands, not eight blobs -- flatter (y .22), wider (x 1.8), each with a
    rose underside slab, and baked per material so the whole cloud layer costs 10 draw calls, not 48. */
 const cloud3=[],cloudM=M('#ffd0a8',{emissive:'#ff8f6a'}),cloudU=M('#c2628f');
