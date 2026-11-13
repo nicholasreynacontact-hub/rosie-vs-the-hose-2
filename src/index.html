@@ -1959,6 +1959,11 @@ function lobes(cnt,seed,w0,w1,a0,a1,skip){let sd=seed|0;
   if(skip&&Math.acos(Math.min(1,d[0]*skip[0]+d[1]*skip[1]+d[2]*skip[2]))<skip[3])continue;
   L.push([d[0],d[1],d[2],w,am,Math.cos(w)]);}
  return L;}
+/* One global scale on the whole displacement field. The aimed lobes were right in PLACEMENT but
+   too deep: at full amplitude she read as cauliflower -- formless bulges rather than a dog under
+   fluff. The curls are carried by the coat texture, so the geometry only has to break the outline,
+   which it does at about half. Tune here, not in the twelve per-lobe amplitudes. */
+const FLUFF_K=.55;
 function fluff(par,mat,R,sc,o){o=o||{};
  const sg=o.seg||[88,60],B=o.base||3,TU=o.tuft||0,ph0=o.ph||0,LB=o.lb||[],KP=o.keep;
  /* the displacement field, as a pure function of direction */
@@ -1970,7 +1975,7 @@ function fluff(par,mat,R,sc,o){o=o||{};
   if(TU)d+=TU*Math.max(0,Math.cos(th*2.3))*(.62+.38*Math.cos(3*ph+.4));
   if(KP){const a=Math.acos(Math.max(-1,Math.min(1,ux*KP[0]+uy*KP[1]+uz*KP[2])));
    let w=a<KP[3]?0:a>KP[4]?1:(a-KP[3])/(KP[4]-KP[3]);d*=w*w*(3-2*w);}
-  return d;};
+  return d*FLUFF_K;};
  const g=new THREE.SphereGeometry(R,sg[0],sg[1]),p=g.attributes.position,na=g.attributes.normal,N=p.count,v=new THREE.Vector3();
  /* Normals are ANALYTIC, not recomputed from the displaced triangles. For a radial surface
     f(u)*u the normal is f*u - df/ds1*t1 - df/ds2*t2, so two extra field samples per vertex give a
