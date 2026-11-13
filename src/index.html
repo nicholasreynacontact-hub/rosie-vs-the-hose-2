@@ -2667,12 +2667,27 @@ let camTX=300,camTZ=300,dogRot=0,manRot=Math.PI,sfS=0,rollS=0;const lerpAng=(a,b
    step with gameplay. stepLockAll() then puts the character nodes back to the transforms
    captured at the last tick. Nothing here can move a hitbox: hit detection, input, the
    bite window and every timer read the R and Hm state, never a node transform. */
-const STEP_FPS=12,STEP_PAT=[2,3];              /* base-frames held per drawing: on 2s, then on 3s */
+const STEP_FPS=0,STEP_PAT=[2,3];               /* 0 = OFF. Everything below is kept but dormant.
+   Stepping was switched off at the user's instruction: "I don't want it to be this sort of eight
+   bit type of movement since it's not an eight bit character. I want it to look like how Fortnite
+   characters move and have it be fluid." Holding poses on 2s and 3s is a 2D-animation convention;
+   on a character rebuilt as smooth 3D it reads as a low frame rate, not as craft. The pose code
+   never depended on the hold -- every spring and smoothing term already integrates on the true dt
+   -- so zero here simply lets all of it run per frame. Do not raise this without asking. */
 let stepT=0,stepNew=true,_stepA=0,_stepI=0;
 function stepClock(dt){
-  if(!STEP_FPS||reduce){stepNew=true;stepT=t;return;}
-  if(hitStop>0){stepNew=false;return;}         /* holds on impact: the pose freezes dead for the
+  if(hitStop>0){stepNew=false;return;}         /* CHECKED FIRST, above the STEP_FPS switch, so the
+                                                  impact freeze survives stepping being turned off.
+                                                  Hit-stop is a fighting-game technique, not a 2D
+                                                  one: the hold on contact is what gives a hit
+                                                  weight, and it is wanted even with fluid motion.
+                                                  holds on impact: the pose freezes dead for the
                                                   whole hit-stop, then the follow-through snaps in */
+  if(!STEP_FPS||reduce){stepNew=true;stepT=t;return;}
+  /* With STEP_FPS=0 the line above marks every frame as new, so stepLock re-captures each frame and
+     holds nothing -- motion is fully fluid -- while a hit-stop still freezes the pose via the early
+     return above it. That is why stepLockAll must NOT short-circuit on !STEP_FPS any more. Removing
+     this guard divides by zero: base becomes Infinity, stepNew never turns true, and she freezes. */
   const base=1/(STEP_FPS*2);let need=STEP_PAT[_stepI%STEP_PAT.length]*base;
   _stepA+=dt;stepNew=false;
   while(_stepA>=need){_stepA-=need;_stepI++;stepT+=need;stepNew=true;need=STEP_PAT[_stepI%STEP_PAT.length]*base;}
@@ -2682,7 +2697,7 @@ function stepLock(o,noPos){const d=o.userData,k=d.__st||(d.__st={p:new THREE.Vec
   else{if(!noPos)o.position.copy(k.p);o.quaternion.copy(k.q);o.scale.copy(k.s);}}
 /* visibility is deliberately NOT locked -- the hurt flicker and the Diggy-Down disappear are
    readouts, not poses, and holding them would read as a bug. */
-function stepLockAll(a,noPos){if(!STEP_FPS||reduce)return;for(let i=0;i<a.length;i++)stepLock(a[i],noPos);}
+function stepLockAll(a,noPos){if(reduce)return;for(let i=0;i<a.length;i++)stepLock(a[i],noPos);}
 const STEP_DOG=[dogP,dHead,dTail,dMouth,dTongue,dShadow,digMound,dTie].concat(dEars,dEyes,dEyes.map(e=>e.children[0]),dBrows,dLegs.map(l=>l.g)),
       STEP_MAN=[manP,mHead,mHat,mMouth].concat(mArms,mLegs.map(l=>l.hip),mLegs.map(l=>l.knee)),
       STEP_ROOT=[man];                         /* roots: rotation and scale step, translation does not --
