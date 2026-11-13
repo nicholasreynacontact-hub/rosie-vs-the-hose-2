@@ -2556,9 +2556,17 @@ const PH={on:true,ready:0,tex:{},h:190,view:'f',flip:false,turn:0,bob:0};
    undefined,()=>{PH.on=false;})));
  PH.mat=new THREE.MeshBasicMaterial({transparent:true,alphaTest:.34,depthWrite:true,toneMapped:false,side:THREE.DoubleSide});
  PH.spr=new THREE.Mesh(new THREE.PlaneGeometry(1,1),PH.mat);PH.spr.visible=false;PH.spr.renderOrder=3;scene.add(PH.spr);
+ /* Opt-in debug handle: ?dbg in the URL exposes the painted-figure state so a harness can ask
+    where a sprite actually is, instead of hunting for it in screenshots. Off by default. */
+ if(location.search.indexOf('dbg')>=0){window.__PH=PH;
+   /* the hose only becomes a creature once the gardener lets go, so a harness needs to be able
+      to free it on demand rather than playing far enough to earn it */
+   window.__free=()=>{Hm.grabbed=false;Hm.mode='roam';};}
 })();
 function phUpdate(dt,t,boss){
-  if(!PH.on||!PH.go||!nozHead.visible){if(PH.spr)PH.spr.visible=false;return false;}
+  PH.calls=(PH.calls|0)+1;
+  if(!PH.on||!PH.go||!nozHead.visible){PH.bail=(PH.bail|0)+1;PH.why=!PH.on?'off':!PH.go?'loading':'nozHidden';
+    if(PH.spr)PH.spr.visible=false;return false;}
   nozHead.visible=false;                       /* the built dragon head steps aside */
   const set=boss?'drag':'hose';
   const camY=Math.atan2(cam.position.x-nozHead.position.x,cam.position.z-nozHead.position.z);
