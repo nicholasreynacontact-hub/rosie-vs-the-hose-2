@@ -2007,6 +2007,63 @@ function fluff(par,mat,R,sc,o){o=o||{};
  me.receiveShadow=false;par.add(me);return me;}
 const bodyM=coatMat(6,11,3301),tailM=coatMat(6,5,5507),earM=coatMat(6,5,9103),legM=coatMat(5,4,6151,.62);
 const dog=grp(scene),dogP=grp(dog),dBody=grp(dogP);
+/* ---- PAINTED ROSIE -------------------------------------------------------------------------
+   She is the user's own artwork now, not geometry (design/art/painted-rosie.md). The 3D rig
+   below is KEPT and still runs -- `dog` remains the anchor every gameplay system reads and
+   writes (position, scale, the hurt-flash `visible`), so nothing downstream had to change.
+   What changes is only what you SEE: `dogP`, which holds every piece of built geometry, is
+   hidden, and a camera-facing quad carrying the painted view is drawn at `dog`'s feet.
+   The sprite is parented to the SCENE, not to `dog`, on purpose: as a child it would inherit
+   dog.rotation.y and spin edge-on as she turned. Her yaw instead chooses WHICH painting to
+   show. Set PR.on=false to get the old 3D dog back. */
+const PR={on:true,ready:false,tex:{},h:150,yaw:0,lean:0,bob:0,sq:1};
+(function(){
+ const L=new THREE.TextureLoader(),V=['q34','side','back','dance_a','dance_b'];let got=0;
+ V.forEach(v=>L.load('art/rosie_'+v+'.png',tx=>{
+   tx.encoding=THREE.sRGBEncoding;tx.minFilter=THREE.LinearFilter;tx.magFilter=THREE.LinearFilter;
+   tx.generateMipmaps=false;tx.anisotropy=4;PR.tex[v]=tx;if(++got===V.length)PR.ready=true;},
+   undefined,()=>{PR.on=false;}));   /* art missing -> fall back to the 3D rig rather than nothing */
+ PR.mat=new THREE.MeshBasicMaterial({transparent:true,alphaTest:.34,depthWrite:true,toneMapped:false,side:THREE.DoubleSide});
+ PR.spr=new THREE.Mesh(new THREE.PlaneGeometry(1,1),PR.mat);
+ PR.spr.visible=false;PR.spr.renderOrder=2;scene.add(PR.spr);
+ /* a soft contact shadow, so she sits ON the deck instead of hovering over it -- the one real
+    risk named in painted-rosie.md is looking pasted on, and ground contact is most of that */
+ PR.sh=new THREE.Mesh(new THREE.CircleGeometry(1,24),new THREE.MeshBasicMaterial({color:0x2a2118,transparent:true,opacity:.26,depthWrite:false}));
+ PR.sh.rotation.x=-Math.PI/2;PR.sh.visible=false;PR.sh.renderOrder=1;scene.add(PR.sh);
+})();
+function prUpdate(dt,t,dance,moving,spd){
+  if(!PR.on||!PR.ready){return false;}
+  dogP.visible=false;
+  /* dShadow hangs off `dog`, not `dogP`, so hiding the geometry group left it behind -- a
+     violet disc tracking her feet. PR.sh replaces it, sized to the painted silhouette. */
+  dShadow.visible=false;
+  const camY=Math.atan2(cam.position.x-dog.position.x,cam.position.z-dog.position.z);
+  let rel=dogRot-camY;rel=Math.atan2(Math.sin(rel),Math.cos(rel));
+  const ar=Math.abs(rel);let v,flip=false;
+  if(ar<Math.PI*0.38)      v='back';               /* her back is to us */
+  else if(ar>Math.PI*0.62) v='q34';                /* she faces us */
+  else {v='side';flip=rel<0;}
+  if(dance)v=(Math.floor(t*5)%2)?'dance_a':'dance_b';
+  const tx=PR.tex[v]||PR.tex.q34;
+  if(PR.mat.map!==tx){PR.mat.map=tx;PR.mat.needsUpdate=true;}
+  /* Procedural life, so she is animated art and not a sticker: a bob on the run cycle, squash
+     on landing, and a lean into the turn. All on the true dt -- fluid, per the user's note. */
+  const gait=moving?Math.abs(Math.sin(t*9))*Math.min(1,spd/180):0;
+  PR.bob=lerp(PR.bob,gait*7,1-Math.exp(-dt*14));
+  PR.sq =lerp(PR.sq ,1-gait*.05,1-Math.exp(-dt*14));
+  PR.lean=lerp(PR.lean,clamp(A.av*.06,-.26,.26),1-Math.exp(-dt*9));
+  const asp=(tx&&tx.image)?tx.image.width/tx.image.height:1;
+  const h=PR.h*R.sc*PR.sq,w=h*asp/PR.sq;
+  PR.spr.scale.set(flip?-w:w,h,1);
+  PR.spr.position.set(dog.position.x,h*.5+PR.bob,dog.position.z);
+  PR.spr.rotation.set(0,camY,PR.lean*(flip?-1:1));
+  PR.spr.visible=dog.visible;
+  PR.sh.position.set(dog.position.x,1.2,dog.position.z);
+  PR.sh.scale.setScalar(w*.34*(1-PR.bob*.012));
+  PR.sh.material.opacity=.26*(1-PR.bob*.02);
+  PR.sh.visible=dog.visible;
+  return true;
+}
 /* BODY: one surface, 30 x 21.6 x 25.2 before displacement. Shorter and narrower than the old
    34 x 23 x 26 so the head out-masses it the way the sheet does: ~78 long against a ~100 head. */
 /* a real chest and a real haunch, then a few broad lobes for the outline -- nothing finer, the
@@ -2768,7 +2825,7 @@ function render3D(dt){
    /* overshoot: the rear-up arrives past vertical and springs back. rearK itself is left alone --
       the mouth-visibility test at rearK>.5 and every other read keep the un-sprung value. */
    rearV=reduce?rearK:clamp(ovr(rearV,rearK,A.rear,dt,21,.42),0,1.12);}
-  dog.position.set(R.x,0,rz);{const d0=dogRot;dogRot=ovrAng(dogRot,-R.ang,A.rot,dt,13,.85);A.av=Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1);rollS=lerp(rollS,clamp(Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1)*.045,-.3,.3)*sf,1-Math.exp(-dt*8));sfS=lerp(sfS,moving?sf:0,1-Math.exp(-dt*9));}dog.rotation.y=dogRot+(dance?lerp(Math.sin(t*6)*.6,Math.sin(t*3)*.45,rearV):0)+(R.thrash>0?Math.sin(t*42)*.18:0);dog.scale.setScalar(R.sc);dog.visible=!(R.hurt>0&&Math.floor(t*18)%2);
+  dog.position.set(R.x,0,rz);{const d0=dogRot;dogRot=ovrAng(dogRot,-R.ang,A.rot,dt,13,.85);A.av=Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1);rollS=lerp(rollS,clamp(Math.atan2(Math.sin(dogRot-d0),Math.cos(dogRot-d0))/(dt||1)*.045,-.3,.3)*sf,1-Math.exp(-dt*8));sfS=lerp(sfS,moving?sf:0,1-Math.exp(-dt*9));}dog.rotation.y=dogRot+(dance?lerp(Math.sin(t*6)*.6,Math.sin(t*3)*.45,rearV):0)+(R.thrash>0?Math.sin(t*42)*.18:0);dog.scale.setScalar(R.sc);dog.visible=!(R.hurt>0&&Math.floor(t*18)%2);prUpdate(dt,t,dance,moving,R.speed);
   /* ANTICIPATION. Bite, Pounce and Dash all fire on the frame of the input -- there is no
      start-up to borrow from without adding input latency -- so the wind-up is carved out of the
      front of the chomp / dash timer that already existed: the hit is resolved before the crouch
