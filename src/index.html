@@ -1865,34 +1865,58 @@ let FURC=new THREE.Color('#fff3dd').convertSRGBToLinear(),FWET=new THREE.Color('
 /* ===== cartoon-to-3d.md: the curls are PAINTED, not sculpted =====
    Deeper dents in a smooth surface give a melted potato; the reference style splits the work --
    the model supplies the FORM, the drawing supplies the DETAIL. So the coat's interior curl clumps
-   live in a texture: a rounded clump shape with a soft shadow beneath it and a light top, varied in
-   size and nudged off the lattice. Geometry now carries only a handful of big silhouette lobes.
-   Clumps are laid out per latitude row with the count scaled by sin(theta), which pre-distorts for
-   the sphere's UV pinch so they read round on the mesh instead of right in the texture. Every row
-   is drawn three times (x-W, x, x+W) so the wrap seam has no gap. */
+   live in a texture. The first build laid them out on a per-latitude LATTICE, and a lattice of
+   same-sized discs reads as fish scales or a pinecone -- the exact opposite of the character sheet,
+   where clump size varies ~4x, clumps clot into larger masses in places and leave quieter patches
+   elsewhere. The field is therefore a seeded SCATTER:
+     - cluster centres are drawn first and two thirds of the clumps orbit one, so masses form;
+     - a low-frequency density field thins whole REGIONS, which is what makes quiet patches read as
+       calm coat rather than as dropped-out holes in a grid;
+     - sizes follow a power law (u*u), so there are many small curls and a few large ones;
+     - each clump is a lumpy three-harmonic blob with its own phases, never a disc, and never
+       repeats its neighbour's outline;
+     - each carries a soft dark drop-shadow offset DOWN the body plus a light top, so it reads as
+       rounded curl mass instead of a flat circle, and so overlapping clumps shadow each other and
+       merge into one bigger mass.
+   Clump width is multiplied by W/(2*H*sin(theta)) to pre-distort for the sphere's UV pinch, so a
+   clump is round ON THE MESH rather than in the texture. Clumps near a vertical edge are redrawn at
+   x-W / x+W so the wrap seam has no gap. Seeded LCG only -- no Math.random() anywhere in here. */
 function paintCurls(g,W,H,rows,cols,seed,a){let sd=seed|0;
  const rn=()=>{sd=(sd*1103515245+12345)&0x7fffffff;return sd/0x7fffffff;};
- /* TWO passes at a non-integer size ratio, with holes, big size spread and free rotation. A single
-    evenly-spaced pass of same-sized, same-facing clumps reads as roof shingles or a pinecone, which
-    is the opposite of the sheet: her curls vary wildly in size and clump together irregularly. */
- const pass=(rw,cl,al)=>{
-  for(let j=0;j<rw;j++){const v=(j+.5)/rw,st=Math.max(.30,Math.sin(Math.PI*v));
-   const n=Math.max(3,Math.round(cl*st)),ryb=H/rw*.88,rxb=W/n*.68;
-   for(let i=0;i<n;i++){
-    const hole=rn(),jx=rn(),jy=rn(),k=.58+.86*rn(),kx=.78+.48*rn(),ky=.78+.48*rn(),kr=rn(),ka=rn();
-    if(hole<.17)continue;                       /* dropped clumps break the lattice */
-    const x=(i+.5+(jx-.5)*.85)/n*W,y=(v+(jy-.5)*.60/rw)*H;
-    const rx=rxb*k*kx,ry=ryb*k*ky,ro=(kr-.5)*1.9,A=al*(.52+.58*ka);
-    for(const dx of [-W,0,W]){g.save();g.translate(x+dx,y);g.rotate(ro);
-     g.beginPath();g.ellipse(0,ry*.30,rx*1.00,ry*.92,0,0,6.283);
-     g.fillStyle='rgba(146,122,102,'+(.25*A).toFixed(3)+')';g.fill();
-     const gr=g.createLinearGradient(0,-ry,0,ry*.86);
-     gr.addColorStop(0,'rgba(255,255,255,'+(.90*A).toFixed(3)+')');
-     gr.addColorStop(.50,'rgba(252,247,241,'+(.44*A).toFixed(3)+')');
-     gr.addColorStop(1,'rgba(228,212,196,0)');
-     g.beginPath();g.ellipse(0,-ry*.08,rx*.90,ry*.84,0,0,6.283);g.fillStyle=gr;g.fill();g.restore();}}}};
- pass(rows,cols,a*.88);
- pass(Math.max(3,Math.round(rows*1.7)),Math.max(3,Math.round(cols*1.7)),a*.60);}
+ const A0=(a===undefined?.78:a),S=H/rows*.38,AR=W/(2*H),N=Math.max(24,Math.round(rows*cols*6.0));
+ /* a curl is a lumpy spiral, not a disc */
+ const path=(rx,ry,p1,p2,p3)=>{g.beginPath();
+  for(let k=0;k<=24;k++){const t=k/24*6.283,
+   rr=1+.10*Math.sin(t*3+p1)+.07*Math.sin(t*5+p2)+.05*Math.sin(t*2+p3);
+   const px=Math.cos(t)*rx*rr,py=Math.sin(t)*ry*rr;if(k)g.lineTo(px,py);else g.moveTo(px,py);}
+  g.closePath();};
+ const cen=[],M=Math.max(3,Math.round(N/7));
+ for(let i=0;i<M;i++)cen.push([rn(),rn(),.04+.10*rn()]);
+ const CL=[];
+ for(let i=0;i<N;i++){
+  const pick=rn(),u=rn(),ci=rn(),qa=rn(),qr=rn(),fx=rn(),fy=rn(),
+        p1=rn()*6.283,p2=rn()*6.283,p3=rn()*6.283,al=rn(),ec=rn(),dk=rn();
+  let ux,uy;
+  if(pick<.58){const c=cen[Math.floor(ci*M)%M],ang=qa*6.283,rad=c[2]*(.12+.88*qr*qr);
+   ux=c[0]+Math.cos(ang)*rad*1.6;uy=c[1]+Math.sin(ang)*rad;}
+  else{ux=fx;uy=fy;}
+  uy=Math.min(.996,Math.max(.004,uy));ux-=Math.floor(ux);
+  if(dk>.44+.56*(.5+.5*Math.sin(ux*12.566+1.3)*Math.cos(uy*9.425+.7)))continue;
+  const ry=S*(.74+.80*u),st=Math.max(.34,Math.sin(Math.PI*uy));
+  CL.push([ux*W,uy*H,ry*AR/st*(.86+.28*ec),ry,p1,p2,p3,A0*Math.min(1,.64+.46*al)]);}
+ CL.sort((p,q)=>q[3]-p[3]); /* big masses first; small curls settle on top and merge into them */
+ for(let q=0;q<CL.length;q++){const c=CL[q],x=c[0],y=c[1],rx=c[2],ry=c[3],A=c[7];
+  const xs=(x<rx*1.4)?[0,W]:(x>W-rx*1.4)?[0,-W]:[0];
+  for(let d=0;d<xs.length;d++){g.save();g.translate(x+xs[d],y);
+   g.shadowColor='rgba(186,160,137,'+(.38*A).toFixed(3)+')';
+   g.shadowBlur=Math.max(1.5,ry*.62);g.shadowOffsetY=ry*.22;
+   path(rx,ry,c[4],c[5],c[6]);g.fillStyle='rgba(248,242,234,'+(.82*A).toFixed(3)+')';g.fill();
+   g.shadowColor='rgba(0,0,0,0)';g.shadowBlur=0;g.shadowOffsetY=0;
+   const gr=g.createLinearGradient(0,-ry*1.12,0,ry*.58);
+   gr.addColorStop(0,'rgba(255,255,255,'+(.86*A).toFixed(3)+')');
+   gr.addColorStop(.46,'rgba(253,249,243,'+(.40*A).toFixed(3)+')');
+   gr.addColorStop(1,'rgba(228,212,196,0)');
+   path(rx*.88,ry*.88,c[4],c[5],c[6]);g.fillStyle=gr;g.fill();g.restore();}}}
 const COAT_BASE='#f4ede6'; /* the clump field averages ~0.95, so she stays the lightest thing in frame */
 function coatTex(rows,cols,seed,a){return ctex(512,512,1,1,g=>{g.fillStyle=COAT_BASE;g.fillRect(0,0,512,512);
  paintCurls(g,512,512,rows,cols,seed,a===undefined?.78:a);});}
@@ -1982,12 +2006,21 @@ const dog=grp(scene),dogP=grp(dog),dBody=grp(dogP);
    34 x 23 x 26 so the head out-masses it the way the sheet does: ~78 long against a ~100 head. */
 /* a real chest and a real haunch, then a few broad lobes for the outline -- nothing finer, the
    texture has the detail now. Coarser mesh too: 64x44 instead of 112x76. */
-const dBodyM=fluff(dBody,bodyM,30,[1,.72,.84],{pos:[-8,46,0],seg:[64,44],base:3.0,ph:.0,
-  lb:lobes(11,7717,.34,.58,3.0,6.2).concat([[.70,.18,.46,.66,5.4,Math.cos(.66)],[.70,.18,-.46,.66,5.4,Math.cos(.66)],
-   [-.62,.40,.52,.74,7.0,Math.cos(.74)],[-.62,.40,-.52,.74,7.0,Math.cos(.74)],[-.90,-.10,0,.60,4.0,Math.cos(.60)]])});
+const dBodyM=fluff(dBody,bodyM,30,[1,.72,.84],{pos:[-8,46,0],seg:[72,50],base:3.0,ph:.0,
+  /* the displacement is spent where it shows -- ON THE OUTLINE. A thin even scatter of small dents
+     over the whole surface is what reads as a melted potato; a modest count of broad, deliberately
+     aimed lobes at chest / haunch / rump / back line / flank breaks the arc instead. */
+  lb:lobes(9,7717,.32,.54,3.0,5.8).concat([
+   [.882,.136,.452,.64,6.0,Math.cos(.64)],[.882,.136,-.452,.64,6.0,Math.cos(.64)],      /* chest */
+   [-.659,.462,.593,.72,6.6,Math.cos(.72)],[-.659,.462,-.593,.72,6.6,Math.cos(.72)],    /* haunches */
+   [-.996,-.087,0,.60,4.6,Math.cos(.60)],                                               /* rump */
+   [.426,.893,.142,.48,6.0,Math.cos(.48)],[-.12,.98,-.16,.46,6.6,Math.cos(.46)],
+   [-.587,.789,.182,.48,5.8,Math.cos(.48)],                                             /* back line */
+   [.060,.261,.964,.54,5.4,Math.cos(.54)],[.060,.261,-.964,.54,5.4,Math.cos(.54)],
+   [-.441,-.161,.883,.50,4.6,Math.cos(.50)],[-.441,-.161,-.883,.50,4.6,Math.cos(.50)]])});
 /* TAIL: a rising plume, flared at the tip -- the sheet's flag */
-const dTail=grp(dBody,-34,50,0);fluff(dTail,tailM,22,[.54,1.28,.48],{pos:[-4,16,0],seg:[44,32],base:1.6,ph:1.7,
-  lb:lobes(6,4231,.44,.68,3.2,5.6)});
+const dTail=grp(dBody,-34,50,0);fluff(dTail,tailM,22,[.54,1.28,.48],{pos:[-4,16,0],seg:[52,38],base:1.8,ph:1.7,
+  lb:lobes(10,4231,.28,.50,3.2,6.0)});
 const FACE_C=document.createElement('canvas');FACE_C.width=1024;FACE_C.height=512;const FACE_G=FACE_C.getContext('2d');
 FACE_G.fillStyle='#ffffff';FACE_G.fillRect(0,0,1024,512);
 paintCurls(FACE_G,1024,512,8,16,2609,.78);
@@ -2036,15 +2069,25 @@ function faceTick(c,bl){const k=[c[0]*bl,c[1],c[2],c[3],c[4],c[5],c[7],c[8],c[9]
    near-neckless set. It wears the face map itself, so there is no decal and no boundary. The
    crown tuft is a lobe of the SAME surface, not a ball stuck on top. */
 const dHead=grp(dogP,34,110,0);
-const dHeadM=fluff(dHead,faceM,41,null,{seg:[72,52],base:2.4,tuft:4.0,ph:.9,
-  lb:lobes(14,2609,.30,.52,3.0,6.0,[.989,-.149,0,1.02]),
+const dHeadM=fluff(dHead,faceM,41,null,{seg:[80,56],base:2.4,tuft:4.2,ph:.9,
+  /* crown / cheeks / back of skull: the three places the head's outline is read from. All sit
+     outside the keep cap, so the drawn face cannot warp. */
+  lb:lobes(11,2609,.28,.48,3.2,6.4,[.989,-.149,0,1.02]).concat([
+   [.10,.97,.22,.52,7.0,Math.cos(.52)],[-.34,.90,-.28,.48,6.2,Math.cos(.48)],
+   [.52,.80,-.30,.46,5.8,Math.cos(.46)],                                          /* crown */
+   [.44,-.14,.89,.54,6.4,Math.cos(.54)],[.44,-.14,-.89,.54,6.4,Math.cos(.54)],    /* cheeks */
+   [-.84,.30,.45,.56,6.0,Math.cos(.56)],[-.84,.30,-.45,.56,6.0,Math.cos(.56)]]),  /* back of head */
   keep:[.989,-.149,0,.72,1.14]}); /* the cap around the muzzle axis stays undisplaced: the drawn face cannot warp */
 const dTie=add(dHead,new THREE.TorusGeometry(13,3.2,8,18),collarM,0,43,0,1,1,1);dTie.rotation.set(Math.PI/2,0,.3);/* wardrobe: the Topknot slot owns this */
 /* EARS: the heaviest mass in her silhouette, hinged high and hanging 23 past the jaw as the sheet
    has them. One displaced surface each -- lumpy outline, no seam. */
 const dEars=[1,-1].map(s=>{const g=grp(dHead,-2,14,s*30);
- fluff(g,earM,24,[.64,1.28,.62],{pos:[0,-26,s*4],seg:[40,30],base:1.4,ph:s>0?.4:2.6,
-  lb:lobes(6,s>0?881:1733,.44,.66,2.6,4.6)});return g;});
+ fluff(g,earM,24,[.64,1.28,.62],{pos:[0,-26,s*4],seg:[52,38],base:1.8,ph:s>0?.4:2.6,
+  /* on the sheet an ear is heavy curl MASS with a ragged hem, not a smooth drape -- so the hanging
+     rim gets four strong lobes of its own on top of the scattered field */
+  lb:lobes(12,s>0?881:1733,.26,.46,2.8,5.4).concat([
+   [.02,-.93,s*.37,.48,5.6,Math.cos(.48)],[.60,-.78,-s*.18,.46,5.0,Math.cos(.46)],
+   [-.62,-.76,s*.20,.46,5.2,Math.cos(.46)],[.30,-.40,s*.87,.50,4.8,Math.cos(.50)]])});return g;});
 /* ---- property 2: the face is DRAWN, not built. The map goes straight onto the head sphere --
    a separate decal shell left a visible mask edge, which is the opposite of "seamless". One 1024x512
    canvas, white everywhere but the face, so there is no boundary anywhere on her. Crisp flat shapes
@@ -2065,8 +2108,8 @@ const dTag=sph(dogP,M('#ffd23f',{emissive:'#7a5a00'}),5.5,40,58,0,1,1,.5,false);
    visible creases; on the sheet her legs disappear into the coat rather than plugging into it, so
    each leg is a single surface whose top is buried deep inside the body's coat.  */
 const dLegs=[[20,15,0],[20,-15,.6],[-22,15,2.4],[-22,-15,3]].map(([x,z,ph],i)=>{const g=grp(dogP,x,34,z);
- fluff(g,legM,14,[.80,1.46,.80],{pos:[0,-12,0],seg:[28,20],base:1.1,ph:i*1.3,
-  lb:lobes(5,2207+i*97,.48,.78,1.4,3.0)});
+ fluff(g,legM,14,[.80,1.46,.80],{pos:[0,-12,0],seg:[34,24],base:1.1,ph:i*1.3,
+  lb:lobes(7,2207+i*97,.38,.64,1.5,3.0)});
  return {g,ph};});
 /* ---- boss-and-dance-mode.md 2: GIANT DANCE MODE. Visual only. danceS multiplies dogP.scale, never R.sc --
    R.sc feeds collision and the camera, so growing it would be a gameplay change this doc does not own.
