@@ -2749,6 +2749,32 @@ function pmUpdate(dt,t,cower){
   PM.sh.scale.setScalar(w*.3);PM.sh.visible=man.visible;
   return true;
 }
+/* ---- LANDSCAPE NUDGE ----------------------------------------------------------------------
+   The arena is wide on purpose -- Rosie needs room to run sideways away from the hose, and in
+   portrait that becomes a corridor. This asks rather than forces: it only appears on a small
+   touch screen held upright, it clears itself the moment the device is turned, and it always
+   offers a way past, so nobody is ever locked out of their own game. */
+(function(){
+ const el=document.createElement('div');
+ el.style.cssText='position:fixed;inset:0;z-index:999;display:none;flex-direction:column;'+
+   'align-items:center;justify-content:center;gap:18px;background:#1b2a24;color:#f4ead8;'+
+   'font:600 17px/1.5 system-ui,sans-serif;text-align:center;padding:32px';
+ el.innerHTML='<div style="font-size:46px;transform:rotate(90deg)">▭</div>'+
+   '<div>Turn your phone sideways<div style="font-weight:400;opacity:.72;font-size:15px;margin-top:6px">'+
+   'Rosie needs the room to run</div></div>'+
+   '<button id="anywayBtn" style="margin-top:4px;background:none;border:1px solid rgba(244,234,216,.45);'+
+   'color:inherit;font:inherit;font-size:14px;padding:9px 18px;border-radius:9px;cursor:pointer">Play anyway</button>';
+ document.body.appendChild(el);
+ let dismissed=false;
+ el.querySelector('#anywayBtn').onclick=()=>{dismissed=true;el.style.display='none';};
+ const check=()=>{
+   const portrait=innerHeight>innerWidth, small=Math.min(innerWidth,innerHeight)<560;
+   const touch=matchMedia('(pointer:coarse)').matches;
+   el.style.display=(portrait&&small&&touch&&!dismissed)?'flex':'none';
+ };
+ addEventListener('resize',check);addEventListener('orientationchange',()=>setTimeout(check,120));
+ check();
+})();
 let camTX=300,camTZ=300,dogRot=0,manRot=Math.PI,sfS=0,rollS=0;const lerpAng=(a,b,k)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*k;
 /* ===== stepped-animation: ONE quantised clock for the CHARACTERS =====
    The note this exists to answer: everything moved on smooth, constant-velocity 60 fps
