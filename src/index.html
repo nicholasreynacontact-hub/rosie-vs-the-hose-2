@@ -1840,7 +1840,11 @@ for(let i=_bd0;i<scene.children.length;i++)scene.children[i].userData.bd3d=true;
  new THREE.TextureLoader().load('art/backdrop.jpg',tx=>{
   tx.encoding=THREE.sRGBEncoding;tx.minFilter=THREE.LinearFilter;tx.magFilter=THREE.LinearFilter;
   tx.generateMipmaps=false;tx.anisotropy=4;tx.wrapS=tx.wrapT=THREE.ClampToEdgeWrapping;
-  const asp=(tx.image&&tx.image.width)?tx.image.width/tx.image.height:3,W=15000,H=W/asp;
+  /* W was 15000, which left the plane's own edges inside the view -- reported as "obvious
+     cutoffs in the background where the picture ends". The painting is not too small; the
+     surface carrying it was. At 26000 across, hung further back, every edge falls outside the
+     frustum at any camera pan, and the extra distance costs nothing because it is a flat image. */
+  const asp=(tx.image&&tx.image.width)?tx.image.width/tx.image.height:3,W=26000,H=W/asp;
   const bd=new THREE.Mesh(new THREE.PlaneGeometry(W,H),
     new THREE.MeshBasicMaterial({map:tx,depthWrite:false,fog:false,toneMapped:false}));
   /* renderOrder 1, NOT -1. The sky dome draws with depthWrite:false, so anything drawn before it
@@ -1848,7 +1852,20 @@ for(let i=_bd0;i<scene.children.length;i++)scene.children[i].userData.bd3d=true;
      sky and it vanished. Drawn after the dome it shows, and because it still depth-TESTS at its
      real distance, the deck, hedge and characters (renderOrder 0, drawn earlier with depth)
      correctly occlude it. */
-  bd.position.set(1600,H*0.06,-5600);bd.renderOrder=1;bd.frustumCulled=false;scene.add(bd);
+  bd.position.set(1600,-H*0.02,-7200);bd.renderOrder=1;bd.frustumCulled=false;scene.add(bd);
+  /* Match the sky dome to the painting's own sky, so where the plane ends there is no seam to
+     see. Sampled from the image's top edge rather than hand-picked, so it tracks the art if the
+     art changes. SKY[..][1] -- the damaged-world variants -- are left alone, and if the canvas
+     read is refused the dome simply keeps its authored colours. */
+  try{
+    const c=document.createElement('canvas');c.width=c.height=8;
+    const g2=c.getContext('2d');g2.drawImage(tx.image,0,0,tx.image.width,Math.round(tx.image.height*.08),0,0,8,8);
+    const d=g2.getImageData(0,0,8,8).data;let r=0,gg=0,b=0;
+    for(let i=0;i<64;i++){r+=d[i*4];gg+=d[i*4+1];b+=d[i*4+2];}
+    const col=new THREE.Color(r/64/255,gg/64/255,b/64/255);
+    SKY.top[0].copy(col).multiplyScalar(.82);SKY.mid[0].copy(col);
+    if(scene.background&&scene.background.copy)scene.background.copy(col);
+  }catch(e){}
   /* the 3D hills, tower and poplars step aside now that the painting is carrying the distance */
   scene.children.forEach(o=>{if(o.userData&&o.userData.bd3d)o.visible=false;});
   /* fog would grey out a painting that is meant to BE the haze, so push it past the backdrop */
