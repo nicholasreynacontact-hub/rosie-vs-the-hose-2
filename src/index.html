@@ -2512,12 +2512,17 @@ const hoseTex=ctex(64,64,Math.round(N*SEG/64),1,g=>{g.fillStyle='#c8c8c8';g.fill
 /* The glowing energy is an emissiveMap, not a mesh: zero draw calls, zero geometry. 3px seam + 5 blobs per tile. */
 const hoseEm=ctex(64,64,Math.round(N*SEG/64),1,g=>{g.fillStyle='#000000';g.fillRect(0,0,64,64);g.fillStyle='#ffffff';g.fillRect(0,10,64,3);for(let i=0;i<5;i++){g.beginPath();g.arc(6+i*13,11.5,4.4,0,6.283);g.fill();}g.fillStyle='#6a6a6a';g.fillRect(0,53,64,2);});
 const EMC=h=>{const c=new THREE.Color(h);c.convertSRGBToLinear();return c;},EM_G=EMC('#1d9c5c'),EM_C=EMC('#46872c'),EM_Y=EMC('#6a7a12'),EM_P=EMC('#a01383');
-const hoseM=M('#44a26a',{roughness:.25,map:hoseTex,emissive:'#24684a',emissiveMap:hoseEm}),HOSE_G=new THREE.Color('#44a26a'),HOSE_Y=new THREE.Color('#e4f76a'),HOSE_P=new THREE.Color('#b5179e'),BLK=new THREE.Color('#000000');
+/* The body is GREY, not green, because the painted head is grey. Reported as "he does not look
+   connected to the rest of the hose" -- and he could not, with a green tube running out of a
+   grey creature. The colour is read off the user's Mr. Hose artwork so the 3D body and the
+   painted head are one animal. HOSE_Y and HOSE_P are untouched, so the winded flash and the
+   Booga tint still signal exactly as before. */
+const hoseM=M('#787d82',{roughness:.3,map:hoseTex,emissive:'#2b2f33',emissiveMap:hoseEm}),HOSE_G=new THREE.Color('#787d82'),HOSE_Y=new THREE.Color('#e4f76a'),HOSE_P=new THREE.Color('#b5179e'),BLK=new THREE.Color('#000000');
 const hv=[...Array(N+1)].map(()=>new THREE.Vector3()),hCurve=new THREE.CatmullRomCurve3(hv),hose3=new THREE.Mesh(new THREE.BufferGeometry(),hoseM);hose3.castShadow=true;hose3.receiveShadow=true;hose3.frustumCulled=false;scene.add(hose3);const ink3=new THREE.Mesh(hose3.geometry,INK);ink3.visible=false;
 /* 3.2: the extra snakes reuse the hose's rope+TubeGeometry approach at 36 nodes and a
    darker clone of hoseM, so the main hose keeps its own winded/BOOGA tint. Two meshes are
    reserved up front (2 draw calls when visible) and never exceeded. */
-const snakeM=hoseM.clone();snakeM.color.set('#1b8f4b');snakeM.emissive.copy(EM_G).multiplyScalar(.35);/* 1.4: the snakes stay headless AND dim -- threat-count, not a second light source */
+const snakeM=hoseM.clone();snakeM.color.set('#55595e');   /* darker grey: same animal, lesser threat */snakeM.emissive.copy(EM_G).multiplyScalar(.35);/* 1.4: the snakes stay headless AND dim -- threat-count, not a second light source */
 const SN_MESH=[0,1].map(()=>{const v=[...Array(SN_N+1)].map(()=>new THREE.Vector3());
   const o={v,c:new THREE.CatmullRomCurve3(v),m:new THREE.Mesh(new THREE.BufferGeometry(),snakeM)};
   o.m.castShadow=true;o.m.receiveShadow=true;o.m.frustumCulled=false;o.m.visible=false;scene.add(o.m);return o;});
@@ -2575,7 +2580,14 @@ function phUpdate(dt,t,boss){
   const asp=tx.image?tx.image.width/tx.image.height:.7;
   const h=PH.h*(boss?1.5:1),w=h*asp*(1-0.46*PH.turn*PH.turn);
   PH.spr.scale.set(flip?-w:w,h,1);
-  PH.spr.position.set(nozHead.position.x,h*.5+PH.bob,nozHead.position.z);
+  /* Stand the card slightly TOWARD the camera. A billboard is a flat vertical quad planted at
+     ground level, so anything behind it at a similar depth -- the fence, the bushes, a planter
+     -- cuts into its upper half, which is exactly where his face is. Reported as "Mr Hose face
+     does not appear and appears cut off". The nudge costs nothing visually and lifts the whole
+     figure clear of scenery at its own depth. */
+  const PUSH=14;   /* just enough to clear scenery at his own depth; more and he visibly
+                      detaches from the rope he is supposed to be the head of */
+  PH.spr.position.set(nozHead.position.x+Math.sin(camY)*PUSH,h*.5+PH.bob,nozHead.position.z+Math.cos(camY)*PUSH);
   PH.spr.rotation.set(0,camY,0);
   PH.spr.visible=true;
   return true;
